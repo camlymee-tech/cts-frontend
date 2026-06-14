@@ -34,9 +34,16 @@ export const api = {
   },
   // ───────── AI đọc hóa đơn VAT ─────────
   // Lấy API Key dùng chung từ storage rồi gọi thẳng Anthropic (không cần backend).
+  // Hỗ trợ cả ảnh (jpeg/png/gif/webp) và PDF (gửi dạng "document").
   async readVAT(imageBase64, mediaType) {
     const apiKey = await api.get('api_key', true);
     if (!apiKey) throw new Error('Chưa cài đặt API Key. Vào Cài đặt → API Key để nhập.');
+
+    const isPdf = mediaType === 'application/pdf';
+    const fileBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
+      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -51,7 +58,7 @@ export const api = {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
+            fileBlock,
             { type: 'text', text:
               'Đây là hóa đơn VAT. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
               '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0,"vatRate":8}]}\n' +
