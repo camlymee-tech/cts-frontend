@@ -1,0 +1,157 @@
+// File: src/pages/CreateDDH.jsx
+import { useState, useEffect, useRef } from 'react';
+import { Select } from '../components/Select';
+import { Alert } from '../components/Alert';
+import { PartyInfoCard } from '../components/PartyInfoCard';
+import { ContractIdPreview } from '../components/ContractIdPreview';
+import { GoodsTable } from '../components/GoodsTable';
+import { DDHPreview } from '../previews/DDHPreview';
+import { buildContractId } from '../helpers';
+import { api } from '../lib/api';
+
+export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
+  const isEdit = !!editData;
+  const [sellerId, setSellerId] = useState(editData?.sellerId || '');
+  const [customerId, setCustomerId] = useState(editData?.customerId || '');
+  const [stt, setStt] = useState(editData?.stt || '');
+  const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
+  const [goods, setGoods] = useState(editData?.goods || []);
+  const [hdntId, setHdntId] = useState(editData?.relatedContracts?.hdnt || '');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const fileRef = useRef();
+  const seller = sellers[sellerId] || {};
+  const customer = customers[customerId] || {};
+  const saleCode = customer.assignedSale?.code || '';
+
+  const matchingHDNTs = Object.values(contracts)
+    .filter(c => c.type === 'HDNT' && c.customerId === customerId && c.sellerId === sellerId)
+    .sort((a, b) => b.contractId.localeCompare(a.contractId));
+
+  useEffect(() => { setHdntId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAiError(''); setAiLoading(true);
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = ev => res(ev.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const result = await api.readVAT(base64, file.type);
+      setGoods(result.goods || []);
+    } catch (err) {
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const contractId = buildContractId({ type: 'DDH', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const getContract = () => (customerId && sellerId) ? {
+    contractId, type: 'DDH', customerId, sellerId, saleCode, stt,
+    customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực', goods,
+    relatedContracts: { hdnt: hdntId }
+  } : null;
+
+  const save = async () => {
+    if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
+    if (!customerId) return alert('Vui lòng chọn khách hàng');
+    if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
+    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
+    await onSave(getContract(), isEdit ? editData.contractId : null);
+    setPage('ddh');
+  };
+
+  const preview = getContract();
+
+  return (
+    <div className="max-w-4xl">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => setPage('ddh')} className="text-blue-600 hover:text-blue-800 text-sm">← Quay lại</button>
+        <h1 className="text-2xl font-bold text-gray-800">{isEdit ? '✏️ Sửa Đơn Đặt Hàng' : 'Tạo Đơn Đặt Hàng'}</h1>
+        {isEdit && <span className="text-sm text-gray-500 font-mono">{editData.contractId}</span>}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Select label="Khách hàng" value={customerId} onChange={setCustomerId} required>
+            <option value="">-- Chọn khách hàng --</option>
+            {Object.entries(customers).map(([id, c]) => <option key={id} value={id}>{id} – {c.companyName}</option>)}
+          </Select>
+          <Select label="Công ty bên bán" value={sellerId} onChange={setSellerId} required>
+            <option value="">-- Chọn bên bán --</option>
+            {Object.entries(sellers).map(([id, s]) => <option key={id} value={id}>{s.shortName ? `[${s.shortName}] ` : ''}{s.companyName}</option>)}
+          </Select>
+        </div>
+
+        {(customerId || sellerId) && (
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <PartyInfoCard title="Bên Mua (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null} />
+            <PartyInfoCard title="Bên Bán (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">STT (3 số) <span className="text-red-500">*</span></label>
+            <input value={stt} onChange={e => setStt(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="VD: 001"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Ngày đặt hàng</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          </div>
+          <Select label="Gắn HĐNT" value={hdntId} onChange={setHdntId}>
+            <option value="">-- Không gắn --</option>
+            {matchingHDNTs.map(h => <option key={h.contractId} value={h.contractId}>{h.contractId}</option>)}
+          </Select>
+        </div>
+
+        {Object.keys(sellers).length === 0 && (
+          <Alert type="warn">Chưa có công ty bên bán. <button onClick={() => setPage('settings')} className="underline font-medium">Thêm ngay →</button></Alert>
+        )}
+        {customerId && sellerId && (
+          matchingHDNTs.length > 0
+            ? <Alert type="info">🔗 Có {matchingHDNTs.length} HĐNT cho cặp này. {hdntId ? <>Đang gắn: <strong>{hdntId}</strong></> : 'Chưa chọn HĐNT để gắn.'}</Alert>
+            : <Alert type="warn">Cặp KH + Cty bán này chưa có HĐNT nào. Bạn có thể tạo HĐNT trước, hoặc để trống.</Alert>
+        )}
+        {customerId && sellerId && stt && <ContractIdPreview id={contractId} />}
+
+        <div className="mb-5">
+          <label className="block text-xs font-medium text-gray-600 mb-2">Bảng hàng hóa — chọn 1 trong 2 cách (có thể kết hợp):</label>
+          <div className="flex items-center gap-3 mb-3">
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFile} className="hidden" />
+            <button onClick={() => fileRef.current.click()} disabled={aiLoading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-60">
+              {aiLoading ? '⏳ AI đang đọc hóa đơn...' : '📷 Cách 1: Upload hóa đơn VAT (AI đọc)'}
+            </button>
+            <span className="text-xs text-gray-400">hoặc Cách 2: bấm "+ Thêm dòng" để nhập tay bên dưới</span>
+          </div>
+          {aiError && <Alert type="error">{aiError}</Alert>}
+          <GoodsTable goods={goods} onChange={setGoods} />
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setShowPreview(p => !p)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">
+          {showPreview ? '🙈 Ẩn xem trước' : '👁️ Xem trước hợp đồng'}
+        </button>
+        <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu đơn đặt hàng'}</button>
+      </div>
+
+      {showPreview && preview && (
+        <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-8">
+          <DDHPreview c={preview} seller={seller} customer={customer} />
+        </div>
+      )}
+    </div>
+  );
+};
