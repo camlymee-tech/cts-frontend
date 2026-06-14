@@ -126,6 +126,20 @@ export const api = {
     return data;
   },
 
+  // ───────── Quản lý tài khoản (chỉ admin) ─────────
+  async adminListProfiles() {
+    const { data, error } = await supabase.rpc('admin_list_profiles');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async updateProfile(id, fields) {
+    const { data, error } = await supabase
+      .from('profiles').update(fields).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
   /* ── Phương án thay thế cho readVAT nếu bạn vẫn dùng backend (Railway) ──
   async readVAT(imageBase64, mediaType) {
     const { data: s } = await supabase.auth.getSession();

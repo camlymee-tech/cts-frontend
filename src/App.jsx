@@ -14,6 +14,7 @@ import { CreateHDNT } from './pages/CreateHDNT';
 import { CreateDDH } from './pages/CreateDDH';
 import { CreateBBBG } from './pages/CreateBBBG';
 import { LoginPage } from './pages/LoginPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
 
 const DOC_TYPE_MAP = { HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg' };
 
@@ -157,6 +158,7 @@ export default function App() {
   const counts = { HDNT: 0, DDH: 0, BBBG: 0 };
   Object.values(contracts).forEach(c => counts[c.type]++);
   const noSellers = Object.keys(sellers).length === 0;
+  const isAdmin = profile?.role === 'admin';
 
   const renderPage = () => {
     switch (page) {
@@ -178,13 +180,14 @@ export default function App() {
       case 'edit-hdnt':    return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
+      case 'admin-users':  return isAdmin ? <AdminUsersPage /> : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       default:             return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
     }
   };
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
-      <Sidebar page={page} setPage={setPage} counts={counts} onLogout={handleLogout} />
+      <Sidebar page={page} setPage={setPage} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
       <main className="flex-1 p-6 overflow-auto bg-gray-50" style={{ minHeight: '100vh' }}>
         {noSellers && page !== 'settings' && (
           <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">

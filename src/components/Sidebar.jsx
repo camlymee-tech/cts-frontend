@@ -1,5 +1,5 @@
 // File: src/components/Sidebar.jsx
-export const Sidebar = ({ page, setPage, counts, onLogout }) => {
+export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
   const nav = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     { id: 'settings', icon: '⚙️', label: 'Cài đặt' },
@@ -8,6 +8,10 @@ export const Sidebar = ({ page, setPage, counts, onLogout }) => {
     { id: 'hdnt', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT, color: 'bg-green-500' },
     { id: 'ddh', icon: '📦', label: 'Đơn Đặt Hàng', count: counts.DDH, color: 'bg-yellow-500' },
     { id: 'bbbg', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG, color: 'bg-purple-500' },
+    ...(isAdmin ? [
+      null,
+      { id: 'admin-users', icon: '👤', label: 'Quản lý tài khoản' },
+    ] : []),
   ];
 
   return (
