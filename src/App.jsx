@@ -15,6 +15,8 @@ import { CreateDDH } from './pages/CreateDDH';
 import { CreateBBBG } from './pages/CreateBBBG';
 import { LoginPage } from './pages/LoginPage';
 
+const DOC_TYPE_MAP = { HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg' };
+
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [page, setPage] = useState('dashboard');
@@ -25,6 +27,7 @@ export default function App() {
   const [viewContract, setViewContract] = useState(null);
   const [editContractData, setEditContractData] = useState(null);
   const [dataReady, setDataReady] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   // Supabase auth
   useEffect(() => {
@@ -37,11 +40,12 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const [sl, dp, c, ct] = await Promise.all([
+      const [sl, dp, c, rows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
         api.get('customers'),
-        api.get('contracts'),
+        api.listContracts(),
+        api.getMyProfile(),
       ]);
       if (dp) setDepartments(dp);
       let sellersData = sl || {};
@@ -55,7 +59,14 @@ export default function App() {
       }
       setSellers(sellersData);
       if (c) setCustomers(c);
-      if (ct) setContracts(ct);
+      setProfile(prof);
+
+      const contractsMap = {};
+      rows.forEach(r => {
+        contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
+      });
+      setContracts(contractsMap);
+
       setDataReady(true);
     })();
   }, [session]);
@@ -97,15 +108,25 @@ export default function App() {
 
   // --- Contracts ---
   const saveContract = async (contract, oldId = null) => {
+    const { _dbId, _maSale, _createdBy, ...cleanContract } = contract;
+    const row = await api.upsertContract({
+      _dbId,
+      category: 'mua_ban',
+      docType: DOC_TYPE_MAP[contract.type],
+      contract: cleanContract,
+      maSale: profile?.ma_sale,
+    });
     const updated = { ...contracts };
     if (oldId && oldId !== contract.contractId) delete updated[oldId];
-    updated[contract.contractId] = contract;
-    setContracts(updated); await api.set('contracts', updated);
+    updated[contract.contractId] = { ...cleanContract, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by };
+    setContracts(updated);
   };
   const deleteContract = async (id) => {
     if (!confirm(`Bạn có chắc muốn xóa hợp đồng ${id}? Hành động này không thể hoàn tác.`)) return;
+    const target = contracts[id];
+    if (target?._dbId) await api.deleteContractRow(target._dbId);
     const updated = { ...contracts }; delete updated[id];
-    setContracts(updated); await api.set('contracts', updated);
+    setContracts(updated);
     setViewContract(null);
   };
   const handleEditContract = (contract) => {

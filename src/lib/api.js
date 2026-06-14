@@ -1,7 +1,8 @@
 // src/lib/api.js
 // Lớp lưu trữ key-value (get/set/del) trên Supabase + đọc hóa đơn VAT.
-// Mỗi "key" (sellers, customers, contracts, departments, api_key, seller_info)
+// Mỗi "key" (sellers, customers, departments, api_key, seller_info)
 // là 1 dòng trong bảng app_storage, cột value (jsonb) chứa nguyên object/map.
+// Hợp đồng (contracts) lưu riêng ở bảng `contracts` (1 hợp đồng = 1 dòng, có RLS theo người tạo).
 // Yêu cầu: tạo bảng app_storage + bật RLS (xem SQL trong HUONG_DAN_DEPLOY hoặc tin nhắn kèm).
 import { supabase } from './supabase';
 const TABLE = 'app_storage';
@@ -77,6 +78,54 @@ export const api = {
     if (!m) throw new Error('Không đọc được phản hồi AI.');
     return JSON.parse(m[0]); // { goods: [...] }
   },
+
+  // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
+  // Mỗi hợp đồng = 1 dòng. RLS tự động lọc: sale chỉ thấy của mình, admin thấy hết.
+  async listContracts() {
+    const { data, error } = await supabase
+      .from('contracts')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsertContract({ _dbId, category, docType, contract, maSale }) {
+    const payload = {
+      category, doc_type: docType,
+      contract_id: contract.contractId,
+      data: contract,
+      updated_at: new Date().toISOString(),
+    };
+    if (_dbId) {
+      const { data, error } = await supabase
+        .from('contracts').update(payload).eq('id', _dbId).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    const { data: s } = await supabase.auth.getSession();
+    payload.created_by = s.session?.user?.id;
+    payload.ma_sale = maSale;
+    const { data, error } = await supabase
+      .from('contracts').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteContractRow(dbId) {
+    const { error } = await supabase.from('contracts').delete().eq('id', dbId);
+    if (error) throw new Error(error.message);
+  },
+
+  async getMyProfile() {
+    const { data: s } = await supabase.auth.getSession();
+    const uid = s.session?.user?.id;
+    if (!uid) return null;
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
   /* ── Phương án thay thế cho readVAT nếu bạn vẫn dùng backend (Railway) ──
   async readVAT(imageBase64, mediaType) {
     const { data: s } = await supabase.auth.getSession();
@@ -91,4 +140,3 @@ export const api = {
   },
   */
 };
-
