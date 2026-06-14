@@ -1,15 +1,12 @@
 // src/lib/api.js
 // Lớp lưu trữ key-value (get/set/del) trên Supabase + đọc hóa đơn VAT.
-// Mỗi "key" (sellers, customers, departments, api_key, seller_info)
+// Mỗi "key" (sellers, departments, api_key, seller_info)
 // là 1 dòng trong bảng app_storage, cột value (jsonb) chứa nguyên object/map.
-// Hợp đồng (contracts) lưu riêng ở bảng `contracts` (1 hợp đồng = 1 dòng, có RLS theo người tạo).
-// Yêu cầu: tạo bảng app_storage + bật RLS (xem SQL trong HUONG_DAN_DEPLOY hoặc tin nhắn kèm).
+// Hợp đồng (contracts) và Khách hàng (customers) lưu riêng (1 dòng = 1 bản ghi, có RLS theo người tạo).
 import { supabase } from './supabase';
 const TABLE = 'app_storage';
 export const api = {
   // ───────── Key-Value storage (Supabase) ─────────
-  // Tham số `shared` giữ lại cho tương thích chữ ký gọi cũ.
-  // Mô hình hiện tại: 1 bảng dùng chung toàn tổ chức (đúng tinh thần "API Key dùng chung").
   async get(key, _shared = false) {
     const { data, error } = await supabase
       .from(TABLE)
@@ -34,8 +31,6 @@ export const api = {
     if (error) throw new Error(error.message);
   },
   // ───────── AI đọc hóa đơn VAT ─────────
-  // Lấy API Key dùng chung từ storage rồi gọi thẳng Anthropic (không cần backend).
-  // Hỗ trợ cả ảnh (jpeg/png/gif/webp) và PDF (gửi dạng "document").
   async readVAT(imageBase64, mediaType) {
     const apiKey = await api.get('api_key', true);
     if (!apiKey) throw new Error('Chưa cài đặt API Key. Vào Cài đặt → API Key để nhập.');
@@ -80,7 +75,6 @@ export const api = {
   },
 
   // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
-  // Mỗi hợp đồng = 1 dòng. RLS tự động lọc: sale chỉ thấy của mình, admin thấy hết.
   async listContracts() {
     const { data, error } = await supabase
       .from('contracts')
@@ -117,11 +111,51 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // ───────── Khách hàng (bảng customers, RLS theo người tạo) ─────────
+  async listCustomers() {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsertCustomer({ _dbId, customerId, data, maSale }) {
+    const payload = { customer_id: customerId, data, updated_at: new Date().toISOString() };
+    if (_dbId) {
+      const { data: row, error } = await supabase
+        .from('customers').update(payload).eq('id', _dbId).select().single();
+      if (error) throw new Error(error.message);
+      return row;
+    }
+    const { data: s } = await supabase.auth.getSession();
+    payload.created_by = s.session?.user?.id;
+    payload.ma_sale = maSale;
+    const { data: row, error } = await supabase
+      .from('customers').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return row;
+  },
+
+  async deleteCustomerRow(dbId) {
+    const { error } = await supabase.from('customers').delete().eq('id', dbId);
+    if (error) throw new Error(error.message);
+  },
+
+  // ───────── Hồ sơ người dùng ─────────
   async getMyProfile() {
     const { data: s } = await supabase.auth.getSession();
     const uid = s.session?.user?.id;
     if (!uid) return null;
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async updateProfile(id, fields) {
+    const { data, error } = await supabase
+      .from('profiles').update(fields).eq('id', id).select().single();
     if (error) throw new Error(error.message);
     return data;
   },
@@ -132,25 +166,4 @@ export const api = {
     if (error) throw new Error(error.message);
     return data || [];
   },
-
-  async updateProfile(id, fields) {
-    const { data, error } = await supabase
-      .from('profiles').update(fields).eq('id', id).select().single();
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
-  /* ── Phương án thay thế cho readVAT nếu bạn vẫn dùng backend (Railway) ──
-  async readVAT(imageBase64, mediaType) {
-    const { data: s } = await supabase.auth.getSession();
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/vat/read`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.session?.access_token}` },
-      body: JSON.stringify({ imageBase64, mediaType }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Lỗi đọc hóa đơn VAT');
-    return data;
-  },
-  */
 };

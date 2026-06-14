@@ -2,7 +2,7 @@
 export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
   const nav = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: 'settings', icon: '⚙️', label: 'Cài đặt' },
+    ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
     null,
     { id: 'hdnt', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT, color: 'bg-green-500' },

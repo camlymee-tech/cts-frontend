@@ -15,6 +15,7 @@ import { CreateDDH } from './pages/CreateDDH';
 import { CreateBBBG } from './pages/CreateBBBG';
 import { LoginPage } from './pages/LoginPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
 
 const DOC_TYPE_MAP = { HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg' };
 
@@ -41,10 +42,10 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const [sl, dp, c, rows, prof] = await Promise.all([
+      const [sl, dp, custRows, contractRows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
-        api.get('customers'),
+        api.listCustomers(),
         api.listContracts(),
         api.getMyProfile(),
       ]);
@@ -59,11 +60,16 @@ export default function App() {
         }
       }
       setSellers(sellersData);
-      if (c) setCustomers(c);
       setProfile(prof);
 
+      const customersMap = {};
+      custRows.forEach(r => {
+        customersMap[r.customer_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
+      });
+      setCustomers(customersMap);
+
       const contractsMap = {};
-      rows.forEach(r => {
+      contractRows.forEach(r => {
         contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
       });
       setContracts(contractsMap);
@@ -98,13 +104,22 @@ export default function App() {
 
   // --- Customers ---
   const saveCustomer = async (id, data) => {
-    const updated = { ...customers, [id]: data };
-    setCustomers(updated); await api.set('customers', updated);
+    const { _dbId, _maSale, _createdBy, ...cleanData } = data;
+    const row = await api.upsertCustomer({
+      _dbId,
+      customerId: id,
+      data: cleanData,
+      maSale: profile?.ma_sale,
+    });
+    const updated = { ...customers, [id]: { ...cleanData, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by } };
+    setCustomers(updated);
   };
   const deleteCustomer = async (id) => {
     if (!confirm(`Xóa khách hàng ${id}? Thao tác không thể hoàn tác.`)) return;
+    const target = customers[id];
+    if (target?._dbId) await api.deleteCustomerRow(target._dbId);
     const updated = { ...customers }; delete updated[id];
-    setCustomers(updated); await api.set('customers', updated);
+    setCustomers(updated);
   };
 
   // --- Contracts ---
@@ -155,6 +170,11 @@ export default function App() {
     );
   }
 
+  // Sale chưa chọn phòng ban → yêu cầu chọn trước khi vào app
+  if (profile && profile.role !== 'admin' && !profile.department_id) {
+    return <ChooseDepartmentPage profile={profile} departments={departments} onDone={(updated) => setProfile(updated)} />;
+  }
+
   const counts = { HDNT: 0, DDH: 0, BBBG: 0 };
   Object.values(contracts).forEach(c => counts[c.type]++);
   const noSellers = Object.keys(sellers).length === 0;
@@ -163,13 +183,13 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard': return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
-      case 'settings':  return (
+      case 'settings':  return isAdmin ? (
         <div className="space-y-6">
           <SellersPage sellers={sellers} onSave={saveSeller} onDelete={deleteSeller} />
           <ApiKeyManager />
           <DepartmentsManager departments={departments} onSave={saveDepartment} onDelete={deleteDepartment} />
         </div>
-      );
+      ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
@@ -192,7 +212,7 @@ export default function App() {
         {noSellers && page !== 'settings' && (
           <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">
             <span>⚠️ Chưa có công ty bên bán nào. Vui lòng thêm ít nhất 1 công ty trước khi tạo hợp đồng.</span>
-            <button onClick={() => setPage('settings')} className="ml-4 underline font-medium hover:text-amber-900">Thêm ngay →</button>
+            {isAdmin && <button onClick={() => setPage('settings')} className="ml-4 underline font-medium hover:text-amber-900">Thêm ngay →</button>}
           </div>
         )}
         {renderPage()}
