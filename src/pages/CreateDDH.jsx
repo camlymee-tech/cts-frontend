@@ -20,6 +20,8 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
+  const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
@@ -52,7 +54,8 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     }
   };
 
-  const contractId = buildContractId({ type: 'DDH', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const autoContractId = buildContractId({ type: 'DDH', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const contractId = idOverride !== null ? idOverride : autoContractId;
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'DDH', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực', goods,
@@ -63,6 +66,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
+    if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
     await onSave(getContract(), isEdit ? editData.contractId : null);
@@ -123,7 +127,14 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
             ? <Alert type="info">🔗 Có {matchingHDNTs.length} HĐNT cho cặp này. {hdntId ? <>Đang gắn: <strong>{hdntId}</strong></> : 'Chưa chọn HĐNT để gắn.'}</Alert>
             : <Alert type="warn">Cặp KH + Cty bán này chưa có HĐNT nào. Bạn có thể tạo HĐNT trước, hoặc để trống.</Alert>
         )}
-        {customerId && sellerId && stt && <ContractIdPreview id={contractId} />}
+        {customerId && sellerId && stt && (
+          <ContractIdPreview
+            id={contractId}
+            onChange={setIdOverride}
+            isAuto={idOverride === null}
+            onReset={() => setIdOverride(null)}
+          />
+        )}
 
         <div className="mb-5">
           <label className="block text-xs font-medium text-gray-600 mb-2">Bảng hàng hóa — chọn 1 trong 2 cách (có thể kết hợp):</label>

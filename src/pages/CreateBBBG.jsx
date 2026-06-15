@@ -21,6 +21,8 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const [showPreview, setShowPreview] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
+  const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
@@ -57,7 +59,8 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     } catch (err) { setAiError(err.message); } finally { setAiLoading(false); e.target.value = ''; }
   };
 
-  const contractId = buildContractId({ type: 'BBBG', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const autoContractId = buildContractId({ type: 'BBBG', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const contractId = idOverride !== null ? idOverride : autoContractId;
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'BBBG', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hoàn thành', goods,
@@ -68,6 +71,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
+    if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
     await onSave(getContract(), isEdit ? editData.contractId : null);
@@ -128,7 +132,14 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
           <Alert type="warn">Chưa có công ty bên bán. <button onClick={() => setPage('settings')} className="underline font-medium">Thêm ngay →</button></Alert>
         )}
         {customerId && sellerId && ddhId && <Alert type="info">🔗 Đã gắn ĐĐH <strong>{ddhId}</strong> — hàng hóa tự động lấy từ ĐĐH này (có thể chỉnh sửa bên dưới).</Alert>}
-        {customerId && sellerId && stt && <ContractIdPreview id={contractId} />}
+        {customerId && sellerId && stt && (
+          <ContractIdPreview
+            id={contractId}
+            onChange={setIdOverride}
+            isAuto={idOverride === null}
+            onReset={() => setIdOverride(null)}
+          />
+        )}
 
         <div className="mb-5">
           <label className="block text-xs font-medium text-gray-600 mb-2">Bảng hàng hóa thực tế — tự lấy từ ĐĐH đã gắn, hoặc:</label>

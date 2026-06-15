@@ -15,11 +15,14 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [stt, setStt] = useState(editData?.stt || '');
   const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
+  // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
+  const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
   const saleCode = customer.assignedSale?.code || '';
 
-  const contractId = buildContractId({ type: 'HDNT', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const autoContractId = buildContractId({ type: 'HDNT', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
+  const contractId = idOverride !== null ? idOverride : autoContractId;
   const preview = (customerId && sellerId) ? {
     contractId, type: 'HDNT', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực', relatedContracts: editData?.relatedContracts || {}
@@ -27,6 +30,7 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
 
   const save = async () => {
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
+    if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
     await onSave(preview, isEdit ? editData.contractId : null);
@@ -109,7 +113,12 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
               </div>
             </div>
             {!saleCode && <div className="mt-3"><Alert type="warn">Khách hàng này chưa có Mã Sale — số HĐ sẽ thiếu phần mã sale. Nên cập nhật Mã Sale ở mục Khách hàng.</Alert></div>}
-            <ContractIdPreview id={contractId} />
+            <ContractIdPreview
+              id={contractId}
+              onChange={setIdOverride}
+              isAuto={idOverride === null}
+              onReset={() => setIdOverride(null)}
+            />
             <div className="border border-gray-200 rounded-lg p-6 bg-gray-50 max-h-96 overflow-y-auto">
               <HDNTPreview c={preview} seller={seller} customer={customer} />
             </div>
