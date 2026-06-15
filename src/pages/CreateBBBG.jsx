@@ -44,8 +44,9 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     setGoods(d?.goods?.length ? d.goods : []);
   };
 
-  const handleFile = async (e) => {
-    const file = e.target.files[0]; if (!file) return;
+  // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste)
+  const processFile = async (file) => {
+    if (!file) return;
     setAiError(''); setAiLoading(true);
     try {
       const base64 = await new Promise((res, rej) => {
@@ -56,8 +57,34 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
       });
       const result = await api.readVAT(base64, file.type);
       setGoods(result.goods || []);
-    } catch (err) { setAiError(err.message); } finally { setAiLoading(false); e.target.value = ''; }
+    } catch (err) {
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+    }
   };
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    await processFile(file);
+    e.target.value = '';
+  };
+
+  // Cho phép dán ảnh hóa đơn từ clipboard (Ctrl+V / Cmd+V)
+  useEffect(() => {
+    const onPaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) { processFile(file); e.preventDefault(); break; }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
 
   const autoContractId = buildContractId({ type: 'BBBG', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
   const contractId = idOverride !== null ? idOverride : autoContractId;
@@ -143,12 +170,13 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
 
         <div className="mb-5">
           <label className="block text-xs font-medium text-gray-600 mb-2">Bảng hàng hóa thực tế — tự lấy từ ĐĐH đã gắn, hoặc:</label>
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
             <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFile} className="hidden" />
             <button onClick={() => fileRef.current.click()} disabled={aiLoading}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm disabled:opacity-60">
               {aiLoading ? '⏳ Đang đọc...' : '📷 Upload VAT thực tế (AI đọc)'}
             </button>
+            <span className="text-xs text-gray-400">hoặc <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Ctrl/Cmd + V</kbd> dán ảnh hóa đơn</span>
             <span className="text-xs text-gray-400">hoặc bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}

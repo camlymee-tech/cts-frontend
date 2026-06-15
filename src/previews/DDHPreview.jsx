@@ -68,8 +68,7 @@ export const DDHPreview = ({ c, seller, customer }) => {
         <div>
           <div className="font-bold uppercase">Đại diện Bên Đặt Hàng</div>
           <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-20 font-bold">{ben_A.representative}</div>
-          <div>{ben_A.position}</div>
+          <div className="mt-24"></div>
         </div>
       </div>
     </div>
