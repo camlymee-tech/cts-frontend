@@ -20,6 +20,26 @@ const loadScriptOnce = (src) => new Promise((resolve, reject) => {
 const safeFilename = (name, ext) =>
   ((name || 'hop-dong').replace(/[\/\\?%*:|"<>]/g, '-')) + ext;
 
+const PRINT_STYLE = `
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  body {
+    font-family: 'Times New Roman', serif;
+    font-size: 13px;
+    line-height: 1.8;
+    background: #fff;
+    color: #000;
+    margin: 0;
+    padding: 16mm 20mm;
+    box-sizing: border-box;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid #555; padding: 4px 8px; }
+  .no-print { display: none !important; }
+`;
+
 export const ContractViewer = ({ contract, seller, customers, onClose, onDelete, onEdit }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [wordLoading, setWordLoading] = useState(false);
@@ -33,13 +53,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
       .map(el => el.outerHTML).join('\n');
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
       ${styleLinks}${styleTags}
-      <style>
-        @page{margin:16mm;}
-        body{font-family:'Times New Roman',serif;font-size:13px;line-height:1.8;background:#fff;color:#000;margin:0;padding:0;}
-        table{border-collapse:collapse;width:100%;}
-        td,th{border:1px solid #555;padding:4px 8px;}
-        .no-print{display:none!important;}
-      </style>
+      <style>${PRINT_STYLE}</style>
     </head><body>${innerHTML}</body></html>`;
   };
 
@@ -80,7 +94,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
       const html = getFullHtml(element.innerHTML);
       const blob = window.htmlDocx.asBlob(html, {
         orientation: 'portrait',
-        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 }, // 2.54cm mỗi lề
+        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
