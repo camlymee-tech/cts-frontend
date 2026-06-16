@@ -2,10 +2,19 @@
 import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
 
+const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC'];
+
 export const ContractListPage = ({ type, contracts, customers, setPage, setViewContract, onDelete, onEdit }) => {
-  const labels = { HDNT: 'Hợp Đồng Nguyên Tắc', DDH: 'Đơn Đặt Hàng', BBBG: 'Biên Bản Bàn Giao' };
-  const createPages = { HDNT: 'create-hdnt', DDH: 'create-ddh', BBBG: 'create-bbbg' };
+  const labels = {
+    HDNT: 'Hợp Đồng Nguyên Tắc', DDH: 'Đơn Đặt Hàng', BBBG: 'Biên Bản Bàn Giao',
+    HDNT_VC: 'HĐ Nguyên Tắc (Vận chuyển)', DDH_VC: 'Đơn Đặt Dịch Vụ', BBBG_VC: 'Biên Bản Bàn Giao (Vận chuyển)',
+  };
+  const createPages = {
+    HDNT: 'create-hdnt', DDH: 'create-ddh', BBBG: 'create-bbbg',
+    HDNT_VC: 'create-hdnt_vc', DDH_VC: 'create-ddh_vc', BBBG_VC: 'create-bbbg_vc',
+  };
   const list = Object.values(contracts).filter(c => c.type === type).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const showTotal = FEE_TYPES.includes(type);
 
   return (
     <div>
@@ -22,7 +31,7 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
               <th className="text-left px-5 py-3">Số hợp đồng</th>
               <th className="text-left px-5 py-3">Khách hàng</th>
               <th className="text-left px-5 py-3">Ngày</th>
-              {(type === 'DDH' || type === 'BBBG') && <th className="text-left px-5 py-3">Tổng tiền</th>}
+              {showTotal && <th className="text-left px-5 py-3">Tổng tiền</th>}
               <th className="text-left px-5 py-3">Trạng thái</th>
               <th className="px-5 py-3"></th>
             </tr></thead>
@@ -34,7 +43,7 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
                     <td className="px-5 py-3 font-mono font-bold text-blue-700">{c.contractId}</td>
                     <td className="px-5 py-3 text-gray-700">{customers[c.customerId]?.companyName || c.customerId}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
-                    {(type === 'DDH' || type === 'BBBG') && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
+                    {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
                       <button onClick={() => setViewContract(c)} className="text-blue-600 hover:text-blue-800 font-medium text-sm mr-3">Xem →</button>

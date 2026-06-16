@@ -4,6 +4,10 @@ import { Badge } from '../components/Badge';
 import { HDNTPreview } from '../previews/HDNTPreview';
 import { DDHPreview } from '../previews/DDHPreview';
 import { BBBGPreview } from '../previews/BBBGPreview';
+import { HDNTVCPreview } from '../previews/HDNTVCPreview';
+import { DDHVCPreview } from '../previews/DDHVCPreview';
+import { BBBGVCPreview } from '../previews/BBBGVCPreview';
+import { TYPE_COLOR } from '../helpers';
 
 const HTML2PDF_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
 const HTMLDOCX_SRC = 'https://unpkg.com/html-docx-js/dist/html-docx.js';
@@ -44,7 +48,10 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
   const [pdfLoading, setPdfLoading] = useState(false);
   const [wordLoading, setWordLoading] = useState(false);
   const customer = customers[contract.customerId] || {};
-  const PreviewComp = { HDNT: HDNTPreview, DDH: DDHPreview, BBBG: BBBGPreview }[contract.type] || HDNTPreview;
+  const PreviewComp = {
+    HDNT: HDNTPreview, DDH: DDHPreview, BBBG: BBBGPreview,
+    HDNT_VC: HDNTVCPreview, DDH_VC: DDHVCPreview, BBBG_VC: BBBGVCPreview,
+  }[contract.type] || HDNTPreview;
 
   const getFullHtml = (innerHTML) => {
     const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
@@ -117,7 +124,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
         <div className="flex items-center justify-between px-6 py-4 border-b no-print flex-wrap gap-2">
           <div>
             <span className="font-mono font-bold text-blue-700 text-lg">{contract.contractId}</span>
-            <Badge color={contract.type === 'HDNT' ? 'green' : contract.type === 'DDH' ? 'yellow' : 'purple'}>{contract.type}</Badge>
+            <Badge color={TYPE_COLOR[contract.type] || 'gray'}>{contract.type}</Badge>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={doPrint}

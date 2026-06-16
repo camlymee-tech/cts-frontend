@@ -5,9 +5,14 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
     null,
+    { header: '🛍️ Hợp đồng mua bán' },
     { id: 'hdnt', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT, color: 'bg-green-500' },
     { id: 'ddh', icon: '📦', label: 'Đơn Đặt Hàng', count: counts.DDH, color: 'bg-yellow-500' },
     { id: 'bbbg', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG, color: 'bg-purple-500' },
+    { header: '🚚 Hợp đồng vận chuyển' },
+    { id: 'hdnt_vc', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT_VC, color: 'bg-green-500' },
+    { id: 'ddh_vc', icon: '📦', label: 'Đơn Đặt Dịch Vụ', count: counts.DDH_VC, color: 'bg-yellow-500' },
+    { id: 'bbbg_vc', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG_VC, color: 'bg-purple-500' },
     ...(isAdmin ? [
       null,
       { id: 'admin-users', icon: '👤', label: 'Quản lý tài khoản' },
@@ -20,24 +25,30 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
         <div className="text-lg font-bold tracking-wide">CTS Contracts</div>
         <div className="text-blue-300 text-xs mt-0.5">CTS Logistics Vietnam</div>
       </div>
-      <nav className="flex-1 p-3 space-y-0.5">
-        {nav.map((item, i) => item === null ? (
-          <div key={i} className="border-t border-blue-700 my-3" />
-        ) : (
-          <button key={item.id} onClick={() => setPage(item.id)}
-            className={`sidebar-btn w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between text-sm ${page === item.id || page.startsWith(item.id + '-') ? 'bg-blue-600 shadow-md' : 'hover:bg-blue-700/60'}`}>
-            <span>{item.icon} <span className="ml-1">{item.label}</span></span>
-            {item.count !== undefined && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full text-white font-medium ${item.color || 'bg-blue-500'}`}>{item.count}</span>
-            )}
-          </button>
-        ))}
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {nav.map((item, i) => {
+          if (item === null) return <div key={i} className="border-t border-blue-700 my-3" />;
+          if (item.header) return (
+            <div key={i} className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-300/80">
+              {item.header}
+            </div>
+          );
+          return (
+            <button key={item.id} onClick={() => setPage(item.id)}
+              className={`sidebar-btn w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between text-sm ${page === item.id || page.startsWith(item.id + '-') ? 'bg-blue-600 shadow-md' : 'hover:bg-blue-700/60'}`}>
+              <span>{item.icon} <span className="ml-1">{item.label}</span></span>
+              {item.count !== undefined && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full text-white font-medium ${item.color || 'bg-blue-500'}`}>{item.count}</span>
+              )}
+            </button>
+          );
+        })}
       </nav>
       <div className="p-3 border-t border-blue-700">
         <button onClick={onLogout} className="w-full text-left px-3 py-2 rounded-lg text-sm text-blue-300 hover:bg-blue-700/60 hover:text-white">
           🚪 Đăng xuất
         </button>
-        <div className="text-blue-400 text-xs mt-2 px-3">CTS01-Ly • v2.0</div>
+        <div className="text-blue-400 text-xs mt-2 px-3">CTS01-Ly • v2.1</div>
       </div>
     </aside>
   );

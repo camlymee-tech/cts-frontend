@@ -75,7 +75,16 @@ export const genDeptId = (departments) => {
   return 'DEPT' + String(next).padStart(3, '0');
 };
 
-export const CONTRACT_ABBR = { HDNT: 'HĐNTMB', DDH: 'ĐĐH', BBBG: 'BBBG' };
+export const CONTRACT_ABBR = {
+  HDNT: 'HĐNTMB', DDH: 'ĐĐH', BBBG: 'BBBG',
+  HDNT_VC: 'HĐNTVC', DDH_VC: 'ĐHVC', BBBG_VC: 'BBBGVC',
+};
+
+// Màu badge dùng chung cho mọi nơi hiển thị loại hợp đồng (Dashboard, danh sách, ContractViewer...)
+export const TYPE_COLOR = {
+  HDNT: 'green', DDH: 'yellow', BBBG: 'purple',
+  HDNT_VC: 'green', DDH_VC: 'yellow', BBBG_VC: 'purple',
+};
 
 export const fmtYYMMDD = (dateStr) => {
   if (!dateStr) return 'YYMMDD';
