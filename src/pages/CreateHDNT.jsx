@@ -1,7 +1,7 @@
 // File: src/pages/CreateHDNT.jsx
 import { useState } from 'react';
 import { Steps } from '../components/Steps';
-import { Select } from '../components/Select';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { Alert } from '../components/Alert';
@@ -56,10 +56,12 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
             </div>
           ) : (
             <div className="space-y-3">
-              <Select label="Bên Mua (Khách hàng)" value={customerId} onChange={setCustomerId} required>
-                <option value="">-- Chọn khách hàng --</option>
-                {Object.entries(customers).map(([id, c]) => <option key={id} value={id}>{id} – {c.companyName}</option>)}
-              </Select>
+              <SearchableSelect
+                label="Bên Mua (Khách hàng)" required
+                value={customerId} onChange={setCustomerId}
+                placeholder="-- Chọn khách hàng --"
+                options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+              />
               {customerId && <PartyInfoCard title="Thông tin Bên Mua (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null} />}
             </div>
           )}
@@ -81,10 +83,12 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
             </div>
           ) : (
             <div className="space-y-3">
-              <Select label="Bên Bán (Công ty)" value={sellerId} onChange={setSellerId} required>
-                <option value="">-- Chọn công ty bên bán --</option>
-                {Object.entries(sellers).map(([id, s]) => <option key={id} value={id}>{s.shortName ? `[${s.shortName}] ` : ''}{s.companyName}</option>)}
-              </Select>
+              <SearchableSelect
+                label="Bên Bán (Công ty)" required
+                value={sellerId} onChange={setSellerId}
+                placeholder="-- Chọn công ty bên bán --"
+                options={Object.entries(sellers).map(([id, s]) => ({ value: id, label: `${s.shortName ? `[${s.shortName}] ` : ''}${s.companyName}` }))}
+              />
               {sellerId && <PartyInfoCard title="Thông tin Bên Bán (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null} />}
             </div>
           )}

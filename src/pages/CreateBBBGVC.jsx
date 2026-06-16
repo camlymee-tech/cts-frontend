@@ -1,6 +1,7 @@
 // File: src/pages/CreateBBBGVC.jsx
 import { useState, useEffect } from 'react';
 import { Select } from '../components/Select';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { Alert } from '../components/Alert';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
@@ -79,14 +80,18 @@ export const CreateBBBGVC = ({ sellers, customers, contracts, onSave, setPage, e
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Select label="Khách hàng (Bên Thuê Dịch Vụ)" value={customerId} onChange={setCustomerId} required>
-            <option value="">-- Chọn khách hàng --</option>
-            {Object.entries(customers).map(([id, c]) => <option key={id} value={id}>{id} – {c.companyName}</option>)}
-          </Select>
-          <Select label="Công ty bên bán (Bên Nhận Dịch Vụ)" value={sellerId} onChange={setSellerId} required>
-            <option value="">-- Chọn bên bán --</option>
-            {Object.entries(sellers).map(([id, s]) => <option key={id} value={id}>{s.shortName ? `[${s.shortName}] ` : ''}{s.companyName}</option>)}
-          </Select>
+          <SearchableSelect
+            label="Khách hàng (Bên Thuê Dịch Vụ)" required
+            value={customerId} onChange={setCustomerId}
+            placeholder="-- Chọn khách hàng --"
+            options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+          />
+          <SearchableSelect
+            label="Công ty bên bán (Bên Nhận Dịch Vụ)" required
+            value={sellerId} onChange={setSellerId}
+            placeholder="-- Chọn bên bán --"
+            options={Object.entries(sellers).map(([id, s]) => ({ value: id, label: `${s.shortName ? `[${s.shortName}] ` : ''}${s.companyName}` }))}
+          />
         </div>
 
         {(customerId || sellerId) && (
