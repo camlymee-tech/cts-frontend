@@ -1,10 +1,20 @@
 // File: src/pages/ContractListPage.jsx
+import { useState, useMemo } from 'react';
 import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
+import { BulkContractViewer } from './BulkContractViewer';
 
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
+const PAGE_SIZE = 30;
 
-export const ContractListPage = ({ type, contracts, customers, setPage, setViewContract, onDelete, onEdit }) => {
+export const ContractListPage = ({ type, contracts, customers, sellers, setPage, setViewContract, onDelete, onEdit }) => {
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+
   const labels = {
     HDNT: 'Hợp Đồng Nguyên Tắc', DDH: 'Đơn Đặt Hàng', BBBG: 'Biên Bản Bàn Giao',
     HDNT_VC: 'HĐ Nguyên Tắc (Vận chuyển)', DDH_VC: 'Đơn Đặt Dịch Vụ', BBBG_VC: 'Biên Bản Bàn Giao (Vận chuyển)',
@@ -15,8 +25,52 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
     HDNT_VC: 'create-hdnt_vc', DDH_VC: 'create-ddh_vc', BBBG_VC: 'create-bbbg_vc',
     HDNT_UT: 'create-hdnt_ut', DDH_UT: 'create-ddh_ut', BBBG_UT: 'create-bbbg_ut',
   };
-  const list = Object.values(contracts).filter(c => c.type === type).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const showTotal = FEE_TYPES.includes(type);
+
+  const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
+
+  const allOfType = useMemo(
+    () => Object.values(contracts).filter(c => c.type === type).sort((a, b) => (b.date || '').localeCompare(a.date || '')),
+    [contracts, type]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allOfType.filter(c => {
+      const matchSearch = !q || c.contractId.toLowerCase().includes(q) || customerLabel(c).toLowerCase().includes(q);
+      const matchFrom = !fromDate || (c.date || '') >= fromDate;
+      const matchTo = !toDate || (c.date || '') <= toDate;
+      return matchSearch && matchFrom && matchTo;
+    });
+  }, [allOfType, search, fromDate, toDate, customers]);
+
+  const list = filtered.slice(0, visibleCount);
+  const hasFilter = search || fromDate || toDate;
+
+  const resetFilters = () => { setSearch(''); setFromDate(''); setToDate(''); setVisibleCount(PAGE_SIZE); setSelectedIds(new Set()); };
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const visibleIds = list.map(c => c.contractId);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const toggleAllVisible = () => {
+    setSelectedIds(prev => {
+      if (allVisibleSelected) {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...visibleIds]);
+    });
+  };
+
+  const selectedContracts = allOfType.filter(c => selectedIds.has(c.contractId));
 
   return (
     <div>
@@ -24,12 +78,51 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
         <h1 className="text-2xl font-bold text-gray-800">{labels[type]}</h1>
         <button onClick={() => setPage(createPages[type])} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Tạo mới</button>
       </div>
+
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input value={search} onChange={e => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }}
+          placeholder="🔍 Tìm theo số hợp đồng hoặc tên khách hàng..."
+          className="flex-1 min-w-48 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <div className="flex items-center gap-1.5 text-sm text-gray-500">
+          <span>Từ</span>
+          <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
+            className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          <span>đến</span>
+          <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
+            className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        </div>
+        {hasFilter && (
+          <button onClick={resetFilters} className="text-sm text-gray-500 hover:text-gray-700 px-2">✕ Xóa lọc</button>
+        )}
+      </div>
+
+      {hasFilter && (
+        <div className="text-xs text-gray-400 mb-2">Tìm thấy {filtered.length} / {allOfType.length} {labels[type]}</div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-3">
+          <div className="text-sm text-blue-800 font-medium">✓ Đã chọn {selectedIds.size} hợp đồng</div>
+          <div className="flex gap-2">
+            <button onClick={() => setBulkOpen(true)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+              🖨️ In / Tải gộp
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-sm text-blue-700 hover:underline px-2">Bỏ chọn</button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {list.length === 0 ? (
+        {allOfType.length === 0 ? (
           <div className="p-12 text-center text-gray-400">Chưa có {labels[type]} nào</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-gray-400">Không tìm thấy {labels[type]} phù hợp với bộ lọc</div>
         ) : (
           <table className="w-full text-sm">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th className="px-4 py-3 w-8">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} className="cursor-pointer" />
+              </th>
               <th className="text-left px-5 py-3">Số hợp đồng</th>
               <th className="text-left px-5 py-3">Khách hàng</th>
               <th className="text-left px-5 py-3">Ngày</th>
@@ -42,8 +135,11 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
                 const total = calcTotals(c.goods).total;
                 return (
                   <tr key={c.contractId} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={selectedIds.has(c.contractId)} onChange={() => toggleOne(c.contractId)} className="cursor-pointer" />
+                    </td>
                     <td className="px-5 py-3 font-mono font-bold text-blue-700">{c.contractId}</td>
-                    <td className="px-5 py-3 text-gray-700">{c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId}</td>
+                    <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>
@@ -58,7 +154,23 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
             </tbody>
           </table>
         )}
+        {filtered.length > visibleCount && (
+          <div className="p-4 text-center border-t border-gray-100">
+            <button onClick={() => setVisibleCount(v => v + PAGE_SIZE)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              Xem thêm {Math.min(PAGE_SIZE, filtered.length - visibleCount)} hợp đồng (còn {filtered.length - visibleCount})
+            </button>
+          </div>
+        )}
       </div>
+
+      {bulkOpen && (
+        <BulkContractViewer
+          contracts={selectedContracts}
+          sellers={sellers}
+          customers={customers}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
     </div>
   );
 };
