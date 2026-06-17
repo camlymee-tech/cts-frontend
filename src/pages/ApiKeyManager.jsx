@@ -3,56 +3,63 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 
 export const ApiKeyManager = () => {
-  const [inputKey, setInputKey] = useState('');
-  const [savedKey, setSavedKey] = useState('');
+  const [oldKeyExists, setOldKeyExists] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cleaning, setCleaning] = useState(false);
 
   useEffect(() => {
     (async () => {
       const k = await api.get('api_key', true);
-      setSavedKey(k || '');
+      setOldKeyExists(!!k);
       setLoading(false);
     })();
   }, []);
 
-  const save = async () => {
-    const k = inputKey.trim();
-    if (!k) return alert('Vui lòng nhập API Key');
-    await api.set('api_key', k, true);
-    setSavedKey(k);
-    setInputKey('');
+  const cleanupOldKey = async () => {
+    if (!confirm('Xóa API Key cũ đang lưu trong database (không dùng nữa)? Việc này không ảnh hưởng tính năng AI đọc hóa đơn — tính năng đó giờ dùng Secret riêng trên Edge Function.')) return;
+    setCleaning(true);
+    try {
+      await api.del('api_key', true);
+      setOldKeyExists(false);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCleaning(false);
+    }
   };
-
-  const remove = async () => {
-    if (!confirm('Xóa API Key? Tính năng AI đọc hóa đơn VAT sẽ không hoạt động.')) return;
-    await api.del('api_key', true);
-    setSavedKey('');
-  };
-
-  const masked = savedKey ? savedKey.slice(0, 10) + '***' : '';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-1">🔑 Cài đặt API Key <span className="text-sm font-normal text-gray-400">(Admin)</span></h2>
-      <p className="text-sm text-gray-500 mb-4">API Key dùng chung cho tất cả người dùng — lưu vào shared storage. Chỉ người biết key mới nhập được.</p>
-      {loading ? <div className="text-gray-400 text-sm">Đang tải...</div> : (
-        <>
-          <div className="mb-3">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border ${savedKey ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-              {savedKey ? `✓ Đã cài đặt: ${masked}` : '✗ Chưa có API Key'}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <input type="password" value={inputKey} onChange={e => setInputKey(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && save()}
-              placeholder="Nhập API Key mới (sk-ant-...)"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-            <button onClick={save} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">Lưu</button>
-            {savedKey && (
-              <button onClick={remove} className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-100 text-sm">Xóa</button>
-            )}
-          </div>
-        </>
+      <h2 className="text-xl font-bold text-gray-800 mb-1">🔑 API Key cho AI đọc hóa đơn <span className="text-sm font-normal text-gray-400">(Admin)</span></h2>
+      <p className="text-sm text-gray-500 mb-4">
+        API Key Anthropic giờ được cấu hình ở phía server (Supabase Edge Function), không còn lưu trong database của app nữa —
+        nhờ vậy trình duyệt của nhân viên không bao giờ thấy được API Key.
+      </p>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900 space-y-2 mb-4">
+        <div className="font-semibold">Cách cấu hình (chỉ cần làm 1 lần, ngoài app này):</div>
+        <ol className="list-decimal list-inside space-y-1">
+          <li>Vào <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="underline font-medium">console.anthropic.com</a> → tạo 1 API Key <strong>mới</strong> (nên tạo mới, không dùng lại key cũ vì key cũ đã từng lộ ra trình duyệt nhân viên).</li>
+          <li>Vào Supabase Dashboard của project → mục <strong>Edge Functions</strong> → tab <strong>Secrets</strong> → thêm secret tên <code className="bg-blue-100 px-1 rounded">ANTHROPIC_API_KEY</code>, giá trị là key vừa tạo ở bước 1.</li>
+          <li>Vẫn trong <strong>Edge Functions</strong> → bấm <strong>Deploy a new function</strong> → chọn <strong>Via Editor</strong> → dán nguyên nội dung file <code className="bg-blue-100 px-1 rounded">supabase/functions/read-invoice/index.ts</code> (đã có trong code) → Deploy.</li>
+          <li>Vào lại <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="underline font-medium">console.anthropic.com</a> → xóa (revoke) API Key <strong>cũ</strong> đã từng lộ, để chắc chắn không ai dùng lại được key đó nữa.</li>
+        </ol>
+      </div>
+
+      {!loading && oldKeyExists && (
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-sm text-amber-900">
+          <div className="font-semibold mb-1">⚠️ Vẫn còn API Key cũ lưu trong database (cách lưu cũ, không an toàn)</div>
+          <p className="mb-3">Không còn được dùng nữa, nhưng nên xóa luôn cho sạch — vì key này đã từng bị mọi nhân viên xem được nên không an toàn để giữ lại.</p>
+          <button onClick={cleanupOldKey} disabled={cleaning}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 text-sm font-medium disabled:opacity-60">
+            {cleaning ? 'Đang xóa...' : '🗑️ Xóa API Key cũ khỏi database'}
+          </button>
+        </div>
+      )}
+      {!loading && !oldKeyExists && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
+          ✓ Database sạch — không còn API Key nào lưu trực tiếp trong app.
+        </div>
       )}
     </div>
   );

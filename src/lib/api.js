@@ -1,8 +1,10 @@
 // src/lib/api.js
-// Lớp lưu trữ key-value (get/set/del) trên Supabase + đọc hóa đơn VAT.
-// Mỗi "key" (sellers, departments, api_key, seller_info)
+// Lớp lưu trữ key-value (get/set/del) trên Supabase + đọc hóa đơn VAT (qua Edge Function).
+// Mỗi "key" (sellers, departments, seller_info)
 // là 1 dòng trong bảng app_storage, cột value (jsonb) chứa nguyên object/map.
 // Hợp đồng (contracts) và Khách hàng (customers) lưu riêng (1 dòng = 1 bản ghi, có RLS theo người tạo).
+// API Key Anthropic KHÔNG lưu ở app_storage nữa (đã từng lộ cho mọi user) — nay là Secret
+// của Edge Function "read-invoice" trên Supabase, chỉ admin project mới cấu hình được.
 import { supabase } from './supabase';
 const TABLE = 'app_storage';
 export const api = {
@@ -30,94 +32,32 @@ export const api = {
     const { error } = await supabase.from(TABLE).delete().eq('key', key);
     if (error) throw new Error(error.message);
   },
-  // ───────── AI đọc hóa đơn VAT ─────────
+  // ───────── AI đọc hóa đơn VAT (gọi qua Edge Function — API Key chỉ nằm ở server) ─────────
   async readVAT(imageBase64, mediaType) {
-    const apiKey = await api.get('api_key', true);
-    if (!apiKey) throw new Error('Chưa cài đặt API Key. Vào Cài đặt → API Key để nhập.');
-
-    const isPdf = mediaType === 'application/pdf';
-    const fileBlock = isPdf
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
-      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        messages: [{
-          role: 'user',
-          content: [
-            fileBlock,
-            { type: 'text', text:
-              'Đây là hóa đơn VAT. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
-              '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0,"vatRate":8}]}\n' +
-              'Chỉ trả JSON, không thêm chữ nào khác.' },
-          ],
-        }],
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error('Lỗi gọi AI (' + res.status + '): ' + err.slice(0, 200));
-    }
-    const data = await res.json();
-    const txt = data.content?.[0]?.text || '';
-    const m = txt.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('Không đọc được phản hồi AI.');
-    return JSON.parse(m[0]); // { goods: [...] }
+    return api._invokeReadInvoice(imageBase64, mediaType, 'vat');
   },
 
-  // ───────── AI đọc danh sách hàng hóa định giá USD (đơn hàng/invoice ủy thác nhập khẩu) ─────────
+  // ───────── AI đọc danh sách hàng hóa định giá USD (gọi qua Edge Function) ─────────
   async readGoodsUSD(imageBase64, mediaType) {
-    const apiKey = await api.get('api_key', true);
-    if (!apiKey) throw new Error('Chưa cài đặt API Key. Vào Cài đặt → API Key để nhập.');
-
-    const isPdf = mediaType === 'application/pdf';
-    const fileBlock = isPdf
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
-      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        messages: [{
-          role: 'user',
-          content: [
-            fileBlock,
-            { type: 'text', text:
-              'Đây là đơn hàng / invoice từ nhà cung cấp nước ngoài, đơn giá tính bằng USD. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
-              '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0}]}\n' +
-              'donGia và thanhTien là số USD (có thể có phần thập phân). Chỉ trả JSON, không thêm chữ nào khác.' },
-          ],
-        }],
-      }),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error('Lỗi gọi AI (' + res.status + '): ' + err.slice(0, 200));
-    }
-    const data = await res.json();
-    const txt = data.content?.[0]?.text || '';
-    const m = txt.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('Không đọc được phản hồi AI.');
-    return JSON.parse(m[0]); // { goods: [...] }
+    return api._invokeReadInvoice(imageBase64, mediaType, 'goods_usd');
   },
 
+  async _invokeReadInvoice(imageBase64, mediaType, mode) {
+    const { data, error } = await supabase.functions.invoke('read-invoice', {
+      body: { imageBase64, mediaType, mode },
+    });
+    if (error) {
+      // Thử đọc message lỗi cụ thể do Edge Function trả về (thay vì lỗi chung "non-2xx status code")
+      let msg = error.message;
+      try {
+        const body = await error.context?.json();
+        if (body?.error) msg = body.error;
+      } catch { /* ignore */ }
+      throw new Error(msg || 'Lỗi gọi AI đọc hóa đơn.');
+    }
+    if (data?.error) throw new Error(data.error);
+    return data; // { goods: [...] }
+  },
 
   // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
   async listContracts() {
