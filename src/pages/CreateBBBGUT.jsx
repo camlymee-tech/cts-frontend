@@ -52,6 +52,7 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'BBBG_UT', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hoàn thành', goods,
+    customerSnapshot: customer, sellerSnapshot: seller,
     declarationNo, packageInfo, otherInfo,
     relatedContracts: { hdnt_ut: hdntUtId, ddh_ut: ddhUtId }
   } : null;

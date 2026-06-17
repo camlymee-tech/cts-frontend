@@ -92,6 +92,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'BBBG', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hoàn thành', goods,
+    customerSnapshot: customer, sellerSnapshot: seller,
     relatedContracts: { hdnt: hdntId, ddh: ddhId }
   } : null;
 

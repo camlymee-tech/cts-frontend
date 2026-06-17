@@ -253,7 +253,7 @@ export default function App() {
       {viewContract && (
         <ContractViewer
           contract={viewContract}
-          seller={sellers[viewContract.sellerId] || {}}
+          sellers={sellers}
           customers={customers}
           onClose={() => setViewContract(null)}
           onDelete={deleteContract}

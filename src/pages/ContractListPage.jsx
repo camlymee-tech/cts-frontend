@@ -43,7 +43,7 @@ export const ContractListPage = ({ type, contracts, customers, setPage, setViewC
                 return (
                   <tr key={c.contractId} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-5 py-3 font-mono font-bold text-blue-700">{c.contractId}</td>
-                    <td className="px-5 py-3 text-gray-700">{customers[c.customerId]?.companyName || c.customerId}</td>
+                    <td className="px-5 py-3 text-gray-700">{c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>

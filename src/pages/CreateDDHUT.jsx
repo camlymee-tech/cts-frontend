@@ -88,6 +88,7 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'DDH_UT', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực',
+    customerSnapshot: customer, sellerSnapshot: seller,
     goodsUSD, exchangeRate, goods,
     relatedContracts: { hdnt_ut: hdntUtId }
   } : null;

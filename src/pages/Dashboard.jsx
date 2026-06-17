@@ -88,7 +88,7 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
                   <td className="px-4 py-2.5">
                     <Badge color={TYPE_COLOR[c.type] || 'gray'}>{c.type}</Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-gray-700">{c.customerName || c.customerId}</td>
+                  <td className="px-4 py-2.5 text-gray-700">{c.customerSnapshot?.companyName || c.customerName || c.customerId}</td>
                   <td className="px-4 py-2.5 text-gray-500">{c.date}</td>
                   <td className="px-4 py-2.5"><Badge color="blue">{c.status}</Badge></td>
                 </tr>

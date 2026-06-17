@@ -81,6 +81,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const getContract = () => (customerId && sellerId) ? {
     contractId, type: 'DDH', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực', goods,
+    customerSnapshot: customer, sellerSnapshot: seller,
     relatedContracts: { hdnt: hdntId }
   } : null;
 

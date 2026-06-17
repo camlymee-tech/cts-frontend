@@ -47,10 +47,14 @@ const PRINT_STYLE = `
   .no-print { display: none !important; }
 `;
 
-export const ContractViewer = ({ contract, seller, customers, onClose, onDelete, onEdit }) => {
+export const ContractViewer = ({ contract, sellers, customers, onClose, onDelete, onEdit }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [wordLoading, setWordLoading] = useState(false);
-  const customer = customers[contract.customerId] || {};
+  // Ưu tiên dùng bản "chụp" thông tin tại thời điểm tạo hợp đồng (customerSnapshot/sellerSnapshot)
+  // — để hợp đồng cũ không bị đổi nội dung khi khách hàng/bên bán sau này được sửa hoặc xóa.
+  // Hợp đồng tạo trước khi có tính năng này (chưa có snapshot) thì vẫn tra cứu sống như cũ.
+  const customer = contract.customerSnapshot || customers[contract.customerId] || {};
+  const seller = contract.sellerSnapshot || sellers[contract.sellerId] || {};
   const PreviewComp = {
     HDNT: HDNTPreview, DDH: DDHPreview, BBBG: BBBGPreview,
     HDNT_VC: HDNTVCPreview, DDH_VC: DDHVCPreview, BBBG_VC: BBBGVCPreview,
