@@ -39,7 +39,7 @@ const PRINT_STYLE = `
     background: #fff;
     color: #000;
     margin: 0;
-    padding: 16mm 20mm;
+    padding: 25mm 20mm 25mm 35mm; /* top right bottom left */
     box-sizing: border-box;
   }
   table { border-collapse: collapse; width: 100%; }
@@ -83,7 +83,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
       await loadScriptOnce(HTML2PDF_SRC);
       const element = document.getElementById('contract-print-zone');
       await window.html2pdf().set({
-        margin: 10,
+        margin: [25, 35, 25, 20], // [top, left, bottom, right] mm
         filename: safeFilename(contract.contractId, '.pdf'),
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
@@ -105,7 +105,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
       const html = getFullHtml(element.innerHTML);
       const blob = window.htmlDocx.asBlob(html, {
         orientation: 'portrait',
-        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+        margins: { top: 1417, right: 1134, bottom: 1417, left: 1984 }, // twip: 2.5/2.0/2.5/3.5 cm
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
