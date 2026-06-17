@@ -19,6 +19,9 @@ export const calcTotals = (goods) => {
   return { subtotal, vat, total: subtotal + vat };
 };
 
+// Tổng giá trị tiền hàng (USD) — dùng cho hợp đồng ủy thác nhập khẩu (không tính VAT, chỉ cộng thành tiền)
+export const calcUSDTotal = (goods) => (goods || []).reduce((sum, g) => sum + (Number(g.thanhTien) || 0), 0);
+
 const readHundred = (n) => {
   const ones = ['', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
   if (n === 0) return '';
@@ -78,12 +81,14 @@ export const genDeptId = (departments) => {
 export const CONTRACT_ABBR = {
   HDNT: 'HĐNTMB', DDH: 'ĐĐH', BBBG: 'BBBG',
   HDNT_VC: 'HĐNTVC', DDH_VC: 'ĐHVC', BBBG_VC: 'BBBGVC',
+  HDNT_UT: 'HĐNTUT', DDH_UT: 'ĐHUT', BBBG_UT: 'BBBGUT',
 };
 
 // Màu badge dùng chung cho mọi nơi hiển thị loại hợp đồng (Dashboard, danh sách, ContractViewer...)
 export const TYPE_COLOR = {
   HDNT: 'green', DDH: 'yellow', BBBG: 'purple',
   HDNT_VC: 'green', DDH_VC: 'yellow', BBBG_VC: 'purple',
+  HDNT_UT: 'green', DDH_UT: 'yellow', BBBG_UT: 'purple',
 };
 
 export const fmtYYMMDD = (dateStr) => {

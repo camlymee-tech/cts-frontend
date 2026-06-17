@@ -7,6 +7,9 @@ import { BBBGPreview } from '../previews/BBBGPreview';
 import { HDNTVCPreview } from '../previews/HDNTVCPreview';
 import { DDHVCPreview } from '../previews/DDHVCPreview';
 import { BBBGVCPreview } from '../previews/BBBGVCPreview';
+import { HDNTUTPreview } from '../previews/HDNTUTPreview';
+import { DDHUTPreview } from '../previews/DDHUTPreview';
+import { BBBGUTPreview } from '../previews/BBBGUTPreview';
 import { TYPE_COLOR } from '../helpers';
 
 const HTML2PDF_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -51,6 +54,7 @@ export const ContractViewer = ({ contract, seller, customers, onClose, onDelete,
   const PreviewComp = {
     HDNT: HDNTPreview, DDH: DDHPreview, BBBG: BBBGPreview,
     HDNT_VC: HDNTVCPreview, DDH_VC: DDHVCPreview, BBBG_VC: BBBGVCPreview,
+    HDNT_UT: HDNTUTPreview, DDH_UT: DDHUTPreview, BBBG_UT: BBBGUTPreview,
   }[contract.type] || HDNTPreview;
 
   const getFullHtml = (innerHTML) => {

@@ -1,0 +1,171 @@
+// File: src/data/hdntUTArticles.js
+// Nội dung điều khoản Hợp Đồng Nguyên Tắc — Ủy thác nhập khẩu hàng hóa — 13 điều
+
+export const HDNT_UT_ARTICLES = [
+  { title: 'ĐỐI TƯỢNG VÀ PHẠM VI', clauses: [
+    { text: 'Bên A ủy thác cho Bên B thực hiện dịch vụ nhập khẩu hàng hóa theo yêu cầu của Bên A, bao gồm nhưng không giới hạn các công việc sau:', sub: [
+      'Ký kết và thanh toán hợp đồng mua bán hàng hóa với đối tác nước ngoài theo chỉ định của Bên A, trên cơ sở các điều kiện thương mại do Bên A đã thỏa thuận với nhà cung cấp, bao gồm nhưng không giới hạn: tên hàng hóa, số lượng, xuất xứ, thông số kỹ thuật, quy cách, chủng loại, chất liệu và giá cả;',
+      'Thực hiện thủ tục hải quan; nộp hồ sơ; nộp thay Bên A các loại phí, lệ phí, thuế liên quan đến mặt hàng nhập khẩu (nếu có);',
+      'Thực hiện việc đặt mua hàng hóa theo thông tin, đường dẫn (link), tài liệu hoặc chỉ dẫn cụ thể do Bên A cung cấp, hoặc Bên B tư vấn các nhà cung cấp bằng cách gửi đường dẫn (link) để Bên A lựa chọn;',
+      'Vận chuyển, giao nhận hàng hóa đến địa điểm do hai Bên thỏa thuận và thanh toán các chi phí phát sinh hợp lý, hợp lệ (nếu có).',
+    ]},
+    'Bên A đảm bảo hàng hóa giao cho Bên B thực hiện ủy thác nhập khẩu sẽ đáp ứng các yêu cầu của pháp luật nước Cộng hòa xã hội chủ nghĩa Việt Nam, bao gồm: tên hàng hóa và nguồn gốc xuất xứ; chất lượng, kiểu dáng, mẫu mã theo đơn đặt hàng; bao bì, ghi nhãn, tem phụ sản phẩm (nếu có yêu cầu); các hồ sơ, giấy tờ cần thiết để hàng hóa được lưu thông (nếu có yêu cầu);',
+    'Bên A cung cấp các thông tin, giấy tờ, tài liệu liên quan đến hàng hóa tại thời điểm Bên B có yêu cầu và đảm bảo các giấy tờ, tài liệu cung cấp là trung thực, chính xác;',
+    'Bên A tạo điều kiện để Bên B kiểm tra mẫu hàng hóa hoặc tem mác (nếu có yêu cầu) nhằm phục vụ cho quá trình nhận ủy thác của Bên B;',
+    'Thông tin chi tiết về từng lô hàng cụ thể mà Bên A thỏa thuận với đối tác nước ngoài được Các Bên xác nhận qua thư điện tử (Email, Zalo,...).',
+  ]},
+  { title: 'GIÁ TRỊ HÀNG HÓA NHẬP KHẨU, PHÍ DỊCH VỤ, PHƯƠNG THỨC VÀ THỜI HẠN THANH TOÁN', clauses: [
+    { text: 'Giá trị tiền hàng nhập khẩu:', sub: [
+      'Giá trị tiền hàng nhập khẩu được xác định chi tiết theo Đơn đặt dịch vụ ủy thác nhập khẩu tại ngày phát sinh, đi kèm theo tỷ giá thỏa thuận;',
+      'Các chi phí thuế và nghĩa vụ của doanh nghiệp đối với lô hàng nhập khẩu, bao gồm: thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế giá trị gia tăng và các thuế, phí khác theo chứng từ kèm tờ khai nhập khẩu hàng hóa, sẽ được Bên B thanh toán trước để thông quan và thông báo để thu lại của Bên A theo số tiền thực tế trước khi giao hàng.',
+    ]},
+    { text: 'Phí dịch vụ trọn gói:', sub: [
+      'Phí dịch vụ ủy thác nhập khẩu hàng hóa do hai Bên thỏa thuận cụ thể đối với từng lô hàng, được thể hiện trong Đơn đặt dịch vụ ủy thác nhập khẩu kèm theo hoặc qua phương tiện điện tử (Email, Zalo,...) do Các Bên thỏa thuận và đều có giá trị ràng buộc pháp lý;',
+      'Phí dịch vụ bao gồm các hạng mục công việc theo thỏa thuận của Các Bên đối với từng lô hàng, bao gồm nhưng không giới hạn: ký kết hợp đồng ngoại thương, khai báo hải quan, nộp các loại thuế theo quy định, kiểm đếm, nâng hạ, kho bãi, vận chuyển, giao hàng, thanh toán quốc tế và các công việc liên quan khác theo phạm vi dịch vụ đã được Bên A chấp thuận; không bao gồm chi phí lưu kho, lưu xe phát sinh do lỗi hoặc do việc chậm trễ nhận hàng của Bên A;',
+      'Trường hợp phát sinh hạng mục công việc không nằm trong báo giá/phụ lục hợp đồng đã được hai Bên ký kết, Bên B phải gửi báo giá bổ sung cho Bên A xác nhận trước thời điểm thực hiện. Việc xác nhận có thể qua văn bản hoặc thư điện tử (Email, Zalo,...) và có giá trị pháp lý như phụ lục hợp đồng. Hai Bên ký biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế. Bên B lập hóa đơn GTGT theo giá trị quyết toán thực tế.',
+    ]},
+    { text: 'Phương thức thanh toán:', sub: [
+      'Hình thức thanh toán: Bên A thanh toán cho Bên B bằng hình thức chuyển khoản 100% giá trị vào tài khoản do Bên B chỉ định;',
+      'Đồng tiền thanh toán: Việt Nam Đồng (VNĐ).',
+    ]},
+    { text: 'Thời hạn thanh toán:', sub: [
+      'Tiền hàng: Sau khi Bên B gửi thông báo thực hiện nghĩa vụ, Bên A có trách nhiệm thanh toán 100% giá trị đó cho Bên B;',
+      'Thuế và các khoản phí liên quan đến nhập khẩu: Bên A thanh toán 100% các loại thuế, phí liên quan đến lô hàng nhập khẩu, bao gồm nhưng không giới hạn: thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế giá trị gia tăng và các thuế, phí khác theo quy định pháp luật, theo chứng từ kèm theo tờ khai hải quan nhập khẩu. Trường hợp Bên B đã nộp thay để phục vụ việc thông quan hàng hóa, Bên A có trách nhiệm hoàn trả cho Bên B theo số tiền thực tế Bên B đã nộp;',
+      'Phí dịch vụ ủy thác: Giá trị phí dịch vụ được xác định trên cơ sở Biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế giữa Các Bên;',
+      'Xuất hóa đơn GTGT: hóa đơn tiền hàng theo giá trị quy đổi ra Việt Nam Đồng căn cứ trên tờ khai hải quan nhập khẩu và các khoản thuế, phí đã nộp thay cho Bên A theo tờ khai hải quan; hóa đơn phí dịch vụ ủy thác theo giá trị nghiệm thu và quyết toán thực tế, đã bao gồm thuế giá trị gia tăng, theo quy định pháp luật thuế.',
+    ]},
+  ]},
+  { title: 'CUNG CẤP THÔNG TIN HÀNG HÓA VÀ QUY CÁCH HÀNG HÓA', clauses: [
+    'Bên A cung cấp cho Bên B đầy đủ thông tin và hồ sơ liên quan đến hàng hóa, bao gồm nhưng không giới hạn: tên hàng, giá cả, chủng loại, số lượng, trọng lượng, kích cỡ, xuất xứ, bao bì, mã hiệu và các giấy tờ cần thiết để hàng hóa được lưu thông;',
+    'Bên A chịu trách nhiệm về chất lượng và tính hợp pháp của hàng hóa;',
+    'Bên B hỗ trợ tra cứu, đề xuất và thực hiện việc áp mã HS đối với hàng hóa nhập khẩu trên cơ sở hồ sơ, thông tin do Bên A cung cấp. Bên A có trách nhiệm xem xét, xác nhận và chấp thuận mã HS do Bên B đề xuất trước khi mở tờ khai hải quan. Trường hợp cơ quan có thẩm quyền của Nhà nước ấn định áp mã HS khác hoặc mức thuế suất khác cho mặt hàng sau khi thông quan theo quy định pháp luật hiện hành, Bên A phải thanh toán cho Bên B toàn bộ số tiền phát sinh theo quyết định cuối cùng của cơ quan nhà nước có thẩm quyền;',
+    'Mỗi lô hàng sau giao nhận phải có biên bản xác nhận số lượng hàng hóa, đơn vị tính có chữ ký của hai Bên;',
+    'Hàng hóa được đóng gói theo tiêu chuẩn của nhà sản xuất và/hoặc theo yêu cầu của Bên B, đồng thời đảm bảo số lượng (thùng/kiện) không bị ảnh hưởng, mất mát trong mọi điều kiện bảo quản và vận chuyển thông thường. Trường hợp quy cách đóng gói của nhà sản xuất và yêu cầu của Bên B khác nhau, ưu tiên quy cách đóng gói theo yêu cầu của Bên B;',
+    'Đơn đặt hàng được xem là thành công và có hiệu lực khi Bên B xác nhận chấp thuận thông qua email, tin nhắn hoặc hình thức điện tử tương đương; trường hợp trong vòng 02 (hai) ngày làm việc kể từ ngày Bên B nhận được Đơn đặt dịch vụ được gửi đến đúng địa chỉ email/fax được chỉ định tại hợp đồng mà không có ý kiến phản hồi bằng văn bản thì được hiểu là Bên B đã chấp thuận toàn bộ nội dung của Đơn đặt dịch vụ đó; Email/fax gửi ngoài giờ làm việc được xem là nhận vào ngày làm việc tiếp theo;',
+    'Trong trường hợp đơn đặt hàng không thành công, Các Bên phải có sự trao đổi với nhau để đưa ra phương án xử lý;',
+    'Bên B phải thông báo cho Bên A thời gian vận chuyển hàng hóa chậm nhất 24 (hai mươi bốn) giờ ngay sau khi hàng về kho của Bên B tại Việt Nam. Bên A có trách nhiệm nhận hàng nếu Bên B thực hiện đúng theo nghĩa vụ Hợp đồng. Hàng hóa được lưu tối đa 05 (năm) ngày, không bao gồm các ngày lễ theo quy định của pháp luật, kể từ thời điểm hàng hóa về đến kho tại Việt Nam của Bên B. Quá thời hạn nêu trên, Bên B có quyền thu phí lưu kho theo chính sách hiện hành của Bên B và Bên A có nghĩa vụ thanh toán đầy đủ khoản phí này;',
+    'Bên A chỉ được hủy đơn đặt hàng nếu có xác nhận chấp thuận bằng văn bản hoặc qua thư điện tử hợp lệ từ nhà cung cấp; ngoài trường hợp này, Bên A không được quyền hủy đơn hàng;',
+    'Mỗi yêu cầu đặt hàng của Bên A nhận được sự chấp thuận của Bên B sẽ phát sinh quyền và nghĩa vụ của Các Bên theo Hợp đồng này.',
+  ]},
+  { title: 'ĐỊA ĐIỂM, THỜI GIAN VÀ PHƯƠNG THỨC GIAO HÀNG', clauses: [
+    { text: 'Địa điểm và thời gian giao hàng:', sub: [
+      'Bên B giao hàng cho Bên A tại địa điểm hai Bên thỏa thuận trước bằng văn bản hoặc thư điện tử (Email, Zalo,...);',
+      'Trường hợp Bên A có yêu cầu thay đổi địa điểm nhận hàng, Bên A phải thông báo cho Bên B tối thiểu 12 (mười hai) giờ trước thời điểm giao hàng mà Bên B đã thông báo. Mọi chi phí phát sinh liên quan đến việc thay đổi địa điểm (nếu có) do Bên A chịu;',
+      'Bên B có trách nhiệm tổ chức thực hiện và hoàn tất dịch vụ vận chuyển hàng hóa trong thời hạn 15 (mười lăm) ngày, kể từ ngày hàng hóa được thông quan và bàn giao cho đơn vị vận chuyển do Bên B chỉ định, trừ trường hợp bất khả kháng theo quy định tại Điều 9 Hợp đồng này;',
+      'Trường hợp do lỗi của nhà cung cấp (thiếu hàng, thiếu chứng từ, chậm tiến độ giao hàng, không đáp ứng điều kiện giao hàng đã thỏa thuận...) dẫn đến việc chậm tiến độ giao hàng đến Bên A, Bên A có trách nhiệm trực tiếp và liên đới cùng với nhà cung cấp để khắc phục, đồng thời chịu trách nhiệm đối với các chi phí phát sinh hợp lý, hợp lệ do sự chậm trễ này gây ra.',
+    ]},
+    { text: 'Điều kiện giao hàng:', sub: [
+      'Hàng hóa được giao cho Bên A khi Bên B đã nhận đầy đủ hàng hóa từ nhà cung cấp của Bên A tại điểm tập kết do Bên B chỉ định và Bên A đã hoàn thành nghĩa vụ thanh toán theo quy định tại Điều 2 Hợp đồng này;',
+      'Trường hợp Bên A chưa hoàn thành nghĩa vụ thanh toán, bao gồm: tiền hàng, phí dịch vụ, thuế, chi phí phát sinh (nếu có), Bên B có quyền tạm giữ hàng hóa cho đến khi Bên A hoàn tất toàn bộ nghĩa vụ tài chính;',
+      'Nếu quá 45 (bốn mươi lăm) ngày kể từ ngày Bên B thông báo mà Bên A vẫn không hoàn thành nghĩa vụ thanh toán, Bên B có quyền xử lý hàng hóa theo quy định pháp luật để thu hồi nợ, đồng thời yêu cầu Bên A bồi thường phần còn thiếu.',
+    ]},
+    { text: 'Phương thức giao hàng và nghiệm thu:', sub: [
+      'Bên A có trách nhiệm thông báo thông tin của người đại diện nhận hàng cho Bên B trước khi Bên B thực hiện việc bàn giao hàng;',
+      'Hai Bên thực hiện việc giao – nhận hàng hóa trên cơ sở Biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế có chữ ký của đại diện hợp pháp của Các Bên. Biên bản này là căn cứ để Bên B lập hóa đơn cho Bên A theo giá trị quyết toán thực tế;',
+      'Chứng từ giao nhận gồm: Biên bản giao nhận hàng và nghiệm thu, quyết toán giá trị dịch vụ thực tế.',
+    ]},
+  ]},
+  { title: 'NHẬN HÀNG VÀ KIỂM TRA HÀNG', clauses: [
+    { text: 'Nhận hàng tại cửa khẩu:', sub: [
+      'Bên B thực hiện việc nhận hàng thay mặt Bên A từ nhà cung cấp trên cơ sở số lượng (thùng, kiện hàng) theo chứng từ giao nhận; việc kiểm tra chi tiết về tình trạng, quy cách, chủng loại hàng hóa thuộc trách nhiệm của Bên A và nhà cung cấp;',
+      'Trường hợp Bên A không cử người/đại diện đến kiểm tra trực tiếp cùng lúc với Bên B, mọi rủi ro liên quan đến việc thiếu hàng, sai quy cách, chất lượng, chứng từ... phát sinh từ lỗi của nhà cung cấp sẽ do Bên A hoàn toàn chịu trách nhiệm và trực tiếp làm việc, xử lý với nhà cung cấp. Trong phạm vi khả năng, Bên B sẽ hỗ trợ Bên A liên hệ với nhà cung cấp để phối hợp giải quyết;',
+      'Trường hợp phát sinh mất mát, hư hỏng hàng hóa trong quá trình lưu kho, bốc xếp hoặc vận chuyển do lỗi của Bên B, Bên B chịu trách nhiệm khắc phục và bồi thường chi phí phát sinh hợp lý theo quy định pháp luật và/hoặc theo chính sách đền bù của Bên B.',
+    ]},
+    { text: 'Khi hàng về đến kho của Bên A tại Việt Nam:', sub: [
+      'Bên A chịu trách nhiệm kiểm tra số lượng (thùng, kiện hàng) và lập biên bản giao nhận có chữ ký của đại diện hợp pháp hai Bên;',
+      'Nếu phát hiện hư hỏng, thiếu hụt hàng hóa do lỗi trong quá trình vận chuyển thuộc trách nhiệm của Bên B, Bên B chịu trách nhiệm khắc phục và bồi thường theo chính sách đền bù từng thời điểm của Bên B;',
+      'Nếu phát hiện hư hỏng, thiếu hụt hàng hóa xuất phát do lỗi của nhà cung cấp, Bên A chịu trách nhiệm chính và trực tiếp xử lý với nhà cung cấp; Bên B không chịu trách nhiệm về các thiệt hại, chi phí liên quan. Trong phạm vi khả năng, Bên B sẽ hỗ trợ Bên A liên hệ với nhà cung cấp để phối hợp giải quyết.',
+    ]},
+    'Việc kiểm định số lượng, chất lượng hàng hóa (nếu pháp luật yêu cầu) do Bên A và/hoặc nhà cung cấp/đối tác trực tiếp thực hiện với đơn vị kiểm định. Bên B không phải là chủ thể kiểm định, không tham gia đánh giá chất lượng hàng hóa và chỉ sử dụng hồ sơ do Bên A và/hoặc nhà cung cấp/đối tác cung cấp để thực hiện thủ tục thông quan theo ủy thác.',
+  ]},
+  { title: 'QUYỀN VÀ NGHĨA VỤ CỦA BÊN A', clauses: [
+    'Được Bên B cung cấp dịch vụ với mức giá đảm bảo tính cạnh tranh công bằng và lành mạnh theo Báo giá/Phụ lục kèm theo Hợp đồng này, được hưởng mức giá ưu đãi nếu có;',
+    'Được quyền kiểm tra số lượng, tình trạng của hàng hóa khi nhận;',
+    'Đối với đơn hàng Bên B đặt hàng theo yêu cầu của Bên A, Bên A xác nhận đường link sản phẩm trước khi đặt. Mọi vấn đề phát sinh liên quan đến chất lượng, chủng loại, mẫu mã hàng hóa thuộc trách nhiệm của Bên A và nhà cung cấp. Bên B không đảm bảo kết quả khiếu nại nhưng sẽ hỗ trợ Bên A liên hệ với nhà cung cấp và không chịu trách nhiệm đổi trả hàng;',
+    'Trong trường hợp hàng hóa bị mất mát, hư hỏng do lỗi của Bên B, Bên B có trách nhiệm bồi thường theo chính sách đền bù của Bên B, nhưng không có nghĩa vụ đổi, trả hoặc bổ sung hàng hóa. Bên A không được từ chối nhận hàng trong các trường hợp này;',
+    'Được quyền yêu cầu Bên B giữ bí mật nội dung đơn đặt hàng của Bên A trong mọi trường hợp;',
+    'Cung cấp đầy đủ, chính xác thông tin về lô hàng theo Điều 3 Hợp đồng này;',
+    'Chịu trách nhiệm hoàn toàn về tính trung thực, chính xác, hợp pháp của các chứng từ liên quan đến hàng hóa; Bên B chỉ thực hiện khai báo hải quan và thủ tục xuất, nhập theo hồ sơ do Bên A cung cấp;',
+    'Thanh toán đầy đủ các nghĩa vụ theo yêu cầu cho Bên B theo đúng thời hạn quy định tại Điều 2 của Hợp đồng;',
+    'Đảm bảo hàng hóa cũng như thông tin, hình ảnh về hàng hóa do Bên A cung cấp không vi phạm các quy định về quyền sở hữu trí tuệ, quyền tác giả và bất kỳ quyền nào khác của bên thứ ba;',
+    'Cử người giám sát việc giao nhận hàng hóa, kiểm tra số lượng, quy cách đóng gói và hình thức hàng hóa khi Bên B giao hàng tại thời điểm giao hàng và ký vào biên bản giao nhận hàng hóa;',
+    'Trường hợp cơ quan chức năng xác định chứng từ sai lệch, không đúng giá trị thực tế hoặc không hợp pháp, Bên A chịu toàn bộ trách nhiệm pháp lý và bồi thường cho Bên B mọi thiệt hại, chi phí phát sinh, bao gồm nhưng không giới hạn: tiền phạt, truy thu thuế, lưu kho, lưu bãi, phí luật sư;',
+    'Có trách nhiệm mua bảo hiểm hàng hóa trong quá trình vận chuyển quốc tế, trừ khi có thỏa thuận khác bằng văn bản. Trường hợp Bên A mua bảo hiểm, mọi rủi ro mất mát, hư hỏng hàng hóa thuộc phạm vi bảo hiểm sẽ do công ty bảo hiểm chi trả; Bên B chỉ chịu trách nhiệm trong phạm vi thiệt hại trực tiếp do lỗi của mình và chỉ trong trường hợp công ty bảo hiểm từ chối chi trả. Trong các trường hợp bất khả kháng hoặc rủi ro đã thuộc phạm vi bảo hiểm, Bên B không phải chịu trách nhiệm;',
+    'Trường hợp Bên A không mua bảo hiểm, mọi rủi ro mất mát, hư hỏng hàng hóa trong quá trình vận chuyển quốc tế sẽ do Bên A tự chịu, trừ trường hợp thiệt hại phát sinh trực tiếp do lỗi của Bên B; trong trường hợp này, trách nhiệm bồi thường của Bên B được xác định theo quy định tại Điều 7 Hợp đồng;',
+    'Trường hợp Bên A cung cấp sai hoặc không đầy đủ thông tin, dẫn đến việc Bên B không thể hoặc chậm trễ trong việc thực hiện thủ tục nhập khẩu, Bên A phải chịu toàn bộ chi phí phát sinh (thuế, phí, các khoản phạt, chi phí lưu kho, lưu bãi, vận chuyển...) và bồi thường thiệt hại thực tế, hợp lý cho Bên B. Ngoài ra, Bên A phải chịu phạt vi phạm với mức 8% giá trị nghĩa vụ vi phạm hoặc thỏa thuận khác;',
+    'Trường hợp thời gian giao nhận hàng quá hạn hoặc thay đổi địa điểm nhận hàng do lỗi của Bên A, làm phát sinh chi phí vận chuyển, chi phí lưu kho, lưu bãi, bảo quản hàng hóa, Bên A phải chịu toàn bộ chi phí phát sinh trên;',
+    'Trong thời gian 45 (bốn mươi lăm) ngày kể từ ngày hàng hóa được nhập kho của Bên B tại Việt Nam, nếu Bên A không nhận hàng hoặc không thanh toán đầy đủ các khoản phí dịch vụ bao gồm chi phí phát sinh (nếu có), Bên B có quyền tự xử lý lô hàng (bao gồm nhưng không giới hạn: bán, tái xuất, tiêu hủy...) hoặc áp dụng biện pháp xử lý phù hợp và thông báo cho Bên A; Bên A chịu toàn bộ chi phí phát sinh gây thiệt hại cho Bên B. Hết thời hạn lưu kho theo quy định tại Điều 3 Hợp đồng này, Bên B không chịu trách nhiệm liên quan đối với chất lượng hàng hóa và các rủi ro khác;',
+    'Thực hiện đúng các cam kết được ghi trong Hợp đồng; các nghĩa vụ khác theo quy định của Hợp đồng và pháp luật.',
+  ]},
+  { title: 'QUYỀN VÀ NGHĨA VỤ CỦA BÊN B', clauses: [
+    'Yêu cầu Bên A thanh toán nghĩa vụ tài chính đầy đủ và đúng thời hạn theo quy định của Hợp đồng này; yêu cầu Bên A nhận hàng, kiểm tra hàng hóa theo quy định của Hợp đồng này;',
+    'Ký kết các văn bản với đối tác là nhà cung cấp của Bên A hoặc bên thứ ba khác theo chỉ định hoặc ủy quyền của Bên A, trên cơ sở các điều khoản Bên A đã thỏa thuận với nhà cung cấp và nhận thông tin từ Bên A; Bên B không ứng trước hoặc chịu trách nhiệm thanh toán vượt quá số tiền Bên A đã thanh toán;',
+    'Thực hiện đầy đủ thủ tục hải quan và các công việc liên quan để lưu thông hàng hóa theo quy định pháp luật;',
+    'Kịp thời thông báo cho Bên A về các vấn đề liên quan đến việc thực hiện hợp đồng: tình hình nhận hàng, chi phí và sự cố (nếu có);',
+    'Giao đúng, đủ số lượng hàng hóa nhập khẩu cho Bên A theo đúng thỏa thuận;',
+    'Trường hợp xảy ra sự cố mất mát, hư hỏng trong quá trình vận chuyển do lỗi của Bên B, Bên B có trách nhiệm bồi thường cho Bên A theo thông báo đền bù của Bên B phù hợp với quy định pháp luật và/hoặc phạm vi bảo hiểm chi trả (nếu có); tuy nhiên trách nhiệm bồi thường của Bên B không áp dụng đối với các thiệt hại, mất mát đã thuộc phạm vi bảo hiểm chi trả. Mức bồi thường cụ thể cho mỗi lô hàng do hai Bên thỏa thuận trên cơ sở thiệt hại thực tế, nhưng không trái quy định pháp luật hiện hành;',
+    'Cung cấp đầy đủ hóa đơn, chứng từ hợp pháp của hàng hóa Bên B giao cho Bên A;',
+    { text: 'Bên B không chịu trách nhiệm đối với:', sub: [
+      'Lợi nhuận kỳ vọng, thiệt hại gián tiếp, thiệt hại do mất cơ hội kinh doanh của Bên A;',
+      'Bất kỳ chi phí, nghĩa vụ phát sinh nào liên quan đến bản chất, chất lượng, xuất xứ, tính hợp pháp của hàng hóa.',
+    ]},
+    'Trường hợp hàng hóa do Bên A chỉ định nhập khẩu thuộc diện cấm nhập, hạn chế nhập, xâm phạm quyền sở hữu trí tuệ, gian lận thương mại hoặc vi phạm pháp luật khác, dẫn đến việc bị cơ quan nhà nước xử lý (tịch thu, tiêu hủy, phạt...), Bên A chịu toàn bộ trách nhiệm và bồi thường cho Bên B mọi thiệt hại;',
+    'Bên B có quyền từ chối tiếp tục thực hiện Hợp đồng nếu phát hiện hàng hóa có dấu hiệu vi phạm pháp luật;',
+    'Tuyệt đối giữ bí mật các thông tin về đơn đặt hàng và các thông tin liên quan của Bên A; các quyền và nghĩa vụ khác theo quy định tại Hợp đồng và pháp luật.',
+  ]},
+  { title: 'HIỆU LỰC, GIA HẠN, CHUYỂN GIAO VÀ THANH LÝ HỢP ĐỒNG', clauses: [
+    'Hợp đồng có hiệu lực 01 (một) năm kể từ ngày ký kết Hợp đồng này;',
+    'Hợp đồng này sẽ tự động gia hạn tiếp nếu trong vòng ba mươi (30) ngày trước khi hết thời hạn nhưng không có bất kỳ thỏa thuận chấm dứt hoặc thay đổi nào được Các Bên xác nhận bằng văn bản. Hết thời hạn gia hạn Hợp đồng nêu trên, các Bên thoả thuận với nhau về việc gia hạn tiếp hoặc thay đổi, chấm dứt Hợp đồng;',
+    'Hợp đồng được tự động thanh lý khi các Bên đã hoàn thành toàn bộ nghĩa vụ theo Hợp đồng này;',
+    'Không Bên nào được chuyển nhượng bất kỳ quyền và/hoặc nghĩa vụ nào tại Hợp đồng cho bất kỳ Bên thứ ba nào khác nếu không được sự đồng ý của Bên còn lại, trừ trường hợp việc chuyển nhượng là hệ quả của việc chia tách, hợp nhất, sáp nhập doanh nghiệp. Trong trường hợp một Bên chuyển giao quyền và nghĩa vụ cho Bên thứ ba theo trường hợp nêu trên, Bên có nghĩa vụ phải thực hiện nghĩa vụ của mình đối với Bên còn lại trước khi thực hiện việc chuyển giao hợp đồng;',
+    { text: 'Không Bên nào được đơn phương chấm dứt hợp đồng trước thời hạn, trừ các trường hợp sau:', sub: [
+      'Một trong các Bên vi phạm nghiêm trọng nghĩa vụ trong Hợp đồng hoặc các Bên có thỏa thuận chấm dứt Hợp đồng trước thời hạn;',
+      'Hợp đồng không thể tiếp tục thực hiện vì sự kiện bất khả kháng quy định tại Điều 9 của Hợp đồng này;',
+      'Khi một trong các Bên bị giải thể hoặc là đối tượng của thủ tục phá sản. Trong trường hợp này, công nợ được các Bên ưu tiên quyết toán đầy đủ cho Bên còn lại.',
+    ]},
+    'Một Bên có quyền đơn phương chấm dứt Hợp đồng ngay khi có căn cứ cho rằng Bên còn lại có hành vi làm giảm uy tín thương mại hoặc có hành vi gây xung đột đối với hoạt động kinh doanh bằng bất cứ phương tiện và hành động nào. Trong trường hợp Hợp đồng bị chấm dứt, các Bên phải hoàn tất các nghĩa vụ của Hợp đồng trong thời gian chậm nhất là mười (10) ngày kể từ ngày Bên còn lại thông báo chấm dứt Hợp đồng.',
+  ]},
+  { title: 'SỰ KIỆN BẤT KHẢ KHÁNG', clauses: [
+    'Các Bên không phải chịu trách nhiệm đối với bất cứ sự chậm trễ hay vi phạm nào trong việc thực hiện nội dung của Hợp đồng này nếu sự chậm trễ hay vi phạm đó gây ra bởi sự kiện bất khả kháng, bao gồm: thiên tai, dịch bệnh, chiến tranh, bạo loạn, phiến loạn, khởi nghĩa, đàn áp, cấm vận, bãi công hay hành động thỏa thuận của công nhân; thiếu lao động, thiếu nguyên liệu hay vật tư; do các nhà thầu hay nhà thầu phụ không thực hiện nghĩa vụ của họ; việc chuyên chở không thực hiện được hoặc bị chậm trễ; sự can thiệp của các cơ quan nhà nước có liên quan; các chính sách, quyết định, chỉ thị của cơ quan nhà nước có thẩm quyền; việc hải quan cấm vận/kiểm hóa khi hàng hóa thuộc diện nghi vấn, dịch bệnh, ùn tắc cửa khẩu hoặc các yếu tố khách quan khác ngoài khả năng kiểm soát của Bên B. Bên bị tác động bởi sự kiện bất khả kháng có trách nhiệm thông báo cho Bên còn lại trong vòng 10 (mười) ngày kể từ ngày sự kiện bất khả kháng bắt đầu tác động lên việc thực hiện Hợp đồng này, trừ trường hợp không thể thông báo;',
+    { text: 'Nếu xảy ra sự kiện bất khả kháng mà các nghĩa vụ của Các Bên theo Hợp đồng này không thể thực hiện thì Hợp đồng này sẽ được tạm ngừng thực hiện đến chừng nào sự kiện bất khả kháng chấm dứt, với điều kiện:', sub: [
+      'Trường hợp bất khả kháng là nguyên nhân trực tiếp cản trở hoặc làm chậm trễ việc thực hiện Hợp đồng;',
+      'Bên dẫn sự kiện bất khả kháng đã tìm hết các biện pháp khắc phục khi sự việc xảy ra;',
+      'Đã thông báo cho Bên còn lại theo thời gian đã quy định.',
+    ]},
+    'Trong suốt thời gian diễn ra sự kiện bất khả kháng, các nghĩa vụ của Các Bên theo Hợp đồng này sẽ được tạm hoãn. Sau khi sự kiện bất khả kháng chấm dứt, Các Bên có trách nhiệm tiếp tục thực hiện Hợp đồng. Việc chậm trễ hoặc không thực hiện nghĩa vụ trong thời gian diễn ra sự kiện bất khả kháng sẽ không bị coi là vi phạm Hợp đồng và Các Bên không phải bồi thường thiệt hại.',
+  ]},
+  { title: 'PHẠT HỢP ĐỒNG VÀ BỒI THƯỜNG THIỆT HẠI', clauses: [
+    'Các Bên cam kết thực hiện tất cả những điều khoản đã cam kết trong Hợp đồng này. Một trong các Bên vi phạm thỏa thuận gây thiệt hại cho Bên còn lại chịu trách nhiệm bồi thường toàn bộ thiệt hại xảy ra do hành vi vi phạm gây nên;',
+    'Trường hợp Bên A vi phạm nghĩa vụ thanh toán tại Điều 2 Hợp đồng này, Bên A phải chịu lãi chậm thanh toán trên số tiền và số ngày chậm thanh toán theo lãi suất tiền gửi 03 (ba) tháng của Ngân hàng TechcomBank tại thời điểm phát sinh;',
+    'Trường hợp Bên B chậm giao hàng so với tiến độ do Các Bên thỏa thuận tại Hợp đồng và Phụ lục kèm theo, mức phạt chậm giao hàng sẽ được xác định theo thỏa thuận của Các Bên tại từng thời điểm, căn cứ vào nguyên nhân dẫn tới việc chậm trễ;',
+    'Trong quá trình thực hiện Hợp đồng này nếu Bên nào có khó khăn, trở ngại thì phải báo cho Bên còn lại bằng văn bản hoặc thư điện tử (Email, Zalo,...) trong vòng mười (10) ngày kể từ ngày có khó khăn trở ngại đó;',
+    'Trường hợp Bên A đơn phương chấm dứt Hợp đồng trước thời hạn, Bên A chịu trách nhiệm bồi thường toàn bộ thiệt hại xảy ra (nếu có) đối với Bên B do việc đơn phương chấm dứt Hợp đồng trước thời hạn;',
+    { text: 'Trường hợp Bên B vi phạm các cam kết, nghĩa vụ cung cấp và giao hàng hóa, Bên A có quyền áp dụng một phần hoặc toàn bộ các chế tài sau:', sub: [
+      'Yêu cầu Bên B khắc phục, bồi thường theo quy định Hợp đồng;',
+      'Tạm dừng thanh toán cho đến khi vi phạm Hợp đồng được giải quyết.',
+    ]},
+    'Trường hợp một trong các Bên không thực hiện, thực hiện không đúng hoặc không đầy đủ các nghĩa vụ của mình theo quy định Hợp đồng này và/hoặc quy định pháp luật dẫn đến gây thiệt hại cho Bên còn lại, Bên vi phạm có nghĩa vụ bồi thường toàn bộ thiệt hại do hành vi vi phạm gây ra. Bên bị thiệt hại có quyền trực tiếp khấu trừ số tiền bồi thường thiệt hại từ các khoản đã thanh toán, nếu có;',
+    'Trường hợp Bên A vi phạm cam kết theo quy định tại Điều 3 Hợp đồng này, Bên A có trách nhiệm khắc phục vi phạm và bồi thường toàn bộ thiệt hại, chi phí phát sinh liên quan (nếu có).',
+  ]},
+  { title: 'BẢO MẬT THÔNG TIN', lead: 'Trong quá trình thực hiện Hợp đồng, Các Bên cùng cam kết thực hiện nghiêm túc những nội dung sau đây:', clauses: [
+    'Các Bên nhất trí rằng tất cả các tài liệu, giấy tờ, thông tin trao đổi và thoả thuận giữa các Bên được xem là thuộc quyền sở hữu của Các Bên, là thông tin bảo mật và được Các Bên cam kết bảo mật tuyệt đối;',
+    'Các Bên cam kết sẽ chỉ được sử dụng thông tin bảo mật cho các mục đích thực hiện Hợp đồng. Tất cả các thông tin bảo mật này sẽ được Các Bên xử lý và lưu hành ở cấp độ bảo mật cao nhất có thể, đồng thời cam kết bảo đảm Các Bên, nhân viên của Các Bên không tiết lộ thông tin bảo mật cho bất kỳ bên thứ ba nào khác;',
+    { text: 'Các nghĩa vụ bảo mật thông tin theo thoả thuận này không áp dụng đối với các thông tin sau:', sub: [
+      'Bên tiếp nhận thông tin đã sở hữu hoặc biết trước thông tin một cách hợp pháp trước khi nhận được từ bên cung cấp thông tin;',
+      'Tiết lộ thông tin bảo mật theo yêu cầu của cơ quan chức năng có đủ thẩm quyền;',
+      'Tiết lộ bởi có sự chấp thuận bằng văn bản của bên có quyền sở hữu đối với thông tin bảo mật.',
+    ]},
+    'Trường hợp một trong các Bên vi phạm quy định này, Bên còn lại có quyền đơn phương chấm dứt hợp đồng mà không cần phải báo trước và yêu cầu Bên vi phạm bồi thường thiệt hại theo quy định của Hợp đồng này.',
+  ]},
+  { title: 'GIẢI QUYẾT TRANH CHẤP', clauses: [
+    'Mọi tranh chấp phát sinh trong quá trình thực hiện Hợp đồng được giải quyết trước hết qua thương lượng, hoà giải. Trong trường hợp không thể giải quyết các tranh chấp bằng biện pháp thương lượng, hòa giải, tranh chấp sẽ được đưa ra Tòa án có thẩm quyền. Phán quyết của Tòa án là quyết định cuối cùng buộc hai bên phải thực hiện. Mọi chi phí phát sinh trong quá trình thua kiện sẽ do bên thua kiện trả.',
+  ]},
+  { title: 'ĐIỀU KHOẢN THI HÀNH', clauses: [
+    'Các Bên cam kết những thông tin đã ghi trong Hợp đồng này là đúng sự thật và tự nguyện thoả thuận giao kết Hợp đồng này;',
+    'Các Bên có trách nhiệm xuất trình các tài liệu, căn cứ chứng minh người đại diện của Các Bên có đủ thẩm quyền tham gia ký kết Hợp đồng này và cam kết về tính hợp lệ, hợp pháp của các tài liệu chứng minh đó;',
+    'Hợp đồng này được hiểu là chịu sự điều chỉnh của Pháp luật nước Cộng hoà xã hội chủ nghĩa Việt Nam. Các vấn đề không được điều chỉnh bởi Hợp đồng này sẽ giải quyết theo quy định của pháp luật;',
+    'Trong quá trình thực hiện Hợp đồng, nếu Bên nào có khó khăn, trở ngại thì phải báo cho Bên còn lại trong vòng mười (10) ngày kể từ ngày có khó khăn, trở ngại để cùng giải quyết;',
+    'Mọi sửa đổi, bổ sung, thông báo liên quan đến Hợp đồng này đều phải được lập bằng văn bản và có chữ ký của Các Bên. Các Phụ lục Hợp đồng hoặc hình thức khác tương đương với Phụ lục hợp đồng (nếu có) là phần không tách rời của Hợp đồng này;',
+    'Hợp đồng này không thể tách rời nhau, được lập thành hai (02) bản bằng tiếng Việt, mỗi Bên giữ một (01) bản, có giá trị pháp lý như nhau và có hiệu lực kể từ ngày ký kết Hợp đồng.',
+  ]},
+];

@@ -16,6 +16,9 @@ import { CreateBBBG } from './pages/CreateBBBG';
 import { CreateHDNTVC } from './pages/CreateHDNTVC';
 import { CreateDDHVC } from './pages/CreateDDHVC';
 import { CreateBBBGVC } from './pages/CreateBBBGVC';
+import { CreateHDNTUT } from './pages/CreateHDNTUT';
+import { CreateDDHUT } from './pages/CreateDDHUT';
+import { CreateBBBGUT } from './pages/CreateBBBGUT';
 import { LoginPage } from './pages/LoginPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
@@ -23,10 +26,12 @@ import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
 const DOC_TYPE_MAP = {
   HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg',
   HDNT_VC: 'hd_nguyen_tac_vc', DDH_VC: 'don_dat_dich_vu', BBBG_VC: 'bbbg_vc',
+  HDNT_UT: 'hd_nguyen_tac_ut', DDH_UT: 'don_dat_dich_vu_ut', BBBG_UT: 'bbbg_ut',
 };
 const CATEGORY_MAP = {
   HDNT: 'mua_ban', DDH: 'mua_ban', BBBG: 'mua_ban',
   HDNT_VC: 'van_chuyen', DDH_VC: 'van_chuyen', BBBG_VC: 'van_chuyen',
+  HDNT_UT: 'uy_thac', DDH_UT: 'uy_thac', BBBG_UT: 'uy_thac',
 };
 
 export default function App() {
@@ -185,7 +190,7 @@ export default function App() {
     return <ChooseDepartmentPage profile={profile} departments={departments} onDone={(updated) => setProfile(updated)} />;
   }
 
-  const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0 };
+  const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
   Object.values(contracts).forEach(c => { if (counts[c.type] !== undefined) counts[c.type]++; });
   const noSellers = Object.keys(sellers).length === 0;
   const isAdmin = profile?.role === 'admin';
@@ -207,18 +212,27 @@ export default function App() {
       case 'hdnt_vc':      return <ContractListPage type="HDNT_VC" contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
       case 'ddh_vc':       return <ContractListPage type="DDH_VC"  contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
       case 'bbbg_vc':      return <ContractListPage type="BBBG_VC" contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
+      case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
+      case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
+      case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
       case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
+      case 'create-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
+      case 'create-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
+      case 'create-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'edit-hdnt':    return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
+      case 'edit-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
+      case 'edit-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
+      case 'edit-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'admin-users':  return isAdmin ? <AdminUsersPage /> : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       default:             return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
     }

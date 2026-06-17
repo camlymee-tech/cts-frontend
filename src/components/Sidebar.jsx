@@ -13,6 +13,10 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     { id: 'hdnt_vc', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT_VC, color: 'bg-green-500' },
     { id: 'ddh_vc', icon: '📦', label: 'Đơn Đặt Dịch Vụ', count: counts.DDH_VC, color: 'bg-yellow-500' },
     { id: 'bbbg_vc', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG_VC, color: 'bg-purple-500' },
+    { header: '🤝 Hợp đồng ủy thác' },
+    { id: 'hdnt_ut', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT_UT, color: 'bg-green-500' },
+    { id: 'ddh_ut', icon: '📦', label: 'Đơn Đặt Dịch Vụ', count: counts.DDH_UT, color: 'bg-yellow-500' },
+    { id: 'bbbg_ut', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG_UT, color: 'bg-purple-500' },
     ...(isAdmin ? [
       null,
       { id: 'admin-users', icon: '👤', label: 'Quản lý tài khoản' },

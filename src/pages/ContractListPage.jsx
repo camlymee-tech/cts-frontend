@@ -2,16 +2,18 @@
 import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
 
-const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC'];
+const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 
 export const ContractListPage = ({ type, contracts, customers, setPage, setViewContract, onDelete, onEdit }) => {
   const labels = {
     HDNT: 'Hợp Đồng Nguyên Tắc', DDH: 'Đơn Đặt Hàng', BBBG: 'Biên Bản Bàn Giao',
     HDNT_VC: 'HĐ Nguyên Tắc (Vận chuyển)', DDH_VC: 'Đơn Đặt Dịch Vụ', BBBG_VC: 'Biên Bản Bàn Giao (Vận chuyển)',
+    HDNT_UT: 'HĐ Nguyên Tắc (Ủy thác)', DDH_UT: 'Đơn Đặt Dịch Vụ Ủy Thác', BBBG_UT: 'Biên Bản Bàn Giao (Ủy thác)',
   };
   const createPages = {
     HDNT: 'create-hdnt', DDH: 'create-ddh', BBBG: 'create-bbbg',
     HDNT_VC: 'create-hdnt_vc', DDH_VC: 'create-ddh_vc', BBBG_VC: 'create-bbbg_vc',
+    HDNT_UT: 'create-hdnt_ut', DDH_UT: 'create-ddh_ut', BBBG_UT: 'create-bbbg_ut',
   };
   const list = Object.values(contracts).filter(c => c.type === type).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const showTotal = FEE_TYPES.includes(type);
