@@ -160,6 +160,26 @@ export default function App() {
     setContracts(updated);
     setViewContract(null);
   };
+  const deleteContracts = async (ids) => {
+    if (!ids || ids.length === 0) return false;
+    if (!confirm(`Bạn có chắc muốn xóa ${ids.length} hợp đồng đã chọn? Hành động này không thể hoàn tác.`)) return false;
+    const updated = { ...contracts };
+    let successCount = 0;
+    try {
+      for (const id of ids) {
+        const target = contracts[id];
+        if (target?._dbId) await api.deleteContractRow(target._dbId);
+        delete updated[id];
+        successCount++;
+      }
+    } catch (err) {
+      alert(`Đã xóa được ${successCount}/${ids.length} hợp đồng, sau đó gặp lỗi: ${err.message}`);
+    } finally {
+      setContracts(updated);
+      setViewContract(null);
+    }
+    return true;
+  };
   const handleEditContract = (contract) => {
     setEditContractData(contract);
     setViewContract(null);
@@ -206,15 +226,15 @@ export default function App() {
         </div>
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} />;
-      case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'hdnt_vc':      return <ContractListPage type="HDNT_VC" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'ddh_vc':       return <ContractListPage type="DDH_VC"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'bbbg_vc':      return <ContractListPage type="BBBG_VC" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
-      case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onEdit={handleEditContract} />;
+      case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'hdnt_vc':      return <ContractListPage type="HDNT_VC" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh_vc':       return <ContractListPage type="DDH_VC"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg_vc':      return <ContractListPage type="BBBG_VC" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} sellers={sellers} setPage={setPage} setViewContract={setViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;
       case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} />;

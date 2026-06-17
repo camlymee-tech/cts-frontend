@@ -7,7 +7,7 @@ import { BulkContractViewer } from './BulkContractViewer';
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 const PAGE_SIZE = 30;
 
-export const ContractListPage = ({ type, contracts, customers, sellers, setPage, setViewContract, onDelete, onEdit }) => {
+export const ContractListPage = ({ type, contracts, customers, sellers, setPage, setViewContract, onDelete, onDeleteMany, onEdit }) => {
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -106,6 +106,12 @@ export const ContractListPage = ({ type, contracts, customers, sellers, setPage,
           <div className="flex gap-2">
             <button onClick={() => setBulkOpen(true)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
               🖨️ In / Tải gộp
+            </button>
+            <button
+              onClick={async () => { const ok = await onDeleteMany(Array.from(selectedIds)); if (ok) setSelectedIds(new Set()); }}
+              className="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-red-100"
+            >
+              🗑️ Xóa gộp
             </button>
             <button onClick={() => setSelectedIds(new Set())} className="text-sm text-blue-700 hover:underline px-2">Bỏ chọn</button>
           </div>
