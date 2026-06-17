@@ -30,7 +30,7 @@ const safeFilename = (name, ext) =>
 const PRINT_STYLE = `
   @page {
     size: A4 portrait;
-    margin: 0;
+    margin: 25mm 20mm 25mm 35mm; /* top right bottom left — áp dụng cho MỌI trang khi in */
   }
   body {
     font-family: 'Times New Roman', serif;
@@ -39,7 +39,7 @@ const PRINT_STYLE = `
     background: #fff;
     color: #000;
     margin: 0;
-    padding: 25mm 20mm 25mm 35mm; /* top right bottom left */
+    padding: 0;
     box-sizing: border-box;
   }
   table { border-collapse: collapse; width: 100%; }
