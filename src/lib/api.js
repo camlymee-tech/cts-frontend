@@ -4,7 +4,7 @@
 // là 1 dòng trong bảng app_storage, cột value (jsonb) chứa nguyên object/map.
 // Hợp đồng (contracts) và Khách hàng (customers) lưu riêng (1 dòng = 1 bản ghi, có RLS theo người tạo).
 // API Key Anthropic KHÔNG lưu ở app_storage nữa (đã từng lộ cho mọi user) — nay là Secret
-// của Edge Function "read-invoice" trên Supabase, chỉ admin project mới cấu hình được.
+// của Edge Function "clever-handler" trên Supabase, chỉ admin project mới cấu hình được.
 import { supabase } from './supabase';
 const TABLE = 'app_storage';
 export const api = {
@@ -43,7 +43,7 @@ export const api = {
   },
 
   async _invokeReadInvoice(imageBase64, mediaType, mode) {
-    const { data, error } = await supabase.functions.invoke('read-invoice', {
+    const { data, error } = await supabase.functions.invoke('clever-handler', {
       body: { imageBase64, mediaType, mode },
     });
     if (error) {

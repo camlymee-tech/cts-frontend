@@ -41,7 +41,7 @@ export const ApiKeyManager = () => {
         <ol className="list-decimal list-inside space-y-1">
           <li>Vào <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="underline font-medium">console.anthropic.com</a> → tạo 1 API Key <strong>mới</strong> (nên tạo mới, không dùng lại key cũ vì key cũ đã từng lộ ra trình duyệt nhân viên).</li>
           <li>Vào Supabase Dashboard của project → mục <strong>Edge Functions</strong> → tab <strong>Secrets</strong> → thêm secret tên <code className="bg-blue-100 px-1 rounded">ANTHROPIC_API_KEY</code>, giá trị là key vừa tạo ở bước 1.</li>
-          <li>Vẫn trong <strong>Edge Functions</strong> → bấm <strong>Deploy a new function</strong> → chọn <strong>Via Editor</strong> → dán nguyên nội dung file <code className="bg-blue-100 px-1 rounded">supabase/functions/read-invoice/index.ts</code> (đã có trong code) → Deploy.</li>
+          <li>Vẫn trong <strong>Edge Functions</strong> → bấm <strong>Deploy a new function</strong> → chọn <strong>Via Editor</strong> → dán nguyên nội dung file <code className="bg-blue-100 px-1 rounded">supabase/functions/read-invoice/index.ts</code> (đã có trong code) → Deploy. <span className="italic">(Hiện đang dùng function tên <code className="bg-blue-100 px-1 rounded">clever-handler</code> — nếu tạo function mới khác tên, báo lại để cập nhật code app theo.)</span></li>
           <li>Vào lại <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="underline font-medium">console.anthropic.com</a> → xóa (revoke) API Key <strong>cũ</strong> đã từng lộ, để chắc chắn không ai dùng lại được key đó nữa.</li>
         </ol>
       </div>
