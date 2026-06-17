@@ -74,6 +74,51 @@ export const api = {
     return JSON.parse(m[0]); // { goods: [...] }
   },
 
+  // ───────── AI đọc danh sách hàng hóa định giá USD (đơn hàng/invoice ủy thác nhập khẩu) ─────────
+  async readGoodsUSD(imageBase64, mediaType) {
+    const apiKey = await api.get('api_key', true);
+    if (!apiKey) throw new Error('Chưa cài đặt API Key. Vào Cài đặt → API Key để nhập.');
+
+    const isPdf = mediaType === 'application/pdf';
+    const fileBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: imageBase64 } }
+      : { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } };
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            fileBlock,
+            { type: 'text', text:
+              'Đây là đơn hàng / invoice từ nhà cung cấp nước ngoài, đơn giá tính bằng USD. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
+              '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0}]}\n' +
+              'donGia và thanhTien là số USD (có thể có phần thập phân). Chỉ trả JSON, không thêm chữ nào khác.' },
+          ],
+        }],
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error('Lỗi gọi AI (' + res.status + '): ' + err.slice(0, 200));
+    }
+    const data = await res.json();
+    const txt = data.content?.[0]?.text || '';
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Không đọc được phản hồi AI.');
+    return JSON.parse(m[0]); // { goods: [...] }
+  },
+
+
   // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
   async listContracts() {
     const { data, error } = await supabase

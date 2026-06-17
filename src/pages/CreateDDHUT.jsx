@@ -1,5 +1,5 @@
 // File: src/pages/CreateDDHUT.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { Select } from '../components/Select';
 import { Alert } from '../components/Alert';
@@ -9,6 +9,7 @@ import { GoodsTableUSD } from '../components/GoodsTableUSD';
 import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { DDHUTPreview } from '../previews/DDHUTPreview';
 import { buildContractId } from '../helpers';
+import { api } from '../lib/api';
 
 export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
   const isEdit = !!editData;
@@ -20,9 +21,12 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   const [exchangeRate, setExchangeRate] = useState(editData?.exchangeRate ?? '');
   const [feeAmount, setFeeAmount] = useState(editData?.goods?.[0]?.donGia ?? '');
   const [hdntUtId, setHdntUtId] = useState(editData?.relatedContracts?.hdnt_ut || '');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
+  const fileRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
   const saleCode = customer.assignedSale?.code || '';
@@ -32,6 +36,49 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
     .sort((a, b) => b.contractId.localeCompare(a.contractId));
 
   useEffect(() => { setHdntUtId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
+
+  // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste) — đọc hàng hóa giá USD
+  const processFile = async (file) => {
+    if (!file) return;
+    setAiError(''); setAiLoading(true);
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = ev => res(ev.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const result = await api.readGoodsUSD(base64, file.type);
+      setGoodsUSD(result.goods || []);
+    } catch (err) {
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    await processFile(file);
+    e.target.value = '';
+  };
+
+  // Cho phép dán ảnh đơn hàng/invoice từ clipboard (Ctrl+V / Cmd+V)
+  useEffect(() => {
+    const onPaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) { processFile(file); e.preventDefault(); break; }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
+
 
   const fee = Number(feeAmount) || 0;
   const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ ủy thác trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate: 8 }] : [];
@@ -125,7 +172,17 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
         )}
 
         <div className="mb-5">
-          <label className="block text-xs font-medium text-gray-600 mb-2">1.1. Giá trị tiền hàng nhập khẩu (USD)</label>
+          <label className="block text-xs font-medium text-gray-600 mb-2">1.1. Giá trị tiền hàng nhập khẩu (USD) — chọn 1 trong các cách (có thể kết hợp):</label>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFile} className="hidden" />
+            <button onClick={() => fileRef.current.click()} disabled={aiLoading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-60">
+              {aiLoading ? '⏳ AI đang đọc đơn hàng...' : '📷 Cách 1: Upload đơn hàng/invoice (AI đọc)'}
+            </button>
+            <span className="text-xs text-gray-400">hoặc Cách 2: <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Ctrl/Cmd + V</kbd> dán ảnh đơn hàng</span>
+            <span className="text-xs text-gray-400">hoặc Cách 3: bấm "+ Thêm dòng" để nhập tay bên dưới</span>
+          </div>
+          {aiError && <Alert type="error">{aiError}</Alert>}
           <GoodsTableUSD goods={goodsUSD} onChange={setGoodsUSD} exchangeRate={exchangeRate} onExchangeRateChange={setExchangeRate} />
         </div>
 
