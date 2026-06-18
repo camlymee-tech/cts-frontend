@@ -9,6 +9,7 @@ import { GoodsTable } from '../components/GoodsTable';
 import { DDHPreview } from '../previews/DDHPreview';
 import { buildContractId, calcTotals, fmtNum } from '../helpers';
 import { api } from '../lib/api';
+import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
 export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
   const isEdit = !!editData;
@@ -51,9 +52,16 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
       const result = await api.readVAT(base64, file.type);
       const newGoods = result.goods || [];
       setGoods(newGoods);
-      // Tự đính kèm luôn ảnh hóa đơn vừa upload để in cùng đơn đặt hàng (chỉ với ảnh, PDF không nhúng được khi in).
-      if (file.type !== 'application/pdf') {
-        setVatInvoiceImage({ data: base64, mediaType: file.type });
+      // Tự đính kèm luôn hóa đơn vừa upload để in cùng đơn đặt hàng — PDF tự chuyển sang ảnh trang đầu.
+      try {
+        if (file.type === 'application/pdf') {
+          const img = await pdfFirstPageToImage(file);
+          setVatInvoiceImage({ data: img.base64, mediaType: img.mediaType });
+        } else {
+          setVatInvoiceImage({ data: base64, mediaType: file.type });
+        }
+      } catch (attachErr) {
+        console.error('Không đính kèm được hóa đơn:', attachErr);
       }
       // Đối chiếu: tổng AI tự cộng từ các dòng hàng so với tổng IN SẴN trên hóa đơn gốc (nếu AI đọc được).
       const printedTotal = result.tongCongInHoaDon;
@@ -76,17 +84,26 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     e.target.value = '';
   };
 
-  // Đính kèm ảnh hóa đơn VAT riêng (không gọi AI) — dùng khi nhập hàng tay hoặc muốn đổi ảnh đính kèm khác
+  // Đính kèm hóa đơn VAT riêng (không gọi AI) — dùng khi nhập hàng tay hoặc muốn đổi ảnh đính kèm khác
   const handleAttachOnly = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = ev => res(ev.target.result.split(',')[1]);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    setVatInvoiceImage({ data: base64, mediaType: file.type });
+    try {
+      if (file.type === 'application/pdf') {
+        const img = await pdfFirstPageToImage(file);
+        setVatInvoiceImage({ data: img.base64, mediaType: img.mediaType });
+      } else {
+        const base64 = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = ev => res(ev.target.result.split(',')[1]);
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        setVatInvoiceImage({ data: base64, mediaType: file.type });
+      }
+    } catch (err) {
+      alert('Không đọc được file này để đính kèm: ' + err.message);
+    }
     e.target.value = '';
   };
 
@@ -228,7 +245,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
               Chưa có hóa đơn đính kèm. {goods.length > 0 ? 'Upload hóa đơn VAT ở mục trên (Cách 1) để tự đính kèm, hoặc' : 'Nếu nhập hàng hóa bằng tay, bạn vẫn có thể'} <button onClick={() => attachRef.current.click()} className="text-blue-600 hover:underline font-medium">đính kèm ảnh hóa đơn</button> riêng để in cùng.
             </div>
           )}
-          <input ref={attachRef} type="file" accept="image/*" onChange={handleAttachOnly} className="hidden" />
+          <input ref={attachRef} type="file" accept="image/*,application/pdf" onChange={handleAttachOnly} className="hidden" />
         </div>
       </div>
 
