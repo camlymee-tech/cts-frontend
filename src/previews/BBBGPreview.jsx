@@ -1,4 +1,5 @@
 // File: src/previews/BBBGPreview.jsx
+import { SignatureBlock } from './SignatureBlock';
 import { fmtDate, calcTotals, fmtNum, numberToWords } from '../helpers';
 import { GoodsTablePrint } from './GoodsTablePrint';
 
@@ -55,18 +56,7 @@ export const BBBGPreview = ({ c, seller, customer }) => {
         <div>Biên bản được lập thành 02 bản gốc có giá trị pháp lý như nhau, mỗi bên giữ 01 bản.</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-10 mt-6 text-center text-sm">
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên Mua (Bên A)</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
-        </div>
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên Bán (Bên B)</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
-        </div>
-      </div>
+      <SignatureBlock marginTop="24px" leftTitle="Đại diện Bên Mua (Bên A)" rightTitle="Đại diện Bên Bán (Bên B)" />
     </div>
   );
 };

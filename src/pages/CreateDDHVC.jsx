@@ -16,6 +16,7 @@ export const CreateDDHVC = ({ sellers, customers, contracts, onSave, setPage, ed
   const [stt, setStt] = useState(editData?.stt || '');
   const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
   const [feeAmount, setFeeAmount] = useState(editData?.goods?.[0]?.donGia ?? '');
+  const [vatRate, setVatRate] = useState(editData?.goods?.[0]?.vatRate ?? 8);
   const [hdntVcId, setHdntVcId] = useState(editData?.relatedContracts?.hdnt_vc || '');
   const [showPreview, setShowPreview] = useState(false);
   // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
@@ -31,7 +32,7 @@ export const CreateDDHVC = ({ sellers, customers, contracts, onSave, setPage, ed
   useEffect(() => { setHdntVcId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
 
   const fee = Number(feeAmount) || 0;
-  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ Logistics trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate: 8 }] : [];
+  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ Logistics trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate }] : [];
 
   const autoContractId = buildContractId({ type: 'DDH_VC', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
   const contractId = idOverride !== null ? idOverride : autoContractId;
@@ -123,12 +124,18 @@ export const CreateDDHVC = ({ sellers, customers, contracts, onSave, setPage, ed
 
         <div className="mb-5">
           <label className="block text-xs font-medium text-gray-600 mb-2">Phí dịch vụ Logistics trọn gói (tạm tính, Vnđ) <span className="text-red-500">*</span></label>
-          <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 15000000"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3" />
+          <div className="flex gap-2 mb-3">
+            <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 15000000"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            <select value={vatRate} onChange={e => setVatRate(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+              {[0, 5, 8, 10].map(r => <option key={r} value={r}>VAT {r}%</option>)}
+            </select>
+          </div>
           {fee > 0 ? (
             <ServiceFeeTable goods={goods} feeLabel="Phí dịch vụ Logistics trọn gói tạm tính (Vnd)" totalLabel="Tổng cộng giá trị sau thuế (Vnd)" />
           ) : (
-            <div className="text-sm text-gray-400 italic">Nhập phí dịch vụ để tự động tính thuế GTGT 8% và tổng cộng.</div>
+            <div className="text-sm text-gray-400 italic">Nhập phí dịch vụ để tự động tính thuế GTGT và tổng cộng.</div>
           )}
         </div>
       </div>

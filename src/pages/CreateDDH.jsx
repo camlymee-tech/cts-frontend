@@ -7,7 +7,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { DDHPreview } from '../previews/DDHPreview';
-import { buildContractId } from '../helpers';
+import { buildContractId, calcTotals, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 
 export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
@@ -17,13 +17,16 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const [stt, setStt] = useState(editData?.stt || '');
   const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
   const [goods, setGoods] = useState(editData?.goods || []);
+  const [vatInvoiceImage, setVatInvoiceImage] = useState(editData?.vatInvoiceImage || null); // { data, mediaType } | null
   const [hdntId, setHdntId] = useState(editData?.relatedContracts?.hdnt || '');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiMismatch, setAiMismatch] = useState(null); // { aiTotal, printedTotal } nếu lệch
   const [showPreview, setShowPreview] = useState(false);
   // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
+  const attachRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
   const saleCode = customer.assignedSale?.code || '';
@@ -37,7 +40,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste)
   const processFile = async (file) => {
     if (!file) return;
-    setAiError(''); setAiLoading(true);
+    setAiError(''); setAiMismatch(null); setAiLoading(true);
     try {
       const base64 = await new Promise((res, rej) => {
         const r = new FileReader();
@@ -46,7 +49,20 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
         r.readAsDataURL(file);
       });
       const result = await api.readVAT(base64, file.type);
-      setGoods(result.goods || []);
+      const newGoods = result.goods || [];
+      setGoods(newGoods);
+      // Tự đính kèm luôn ảnh hóa đơn vừa upload để in cùng đơn đặt hàng (chỉ với ảnh, PDF không nhúng được khi in).
+      if (file.type !== 'application/pdf') {
+        setVatInvoiceImage({ data: base64, mediaType: file.type });
+      }
+      // Đối chiếu: tổng AI tự cộng từ các dòng hàng so với tổng IN SẴN trên hóa đơn gốc (nếu AI đọc được).
+      const printedTotal = result.tongCongInHoaDon;
+      if (printedTotal !== null && printedTotal !== undefined) {
+        const aiTotal = calcTotals(newGoods).total;
+        if (Math.abs(aiTotal - Number(printedTotal)) > 1) {
+          setAiMismatch({ aiTotal, printedTotal: Number(printedTotal) });
+        }
+      }
     } catch (err) {
       setAiError(err.message);
     } finally {
@@ -57,6 +73,20 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const handleFile = async (e) => {
     const file = e.target.files[0];
     await processFile(file);
+    e.target.value = '';
+  };
+
+  // Đính kèm ảnh hóa đơn VAT riêng (không gọi AI) — dùng khi nhập hàng tay hoặc muốn đổi ảnh đính kèm khác
+  const handleAttachOnly = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = ev => res(ev.target.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    setVatInvoiceImage({ data: base64, mediaType: file.type });
     e.target.value = '';
   };
 
@@ -82,6 +112,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     contractId, type: 'DDH', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hiệu lực', goods,
     customerSnapshot: customer, sellerSnapshot: seller,
+    vatInvoiceImage,
     relatedContracts: { hdnt: hdntId }
   } : null;
 
@@ -175,7 +206,29 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
             <span className="text-xs text-gray-400">hoặc Cách 3: bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}
+          {aiMismatch && (
+            <Alert type="warn">
+              ⚠️ Tổng AI tính được ({fmtNum(aiMismatch.aiTotal)} đ) không khớp với tổng in trên hóa đơn gốc ({fmtNum(aiMismatch.printedTotal)} đ) — vui lòng kiểm tra lại các dòng hàng bên dưới trước khi lưu.
+            </Alert>
+          )}
           <GoodsTable goods={goods} onChange={setGoods} />
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-xs font-medium text-gray-600 mb-2">🧾 Hóa đơn VAT (nếu có) — đính kèm để in cùng đơn đặt hàng</label>
+          {vatInvoiceImage ? (
+            <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <img src={`data:${vatInvoiceImage.mediaType};base64,${vatInvoiceImage.data}`} alt="Hóa đơn VAT" className="h-16 w-16 object-cover rounded border border-gray-300" />
+              <div className="flex-1 text-sm text-gray-600">Đã đính kèm — sẽ in/xuất file kèm theo đơn đặt hàng này.</div>
+              <button onClick={() => attachRef.current.click()} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Đổi ảnh khác</button>
+              <button onClick={() => setVatInvoiceImage(null)} className="text-red-500 hover:text-red-700 text-sm font-medium">✕ Gỡ</button>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 italic">
+              Chưa có hóa đơn đính kèm. {goods.length > 0 ? 'Upload hóa đơn VAT ở mục trên (Cách 1) để tự đính kèm, hoặc' : 'Nếu nhập hàng hóa bằng tay, bạn vẫn có thể'} <button onClick={() => attachRef.current.click()} className="text-blue-600 hover:underline font-medium">đính kèm ảnh hóa đơn</button> riêng để in cùng.
+            </div>
+          )}
+          <input ref={attachRef} type="file" accept="image/*" onChange={handleAttachOnly} className="hidden" />
         </div>
       </div>
 

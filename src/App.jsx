@@ -33,6 +33,13 @@ const CATEGORY_MAP = {
   HDNT_VC: 'van_chuyen', DDH_VC: 'van_chuyen', BBBG_VC: 'van_chuyen',
   HDNT_UT: 'uy_thac', DDH_UT: 'uy_thac', BBBG_UT: 'uy_thac',
 };
+// Khi sửa mã hợp đồng (contractId) của HDNT/DDH (và các biến thể VC/UT), cần dò các hợp đồng
+// con đang tham chiếu tới mã CŨ trong relatedContracts để cập nhật theo mã MỚI luôn.
+// Key bên phải là tên field trong relatedContracts mà hợp đồng con dùng để trỏ tới loại này.
+const REFERENCED_AS = {
+  HDNT: 'hdnt', HDNT_VC: 'hdnt_vc', HDNT_UT: 'hdnt_ut',
+  DDH: 'ddh', DDH_VC: 'ddh_vc', DDH_UT: 'ddh_ut',
+};
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -150,6 +157,28 @@ export default function App() {
     const updated = { ...contracts };
     if (oldId && oldId !== contract.contractId) delete updated[oldId];
     updated[contract.contractId] = { ...cleanContract, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by };
+
+    // Mã hợp đồng bị đổi (VD: sửa lại số HĐNT) → tự cập nhật các hợp đồng con đang tham chiếu
+    // tới mã CŨ (ĐĐH/BBBG có relatedContracts.hdnt/ddh/...) sang mã MỚI, tránh lệch thông tin.
+    const refKey = REFERENCED_AS[contract.type];
+    if (oldId && oldId !== contract.contractId && refKey) {
+      for (const childId of Object.keys(updated)) {
+        const child = updated[childId];
+        if (child.relatedContracts?.[refKey] === oldId) {
+          const newChild = { ...child, relatedContracts: { ...child.relatedContracts, [refKey]: contract.contractId } };
+          updated[childId] = newChild;
+          const { _dbId: cDbId, _maSale: cMaSale, _createdBy: cCreatedBy, ...cleanChild } = newChild;
+          await api.upsertContract({
+            _dbId: cDbId,
+            category: CATEGORY_MAP[newChild.type] || 'mua_ban',
+            docType: DOC_TYPE_MAP[newChild.type],
+            contract: cleanChild,
+            maSale: profile?.ma_sale,
+          });
+        }
+      }
+    }
+
     setContracts(updated);
   };
   const deleteContract = async (id) => {

@@ -44,6 +44,8 @@ const PRINT_STYLE = `
   }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid #555; padding: 4px 8px; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
   .no-print { display: none !important; }
 `;
 
@@ -75,6 +77,10 @@ export const ContractViewer = ({ contract, sellers, customers, onClose, onDelete
   const doPrint = () => {
     const content = document.getElementById('contract-print-zone').innerHTML;
     const w = window.open('', '_blank');
+    if (!w) {
+      alert('Trình duyệt đang chặn cửa sổ bật lên (popup). Vui lòng cho phép popup cho trang này (thường có biểu tượng 🚫 trên thanh địa chỉ) rồi bấm lại.');
+      return;
+    }
     w.document.write(getFullHtml(content));
     w.document.close();
     w.onload = () => { w.focus(); w.print(); w.close(); };

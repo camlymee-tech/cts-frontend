@@ -48,6 +48,8 @@ const PRINT_STYLE = `
   }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid #555; padding: 4px 8px; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
   .no-print { display: none !important; }
   .bulk-item { page-break-after: always; break-after: page; }
   .bulk-item:last-child { page-break-after: auto; break-after: auto; }

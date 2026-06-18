@@ -1,25 +1,29 @@
 // supabase/functions/read-invoice/index.ts
 // Edge Function: đọc hóa đơn VAT / đơn hàng USD bằng AI.
 // API Key (ANTHROPIC_API_KEY) chỉ nằm ở đây (server), KHÔNG bao giờ gửi về trình duyệt người dùng.
-// Deploy: Supabase Dashboard → Edge Functions → Deploy a new function → Via Editor → dán nguyên file này.
-// Cấu hình: Edge Functions → Secrets → thêm ANTHROPIC_API_KEY = <API key thật>.
-
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+// Không phụ thuộc thư viện ngoài (jsr:@supabase/supabase-js) — tự gọi thẳng Supabase Auth REST API
+// để kiểm tra đăng nhập, giảm điểm có thể lỗi khi khởi động function.
+// Deploy: Supabase Dashboard → Edge Functions → function "clever-handler" → tab Code → dán nguyên file này → Deploy updates.
+// Cấu hình: Edge Functions → Secrets → ANTHROPIC_API_KEY = <API key thật>.
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// tongCongInHoaDon: tổng cộng/thành tiền sau cùng IN SẴN trên hóa đơn gốc (nếu đọc được) —
+// dùng để đối chiếu lại với tổng do AI tự cộng từ các dòng hàng, phát hiện sai sót khi ảnh mờ/nghiêng.
 const PROMPTS: Record<string, string> = {
   vat:
     'Đây là hóa đơn VAT. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
-    '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0,"vatRate":8}]}\n' +
+    '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0,"vatRate":8}],"tongCongInHoaDon":0}\n' +
+    'tongCongInHoaDon là số tiền tổng cộng/thanh toán sau cùng được IN SẴN trên hóa đơn (đã gồm thuế, nếu có) — để null nếu không thấy rõ trên hóa đơn. ' +
     'Chỉ trả JSON, không thêm chữ nào khác.',
   goods_usd:
     'Đây là đơn hàng / invoice từ nhà cung cấp nước ngoài, đơn giá tính bằng USD. Trích xuất danh sách hàng hóa và trả về JSON đúng định dạng:\n' +
-    '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0}]}\n' +
-    'donGia và thanhTien là số USD (có thể có phần thập phân). Chỉ trả JSON, không thêm chữ nào khác.',
+    '{"goods":[{"stt":1,"tenHang":"...","dvt":"...","soLuong":0,"donGia":0,"thanhTien":0}],"tongCongInHoaDon":0}\n' +
+    'donGia và thanhTien là số USD (có thể có phần thập phân). tongCongInHoaDon là tổng cộng USD IN SẴN trên đơn hàng/invoice (nếu có) — để null nếu không thấy rõ. ' +
+    'Chỉ trả JSON, không thêm chữ nào khác.',
 };
 
 function json(body: unknown, status = 200) {
@@ -34,14 +38,18 @@ Deno.serve(async (req) => {
 
   try {
     // 1. Chỉ cho phép user đã đăng nhập hợp lệ của app gọi vào — không cho gọi ẩn danh từ ngoài.
+    //    Gọi trực tiếp Supabase Auth REST API (không qua thư viện ngoài) để kiểm tra token.
     const authHeader = req.headers.get('Authorization') || '';
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
-    if (userErr || !user) {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { Authorization: authHeader, apikey: supabaseAnonKey! },
+    });
+    if (!userRes.ok) {
+      return json({ error: 'Chưa đăng nhập hoặc phiên đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.' }, 401);
+    }
+    const user = await userRes.json();
+    if (!user?.id) {
       return json({ error: 'Chưa đăng nhập hoặc phiên đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.' }, 401);
     }
 

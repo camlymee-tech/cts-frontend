@@ -8,7 +8,7 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTableUSD } from '../components/GoodsTableUSD';
 import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { DDHUTPreview } from '../previews/DDHUTPreview';
-import { buildContractId } from '../helpers';
+import { buildContractId, calcUSDTotal, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 
 export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
@@ -20,9 +20,11 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   const [goodsUSD, setGoodsUSD] = useState(editData?.goodsUSD || []);
   const [exchangeRate, setExchangeRate] = useState(editData?.exchangeRate ?? '');
   const [feeAmount, setFeeAmount] = useState(editData?.goods?.[0]?.donGia ?? '');
+  const [vatRate, setVatRate] = useState(editData?.goods?.[0]?.vatRate ?? 8);
   const [hdntUtId, setHdntUtId] = useState(editData?.relatedContracts?.hdnt_ut || '');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiMismatch, setAiMismatch] = useState(null); // { aiTotal, printedTotal } nếu lệch
   const [showPreview, setShowPreview] = useState(false);
   // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
@@ -40,7 +42,7 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste) — đọc hàng hóa giá USD
   const processFile = async (file) => {
     if (!file) return;
-    setAiError(''); setAiLoading(true);
+    setAiError(''); setAiMismatch(null); setAiLoading(true);
     try {
       const base64 = await new Promise((res, rej) => {
         const r = new FileReader();
@@ -49,7 +51,15 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
         r.readAsDataURL(file);
       });
       const result = await api.readGoodsUSD(base64, file.type);
-      setGoodsUSD(result.goods || []);
+      const newGoodsUSD = result.goods || [];
+      setGoodsUSD(newGoodsUSD);
+      const printedTotal = result.tongCongInHoaDon;
+      if (printedTotal !== null && printedTotal !== undefined) {
+        const aiTotal = calcUSDTotal(newGoodsUSD);
+        if (Math.abs(aiTotal - Number(printedTotal)) > 0.5) {
+          setAiMismatch({ aiTotal, printedTotal: Number(printedTotal) });
+        }
+      }
     } catch (err) {
       setAiError(err.message);
     } finally {
@@ -81,7 +91,7 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
 
 
   const fee = Number(feeAmount) || 0;
-  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ ủy thác trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate: 8 }] : [];
+  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ ủy thác trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate }] : [];
 
   const autoContractId = buildContractId({ type: 'DDH_UT', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
   const contractId = idOverride !== null ? idOverride : autoContractId;
@@ -184,17 +194,28 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
             <span className="text-xs text-gray-400">hoặc Cách 3: bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}
+          {aiMismatch && (
+            <Alert type="warn">
+              ⚠️ Tổng AI tính được ({fmtNum(aiMismatch.aiTotal)} USD) không khớp với tổng in trên invoice gốc ({fmtNum(aiMismatch.printedTotal)} USD) — vui lòng kiểm tra lại các dòng hàng bên dưới trước khi lưu.
+            </Alert>
+          )}
           <GoodsTableUSD goods={goodsUSD} onChange={setGoodsUSD} exchangeRate={exchangeRate} onExchangeRateChange={setExchangeRate} />
         </div>
 
         <div className="mb-2">
           <label className="block text-xs font-medium text-gray-600 mb-2">1.2. Phí dịch vụ ủy thác trọn gói (tạm tính, Vnđ) <span className="text-red-500">*</span></label>
-          <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 8000000"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3" />
+          <div className="flex gap-2 mb-3">
+            <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 8000000"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            <select value={vatRate} onChange={e => setVatRate(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+              {[0, 5, 8, 10].map(r => <option key={r} value={r}>VAT {r}%</option>)}
+            </select>
+          </div>
           {fee > 0 ? (
             <ServiceFeeTable goods={goods} feeLabel="Phí dịch vụ ủy thác trọn gói tạm tính (Vnd)" totalLabel="Tổng cộng giá trị sau thuế (Vnd)" />
           ) : (
-            <div className="text-sm text-gray-400 italic">Nhập phí dịch vụ để tự động tính thuế GTGT 8% và tổng cộng.</div>
+            <div className="text-sm text-gray-400 italic">Nhập phí dịch vụ để tự động tính thuế GTGT và tổng cộng.</div>
           )}
         </div>
       </div>

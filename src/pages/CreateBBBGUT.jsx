@@ -16,6 +16,7 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
   const [stt, setStt] = useState(editData?.stt || '');
   const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
   const [feeAmount, setFeeAmount] = useState(editData?.goods?.[0]?.donGia ?? '');
+  const [vatRate, setVatRate] = useState(editData?.goods?.[0]?.vatRate ?? 8);
   const [hdntUtId, setHdntUtId] = useState(editData?.relatedContracts?.hdnt_ut || '');
   const [ddhUtId, setDdhUtId] = useState(editData?.relatedContracts?.ddh_ut || '');
   const [declarationNo, setDeclarationNo] = useState(editData?.declarationNo || '');
@@ -45,7 +46,7 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
   };
 
   const fee = Number(feeAmount) || 0;
-  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ ủy thác nhập khẩu quyết toán trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate: 8 }] : [];
+  const goods = fee > 0 ? [{ stt: 1, tenHang: 'Phí dịch vụ ủy thác nhập khẩu quyết toán trọn gói', dvt: 'Trọn gói', soLuong: 1, donGia: fee, thanhTien: fee, vatRate }] : [];
 
   const autoContractId = buildContractId({ type: 'BBBG_UT', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
   const contractId = idOverride !== null ? idOverride : autoContractId;
@@ -157,12 +158,18 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
           </div>
 
           <label className="block text-xs font-medium text-gray-600 mb-2">Giá trị dịch vụ ủy thác quyết toán thực tế (Vnđ) <span className="text-red-500">*</span></label>
-          <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 8000000"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3" />
+          <div className="flex gap-2 mb-3">
+            <input type="number" min="0" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="VD: 8000000"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            <select value={vatRate} onChange={e => setVatRate(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+              {[0, 5, 8, 10].map(r => <option key={r} value={r}>VAT {r}%</option>)}
+            </select>
+          </div>
           {fee > 0 ? (
             <ServiceFeeTable goods={goods} feeLabel="Phí dịch vụ ủy thác nhập khẩu quyết toán trọn gói" totalLabel="Tổng cộng giá trị sau thuế" />
           ) : (
-            <div className="text-sm text-gray-400 italic">Nhập giá trị quyết toán để tự động tính thuế GTGT 8% và tổng cộng.</div>
+            <div className="text-sm text-gray-400 italic">Nhập giá trị quyết toán để tự động tính thuế GTGT và tổng cộng.</div>
           )}
         </div>
       </div>

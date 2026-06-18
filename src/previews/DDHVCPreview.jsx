@@ -1,4 +1,5 @@
 // File: src/previews/DDHVCPreview.jsx
+import { SignatureBlock } from './SignatureBlock';
 import { fmtDate } from '../helpers';
 import { ServiceFeeTable } from './ServiceFeeTable';
 
@@ -60,14 +61,7 @@ export const DDHVCPreview = ({ c, seller, customer }) => {
         <div style={{ textAlign: 'justify' }}>Đơn đặt dịch vụ này là một phần không tách rời Hợp đồng nguyên tắc hai bên đã ký. Các điều khoản của đơn đặt dịch vụ này được áp dụng theo điều khoản trong hợp đồng nguyên tắc, có hiệu lực từ ngày ký. Đơn đặt dịch vụ được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo đơn đặt dịch vụ này.</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-10 mt-8 text-center text-sm">
-        <div></div>
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên Đặt Dịch Vụ</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
-        </div>
-      </div>
+      <SignatureBlock marginTop="32px" rightTitle="Đại diện Bên Đặt Dịch Vụ" />
     </div>
   );
 };

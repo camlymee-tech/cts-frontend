@@ -1,4 +1,5 @@
 // File: src/previews/HDNTPreview.jsx
+import { SignatureBlock } from './SignatureBlock';
 import { fmtDate } from '../helpers';
 import { HDNT_ARTICLES } from '../data/hdntArticles';
 import { PartyBlock } from './PartyBlock';
@@ -47,20 +48,7 @@ export const HDNTPreview = ({ c, seller, customer }) => {
         </div>
       ))}
 
-      <div className="grid grid-cols-2 gap-10 mt-10 text-center text-sm">
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên A</div>
-          <div className="text-xs">(Bên Mua)</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
-        </div>
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên B</div>
-          <div className="text-xs">(Bên Bán)</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
-        </div>
-      </div>
+      <SignatureBlock marginTop="40px" leftTitle="Đại diện Bên A" leftSub="(Bên Mua)" rightTitle="Đại diện Bên B" rightSub="(Bên Bán)" />
     </div>
   );
 };

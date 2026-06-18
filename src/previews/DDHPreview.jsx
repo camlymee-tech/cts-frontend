@@ -1,4 +1,5 @@
 // File: src/previews/DDHPreview.jsx
+import { SignatureBlock } from './SignatureBlock';
 import { fmtDate, calcTotals, numberToWords } from '../helpers';
 import { GoodsTablePrint } from './GoodsTablePrint';
 
@@ -63,14 +64,18 @@ export const DDHPreview = ({ c, seller, customer }) => {
         <div style={{ textAlign: 'justify' }}>Đơn đặt hàng này là một phần không tách rời Hợp đồng nguyên tắc hai bên đã ký. Các điều khoản của đơn đặt hàng này được áp dụng theo điều khoản trong hợp đồng nguyên tắc, có hiệu lực từ ngày ký. Đơn đặt hàng được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo đơn đặt hàng này.</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-10 mt-8 text-center text-sm">
-        <div></div>
-        <div>
-          <div className="font-bold uppercase">Đại diện Bên Đặt Hàng</div>
-          <div className="italic text-gray-500">(Ký tên, đóng dấu)</div>
-          <div className="mt-24"></div>
+      <SignatureBlock marginTop="32px" rightTitle="Đại diện Bên Đặt Hàng" />
+
+      {c.vatInvoiceImage && (
+        <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="mt-10">
+          <div className="text-center font-bold uppercase text-sm mb-3">Hóa đơn VAT đính kèm — {c.contractId}</div>
+          <img
+            src={`data:${c.vatInvoiceImage.mediaType};base64,${c.vatInvoiceImage.data}`}
+            alt="Hóa đơn VAT đính kèm"
+            style={{ maxWidth: '100%', display: 'block', margin: '0 auto' }}
+          />
         </div>
-      </div>
+      )}
     </div>
   );
 };
