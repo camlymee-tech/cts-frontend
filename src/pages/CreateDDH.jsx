@@ -52,7 +52,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
       const result = await api.readVAT(base64, file.type);
       const newGoods = result.goods || [];
       setGoods(newGoods);
-      // Tự đính kèm luôn hóa đơn vừa upload để in cùng đơn đặt hàng — PDF tự chuyển sang ảnh trang đầu.
+      // Tự đính kèm luôn hóa đơn vừa upload — giữ lại để in cùng Biên Bản Bàn Giao sau này. PDF tự chuyển sang ảnh trang đầu.
       try {
         if (file.type === 'application/pdf') {
           const img = await pdfFirstPageToImage(file);
@@ -232,11 +232,11 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
         </div>
 
         <div className="mb-5">
-          <label className="block text-xs font-medium text-gray-600 mb-2">🧾 Hóa đơn VAT (nếu có) — đính kèm để in cùng đơn đặt hàng</label>
+          <label className="block text-xs font-medium text-gray-600 mb-2">🧾 Hóa đơn VAT (nếu có) — đính kèm, sẽ in cùng Biên Bản Bàn Giao sau này (không in cùng đơn đặt hàng)</label>
           {vatInvoiceImage ? (
             <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
               <img src={`data:${vatInvoiceImage.mediaType};base64,${vatInvoiceImage.data}`} alt="Hóa đơn VAT" className="h-16 w-16 object-cover rounded border border-gray-300" />
-              <div className="flex-1 text-sm text-gray-600">Đã đính kèm — sẽ in/xuất file kèm theo đơn đặt hàng này.</div>
+              <div className="flex-1 text-sm text-gray-600">Đã đính kèm — sẽ tự chuyển sang Biên Bản Bàn Giao gắn với ĐĐH này khi tạo, để in cùng BBBG.</div>
               <button onClick={() => attachRef.current.click()} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Đổi ảnh khác</button>
               <button onClick={() => setVatInvoiceImage(null)} className="text-red-500 hover:text-red-700 text-sm font-medium">✕ Gỡ</button>
             </div>

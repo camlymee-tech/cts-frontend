@@ -9,6 +9,7 @@ import { GoodsTable } from '../components/GoodsTable';
 import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId } from '../helpers';
 import { api } from '../lib/api';
+import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
 export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
   const isEdit = !!editData;
@@ -17,6 +18,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const [stt, setStt] = useState(editData?.stt || '');
   const [date, setDate] = useState(editData?.date || new Date().toISOString().slice(0, 10));
   const [goods, setGoods] = useState(editData?.goods || []);
+  const [vatInvoiceImage, setVatInvoiceImage] = useState(editData?.vatInvoiceImage || null); // { data, mediaType } | null
   const [hdntId, setHdntId] = useState(editData?.relatedContracts?.hdnt || '');
   const [ddhId, setDdhId] = useState(editData?.relatedContracts?.ddh || '');
   const [showPreview, setShowPreview] = useState(false);
@@ -37,12 +39,38 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     const d = matchingDDHs[0];
     setDdhId(d?.contractId || '');
     setGoods(d?.goods?.length ? d.goods : []);
+    if (!isEdit) setVatInvoiceImage(d?.vatInvoiceImage || null);
   }, [customerId, sellerId]);
 
   const selectDDH = (id) => {
     setDdhId(id);
     const d = contracts[id];
     setGoods(d?.goods?.length ? d.goods : []);
+    setVatInvoiceImage(d?.vatInvoiceImage || null);
+  };
+
+  const fileRef2 = useRef();
+  // Đính kèm/đổi hóa đơn VAT riêng (không qua AI) — dùng khi không có ĐĐH gắn sẵn, hoặc muốn đổi ảnh khác
+  const handleAttachOnly = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      if (file.type === 'application/pdf') {
+        const img = await pdfFirstPageToImage(file);
+        setVatInvoiceImage({ data: img.base64, mediaType: img.mediaType });
+      } else {
+        const base64 = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = ev => res(ev.target.result.split(',')[1]);
+          r.onerror = rej;
+          r.readAsDataURL(file);
+        });
+        setVatInvoiceImage({ data: base64, mediaType: file.type });
+      }
+    } catch (err) {
+      alert('Không đọc được file này để đính kèm: ' + err.message);
+    }
+    e.target.value = '';
   };
 
   // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste)
@@ -58,6 +86,17 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
       });
       const result = await api.readVAT(base64, file.type);
       setGoods(result.goods || []);
+      // Tự đính kèm hóa đơn VAT thực tế vừa upload (ưu tiên hơn hóa đơn lấy từ ĐĐH, vì là bản quyết toán cuối).
+      try {
+        if (file.type === 'application/pdf') {
+          const img = await pdfFirstPageToImage(file);
+          setVatInvoiceImage({ data: img.base64, mediaType: img.mediaType });
+        } else {
+          setVatInvoiceImage({ data: base64, mediaType: file.type });
+        }
+      } catch (attachErr) {
+        console.error('Không đính kèm được hóa đơn:', attachErr);
+      }
     } catch (err) {
       setAiError(err.message);
     } finally {
@@ -93,6 +132,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     contractId, type: 'BBBG', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hoàn thành', goods,
     customerSnapshot: customer, sellerSnapshot: seller,
+    vatInvoiceImage,
     relatedContracts: { hdnt: hdntId, ddh: ddhId }
   } : null;
 
@@ -187,6 +227,23 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}
           <GoodsTable goods={goods} onChange={setGoods} />
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-xs font-medium text-gray-600 mb-2">🧾 Hóa đơn VAT đính kèm (in cùng biên bản này)</label>
+          {vatInvoiceImage ? (
+            <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <img src={`data:${vatInvoiceImage.mediaType};base64,${vatInvoiceImage.data}`} alt="Hóa đơn VAT" className="h-16 w-16 object-cover rounded border border-gray-300" />
+              <div className="flex-1 text-sm text-gray-600">Đã có hóa đơn đính kèm (tự lấy từ ĐĐH đã gắn, hoặc đính kèm riêng) — sẽ in/xuất file kèm theo biên bản này.</div>
+              <button onClick={() => fileRef2.current.click()} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Đổi ảnh khác</button>
+              <button onClick={() => setVatInvoiceImage(null)} className="text-red-500 hover:text-red-700 text-sm font-medium">✕ Gỡ</button>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 italic">
+              Chưa có hóa đơn đính kèm (ĐĐH đã gắn chưa có hóa đơn, hoặc chưa gắn ĐĐH nào). Bạn có thể <button onClick={() => fileRef2.current.click()} className="text-blue-600 hover:underline font-medium">đính kèm ảnh hóa đơn</button> riêng để in cùng.
+            </div>
+          )}
+          <input ref={fileRef2} type="file" accept="image/*,application/pdf" onChange={handleAttachOnly} className="hidden" />
         </div>
       </div>
 

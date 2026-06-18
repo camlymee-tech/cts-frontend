@@ -57,6 +57,17 @@ export const BBBGPreview = ({ c, seller, customer }) => {
       </div>
 
       <SignatureBlock marginTop="24px" leftTitle="Đại diện Bên Mua (Bên A)" rightTitle="Đại diện Bên Bán (Bên B)" />
+
+      {c.vatInvoiceImage && (
+        <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }} className="mt-10">
+          <div className="text-center font-bold uppercase text-sm mb-3">Hóa đơn VAT đính kèm — {c.contractId}</div>
+          <img
+            src={`data:${c.vatInvoiceImage.mediaType};base64,${c.vatInvoiceImage.data}`}
+            alt="Hóa đơn VAT đính kèm"
+            style={{ maxWidth: '100%', display: 'block', margin: '0 auto' }}
+          />
+        </div>
+      )}
     </div>
   );
 };
