@@ -22,6 +22,7 @@ import { CreateBBBGUT } from './pages/CreateBBBGUT';
 import { LoginPage } from './pages/LoginPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
+import { CompleteProfilePage } from './pages/CompleteProfilePage';
 
 const DOC_TYPE_MAP = {
   HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg',
@@ -251,8 +252,10 @@ export default function App() {
   }
 
   // Sale chưa chọn phòng ban → yêu cầu chọn trước khi vào app
-  if (profile && profile.role !== 'admin' && !profile.department_id) {
-    return <ChooseDepartmentPage profile={profile} departments={departments} onDone={(updated) => setProfile(updated)} />;
+  // Chưa điền đủ thông tin (tên + phòng ban) → yêu cầu hoàn thiện hồ sơ trước khi vào app
+  if (profile && profile.role !== 'admin' && (!profile.full_name || !profile.department_id)) {
+    return <CompleteProfilePage profile={profile} departments={departments}
+      onDone={(updated) => setProfile(updated)} />;
   }
 
   const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
@@ -298,6 +301,8 @@ export default function App() {
       case 'edit-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
       case 'edit-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} editData={editContractData} />;
+      case 'my-profile': return <CompleteProfilePage profile={profile} departments={departments}
+          onDone={(updated) => setProfile(updated)} isEdit={true} />;
       case 'admin-users':  return isAdmin ? <AdminUsersPage departments={departments} /> : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       default:             return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
     }

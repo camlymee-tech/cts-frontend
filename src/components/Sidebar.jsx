@@ -27,6 +27,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
+    { id: 'my-profile', icon: '👤', label: 'Hồ sơ của tôi' },
   ];
 
   const groups = [
