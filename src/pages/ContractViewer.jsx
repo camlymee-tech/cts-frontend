@@ -49,7 +49,7 @@ const PRINT_STYLE = `
   .no-print { display: none !important; }
 `;
 
-export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, isAdmin = false, onAssign, onClose, onDelete, onEdit }) => {
+export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, saleProfiles = [], isAdmin = false, onAssign, onClose, onDelete, onEdit }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [wordLoading, setWordLoading] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -181,12 +181,12 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, isA
             </span>
             <select value={assignTarget} onChange={e => { setAssignTarget(e.target.value); setAssignDone(false); }}
               className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
-              <option value="">-- Giao cho sale khác --</option>
-              {Object.entries(saleMap)
-                .filter(([key]) => key.length < 20) // chỉ lấy key ngắn (mã sale), không lấy uuid
-                .map(([maSale, info]) => (
-                  <option key={maSale} value={maSale}>{info.name} ({maSale})</option>
-                ))}
+              <option value="">-- Giao cho sale --</option>
+              {saleProfiles.map(p => (
+                <option key={p.uuid} value={p.uuid}>
+                  {p.name}{p.ma_sale ? ` (${p.ma_sale})` : ''}{p.deptName ? ` — ${p.deptName}` : ''}
+                </option>
+              ))}
             </select>
             <button
               disabled={assigning || !assignTarget || assignTarget === contract._maSale}

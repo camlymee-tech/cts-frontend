@@ -7,7 +7,8 @@ import { BulkContractViewer } from './BulkContractViewer';
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 const PAGE_SIZE = 30;
 
-export const ContractListPage = ({ type, contracts, customers, sellers, saleMap = {}, setPage, setViewContract, onDelete, onDeleteMany, onEdit }) => {
+export const ContractListPage = ({ type, contracts, customers, sellers, saleMap = {}, saleProfiles = [], setPage, setViewContract, onDelete, onDeleteMany, onAssign, onEdit }) => {
+  const [assigningId, setAssigningId] = useState(null); // contractId đang được giao
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -150,7 +151,36 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
                     <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
-                    <td className="px-5 py-3 text-gray-600 text-xs">{(saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || '–'}</td>
+                    <td className="px-5 py-3 text-gray-600 text-xs">
+                      {saleProfiles.length > 0 ? (
+                        assigningId === c.contractId ? (
+                          <select autoFocus
+                            defaultValue={(saleMap[c._maSale] ? c._maSale : c._createdBy) || ''}
+                            onChange={async e => {
+                              const val = e.target.value;
+                              if (val) { try { await onAssign(c.contractId, val); } catch {} }
+                              setAssigningId(null);
+                            }}
+                            onBlur={() => setAssigningId(null)}
+                            className="border border-blue-300 rounded px-1 py-0.5 text-xs bg-white focus:outline-none max-w-[140px]">
+                            <option value="">-- Chọn sale --</option>
+                            {saleProfiles.map(p => (
+                              <option key={p.uuid} value={p.uuid}>
+                                {p.name}{p.ma_sale ? ` (${p.ma_sale})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <button onClick={() => setAssigningId(c.contractId)}
+                            className="hover:text-blue-600 hover:underline text-left w-full"
+                            title="Bấm để giao cho sale khác">
+                            {(saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || <span className="text-gray-300">Chưa gán</span>}
+                          </button>
+                        )
+                      ) : (
+                        (saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || '–'
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-gray-500 text-xs">{(saleMap[c._createdBy] || saleMap[c._maSale])?.deptName || '–'}</td>
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
