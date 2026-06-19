@@ -147,7 +147,13 @@ export const api = {
 
   // ───────── Quản lý tài khoản (chỉ admin) ─────────
   async adminListProfiles() {
-    const { data, error } = await supabase.rpc('admin_list_profiles');
+    // Dùng direct query thay vì RPC để tự động lấy đủ các cột mới (approved, phone...)
+    // kể cả khi cột được thêm sau khi RPC đã được tạo.
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('approved', { ascending: true })
+      .order('full_name', { ascending: true, nullsFirst: true });
     if (error) throw new Error(error.message);
     return data || [];
   },
