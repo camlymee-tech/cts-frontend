@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
 import { BulkContractViewer } from './BulkContractViewer';
+import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 const PAGE_SIZE = 30;
@@ -154,27 +155,20 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
                     <td className="px-5 py-3 text-gray-600 text-xs">
                       {saleProfiles.length > 0 ? (
                         assigningId === c.contractId ? (
-                          <select autoFocus
-                            defaultValue={(saleMap[c._maSale] ? c._maSale : c._createdBy) || ''}
-                            onChange={async e => {
-                              const val = e.target.value;
-                              if (val) { try { await onAssign(c.contractId, val); } catch {} }
+                          <SaleSearchDropdown
+                            saleProfiles={saleProfiles}
+                            value={c._maSale || c._createdBy || ''}
+                            onChange={async uuid => {
+                              if (uuid) { try { await onAssign(c.contractId, uuid); } catch {} }
                               setAssigningId(null);
                             }}
-                            onBlur={() => setAssigningId(null)}
-                            className="border border-blue-300 rounded px-1 py-0.5 text-xs bg-white focus:outline-none max-w-[140px]">
-                            <option value="">-- Chọn sale --</option>
-                            {saleProfiles.map(p => (
-                              <option key={p.uuid} value={p.uuid}>
-                                {p.name}{p.ma_sale ? ` (${p.ma_sale})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            placeholder="Chọn sale..."
+                          />
                         ) : (
                           <button onClick={() => setAssigningId(c.contractId)}
                             className="hover:text-blue-600 hover:underline text-left w-full"
                             title="Bấm để giao cho sale khác">
-                            {(saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || <span className="text-gray-300">Chưa gán</span>}
+                            {(saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || <span className="text-gray-300 italic">Chưa gán</span>}
                           </button>
                         )
                       ) : (

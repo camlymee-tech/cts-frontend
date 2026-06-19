@@ -1,6 +1,7 @@
 // File: src/pages/ContractViewer.jsx
 import { useState } from 'react';
 import { Badge } from '../components/Badge';
+import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { HDNTPreview } from '../previews/HDNTPreview';
 import { DDHPreview } from '../previews/DDHPreview';
 import { BBBGPreview } from '../previews/BBBGPreview';
@@ -179,15 +180,12 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, sal
             <span className="text-sm text-gray-700">
               {saleMap[contract._maSale]?.name || contract._maSale || <span className="text-gray-400 italic">Chưa gán</span>}
             </span>
-            <select value={assignTarget} onChange={e => { setAssignTarget(e.target.value); setAssignDone(false); }}
-              className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
-              <option value="">-- Giao cho sale --</option>
-              {saleProfiles.map(p => (
-                <option key={p.uuid} value={p.uuid}>
-                  {p.name}{p.ma_sale ? ` (${p.ma_sale})` : ''}{p.deptName ? ` — ${p.deptName}` : ''}
-                </option>
-              ))}
-            </select>
+            <SaleSearchDropdown
+              saleProfiles={saleProfiles}
+              value={assignTarget}
+              onChange={v => { setAssignTarget(v); setAssignDone(false); }}
+              placeholder="Giao cho sale..."
+            />
             <button
               disabled={assigning || !assignTarget || assignTarget === contract._maSale}
               onClick={async () => {
