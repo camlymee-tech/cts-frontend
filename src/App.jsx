@@ -98,16 +98,22 @@ export default function App() {
       });
       setContracts(contractsMap);
 
-      // Build saleMap { [ma_sale]: { name, deptName } } để hiện tên + phòng ban ở danh sách HĐ (admin dùng)
+      // Build saleMap để hiện tên + phòng ban ở danh sách HĐ (admin dùng).
+      // Dùng 2 key: uuid (_createdBy) và ma_sale (_maSale) để luôn tìm được
+      // kể cả hợp đồng tạo trước khi sale được gán mã.
       if (prof?.role === 'admin') {
         try {
           const allProfiles = await api.adminListProfiles();
           const map = {};
           allProfiles.forEach(p => {
-            if (p.ma_sale) {
-              const deptName = dp?.[p.department_id]?.name || '';
-              map[p.ma_sale] = { name: p.full_name || p.email || p.ma_sale, deptName };
-            }
+            const info = {
+              name: p.full_name || p.email || p.ma_sale || p.id,
+              deptName: dp?.[p.department_id]?.name || '',
+            };
+            // Tra theo uuid (luôn có, dùng làm key chính)
+            map[p.id] = info;
+            // Tra theo mã sale (nếu có, để backward-compat)
+            if (p.ma_sale) map[p.ma_sale] = info;
           });
           setSaleMap(map);
         } catch { /* bỏ qua nếu lỗi, không ảnh hưởng chức năng chính */ }

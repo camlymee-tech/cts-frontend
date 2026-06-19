@@ -150,8 +150,8 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
                     <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
-                    <td className="px-5 py-3 text-gray-600 text-xs">{saleMap[c._maSale]?.name || c._maSale || '–'}</td>
-                    <td className="px-5 py-3 text-gray-500 text-xs">{saleMap[c._maSale]?.deptName || '–'}</td>
+                    <td className="px-5 py-3 text-gray-600 text-xs">{(saleMap[c._createdBy] || saleMap[c._maSale])?.name || c._maSale || '–'}</td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{(saleMap[c._createdBy] || saleMap[c._maSale])?.deptName || '–'}</td>
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
                       <button onClick={() => setViewContract(c)} className="text-blue-600 hover:text-blue-800 font-medium text-sm mr-3">Xem →</button>
