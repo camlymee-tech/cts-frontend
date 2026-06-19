@@ -2,14 +2,16 @@
 import { useState } from 'react';
 import { Steps } from '../components/Steps';
 import { SearchableSelect } from '../components/SearchableSelect';
+import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { Alert } from '../components/Alert';
 import { HDNTPreview } from '../previews/HDNTPreview';
 import { buildContractId } from '../helpers';
 
-export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
+export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [step, setStep] = useState(isEdit ? 2 : 0);
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -34,7 +36,7 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(preview, isEdit ? editData.contractId : null);
+    await onSave(preview, isEdit ? editData.contractId : null, assignedSaleUuid || null);
     setPage('hdnt');
   };
 
@@ -93,6 +95,13 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
               {sellerId && <PartyInfoCard title="Thông tin Bên Bán (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null} />}
             </div>
           )}
+
+        {isAdmin && (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">👤 Sale phụ trách <span className="text-gray-400">(admin gán)</span></label>
+            <SaleSearchDropdown saleProfiles={saleProfiles} value={assignedSaleUuid} onChange={setAssignedSaleUuid} placeholder="Giao cho sale..." />
+          </div>
+        )}
           <div className="flex gap-2 mt-5">
             <button onClick={() => setStep(0)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">← Quay lại</button>
             <button onClick={() => { if (!sellerId) return alert('Vui lòng chọn công ty bên bán'); setStep(2); }}

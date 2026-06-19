@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Select } from '../components/Select';
 import { SearchableSelect } from '../components/SearchableSelect';
+import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { Alert } from '../components/Alert';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
@@ -9,8 +10,9 @@ import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { BBBGVCPreview } from '../previews/BBBGVCPreview';
 import { buildContractId } from '../helpers';
 
-export const CreateBBBGVC = ({ sellers, customers, contracts, onSave, setPage, editData }) => {
+export const CreateBBBGVC = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
   const [stt, setStt] = useState(editData?.stt || '');
@@ -66,7 +68,7 @@ export const CreateBBBGVC = ({ sellers, customers, contracts, onSave, setPage, e
     if (fee <= 0) return alert('Vui lòng nhập giá trị dịch vụ quyết toán');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(getContract(), isEdit ? editData.contractId : null);
+    await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
     setPage('bbbg_vc');
   };
 
@@ -100,6 +102,13 @@ export const CreateBBBGVC = ({ sellers, customers, contracts, onSave, setPage, e
           <div className="grid grid-cols-2 gap-4 mb-4">
             <PartyInfoCard title="Bên Thuê Dịch Vụ (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null} />
             <PartyInfoCard title="Bên Nhận Dịch Vụ (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null} />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">👤 Sale phụ trách <span className="text-gray-400">(admin gán)</span></label>
+            <SaleSearchDropdown saleProfiles={saleProfiles} value={assignedSaleUuid} onChange={setAssignedSaleUuid} placeholder="Giao cho sale..." />
           </div>
         )}
 
