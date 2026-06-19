@@ -7,7 +7,7 @@ import { BulkContractViewer } from './BulkContractViewer';
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 const PAGE_SIZE = 30;
 
-export const ContractListPage = ({ type, contracts, customers, sellers, setPage, setViewContract, onDelete, onDeleteMany, onEdit }) => {
+export const ContractListPage = ({ type, contracts, customers, sellers, saleMap = {}, setPage, setViewContract, onDelete, onDeleteMany, onEdit }) => {
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -133,6 +133,8 @@ export const ContractListPage = ({ type, contracts, customers, sellers, setPage,
               <th className="text-left px-5 py-3">Khách hàng</th>
               <th className="text-left px-5 py-3">Ngày</th>
               {showTotal && <th className="text-left px-5 py-3">Tổng tiền</th>}
+              <th className="text-left px-5 py-3">Sale</th>
+              <th className="text-left px-5 py-3">Phòng ban</th>
               <th className="text-left px-5 py-3">Trạng thái</th>
               <th className="px-5 py-3"></th>
             </tr></thead>
@@ -148,6 +150,8 @@ export const ContractListPage = ({ type, contracts, customers, sellers, setPage,
                     <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
+                    <td className="px-5 py-3 text-gray-600 text-xs">{saleMap[c._maSale]?.name || c._maSale || '–'}</td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{saleMap[c._maSale]?.deptName || '–'}</td>
                     <td className="px-5 py-3"><Badge color={c.status === 'Hoàn thành' ? 'green' : 'blue'}>{c.status}</Badge></td>
                     <td className="px-5 py-3 whitespace-nowrap text-right">
                       <button onClick={() => setViewContract(c)} className="text-blue-600 hover:text-blue-800 font-medium text-sm mr-3">Xem →</button>
