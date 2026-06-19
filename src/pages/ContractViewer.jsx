@@ -49,9 +49,13 @@ const PRINT_STYLE = `
   .no-print { display: none !important; }
 `;
 
-export const ContractViewer = ({ contract, sellers, customers, onClose, onDelete, onEdit }) => {
+export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, isAdmin = false, onAssign, onClose, onDelete, onEdit }) => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [wordLoading, setWordLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignTarget, setAssignTarget] = useState(contract._maSale || '');
+  const [assignError, setAssignError] = useState('');
+  const [assignDone, setAssignDone] = useState(false);
   // Ưu tiên dùng bản "chụp" thông tin tại thời điểm tạo hợp đồng (customerSnapshot/sellerSnapshot)
   // — để hợp đồng cũ không bị đổi nội dung khi khách hàng/bên bán sau này được sửa hoặc xóa.
   // Hợp đồng tạo trước khi có tính năng này (chưa có snapshot) thì vẫn tra cứu sống như cũ.
@@ -167,6 +171,40 @@ export const ContractViewer = ({ contract, sellers, customers, onClose, onDelete
             </button>
           </div>
         </div>
+
+        {/* Giao hợp đồng cho sale — chỉ admin thấy */}
+        {isAdmin && (
+          <div className="px-6 py-3 border-b bg-gray-50 no-print flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-medium text-gray-500">👤 Sale phụ trách:</span>
+            <span className="text-sm text-gray-700">
+              {saleMap[contract._maSale]?.name || contract._maSale || <span className="text-gray-400 italic">Chưa gán</span>}
+            </span>
+            <select value={assignTarget} onChange={e => { setAssignTarget(e.target.value); setAssignDone(false); }}
+              className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+              <option value="">-- Giao cho sale khác --</option>
+              {Object.entries(saleMap)
+                .filter(([key]) => key.length < 20) // chỉ lấy key ngắn (mã sale), không lấy uuid
+                .map(([maSale, info]) => (
+                  <option key={maSale} value={maSale}>{info.name} ({maSale})</option>
+                ))}
+            </select>
+            <button
+              disabled={assigning || !assignTarget || assignTarget === contract._maSale}
+              onClick={async () => {
+                setAssigning(true); setAssignError(''); setAssignDone(false);
+                try {
+                  await onAssign(contract.contractId, assignTarget);
+                  setAssignDone(true);
+                } catch (err) { setAssignError(err.message); }
+                finally { setAssigning(false); }
+              }}
+              className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              {assigning ? '...' : '✓ Giao'}
+            </button>
+            {assignDone && <span className="text-xs text-green-600 font-medium">✓ Đã giao thành công</span>}
+            {assignError && <span className="text-xs text-red-600">{assignError}</span>}
+          </div>
+        )}
         <div className="p-10" id="contract-print-zone">
           <PreviewComp c={contract} seller={seller} customer={customer} />
         </div>

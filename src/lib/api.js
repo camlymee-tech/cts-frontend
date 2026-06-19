@@ -96,6 +96,18 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // Giao hợp đồng cho sale khác (chỉ admin) — chỉ cập nhật ma_sale, không đổi người tạo
+  async assignContractSale(dbId, newMaSale) {
+    const { data, error } = await supabase
+      .from('contracts')
+      .update({ ma_sale: newMaSale, updated_at: new Date().toISOString() })
+      .eq('id', dbId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
   // ───────── Khách hàng (bảng customers, RLS theo người tạo) ─────────
   async listCustomers() {
     const { data, error } = await supabase

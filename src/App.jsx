@@ -238,6 +238,22 @@ export default function App() {
     setPage('edit-' + contract.type.toLowerCase());
   };
 
+  // Admin giao hợp đồng cho sale khác — chỉ cập nhật ma_sale, giữ nguyên người tạo
+  const assignContract = async (contractId, newMaSale) => {
+    const target = contracts[contractId];
+    if (!target?._dbId) return;
+    await api.assignContractSale(target._dbId, newMaSale);
+    const updated = {
+      ...contracts,
+      [contractId]: { ...target, _maSale: newMaSale },
+    };
+    setContracts(updated);
+    // Cập nhật viewContract nếu đang xem hợp đồng này
+    if (viewContract?.contractId === contractId) {
+      setViewContract({ ...viewContract, _maSale: newMaSale });
+    }
+  };
+
   // --- Loading / Auth states ---
   if (session === undefined) {
     return (
@@ -331,6 +347,9 @@ export default function App() {
           contract={viewContract}
           sellers={sellers}
           customers={customers}
+          saleMap={saleMap}
+          isAdmin={isAdmin}
+          onAssign={assignContract}
           onClose={() => setViewContract(null)}
           onDelete={deleteContract}
           onEdit={handleEditContract}
