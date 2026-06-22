@@ -61,12 +61,18 @@ export const api = {
 
   // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
   async listContracts() {
-    const { data, error } = await supabase
-      .from('contracts')
-      .select('*')
-      .order('created_at', { ascending: true });
+    // Dùng RPC slim để bỏ vatInvoiceImage khỏi danh sách (ảnh base64 làm payload nặng → timeout).
+    // Ảnh chỉ được load khi xem hợp đồng cụ thể (getContractFull).
+    const { data, error } = await supabase.rpc('list_contracts_slim');
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async getContractFull(dbId) {
+    // Load toàn bộ dữ liệu hợp đồng (kể cả vatInvoiceImage) khi bấm Xem.
+    const { data, error } = await supabase.from('contracts').select('*').eq('id', dbId).single();
+    if (error) throw new Error(error.message);
+    return data;
   },
 
   async upsertContract({ _dbId, category, docType, contract, maSale }) {

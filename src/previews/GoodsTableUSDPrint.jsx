@@ -22,7 +22,7 @@ export const GoodsTableUSDPrint = ({ goods, exchangeRate }) => {
           {(goods || []).length === 0 ? (
             <tr><td colSpan="6" className="border border-gray-400 px-2 py-2 text-center text-gray-400 italic">Chưa có hàng hóa</td></tr>
           ) : goods.map((g, i) => (
-            <tr key={i}>
+            <tr key={i} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               <td className="border border-gray-400 px-2 py-1 text-center">{i + 1}</td>
               <td className="border border-gray-400 px-2 py-1">{g.tenHang}</td>
               <td className="border border-gray-400 px-2 py-1 text-center">{g.dvt}</td>

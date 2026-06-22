@@ -18,7 +18,7 @@ export const GoodsTablePrint = ({ goods, finalLabel }) => {
           const rate = g.vatRate !== undefined ? Number(g.vatRate) : 8;
           const tax = Math.round(pre * rate / 100);
           return (
-            <tr key={i}>
+            <tr key={i} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               <td className="border border-gray-400 px-2 py-1 text-center">{i + 1}</td>
               <td className="border border-gray-400 px-2 py-1">{g.tenHang}</td>
               <td className="border border-gray-400 px-2 py-1 text-center">{g.dvt}</td>
