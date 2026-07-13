@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { Field } from '../components/Field';
 import { Select } from '../components/Select';
+import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 
-export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {} }) => {
+export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [] }) => {
   const blank = {
     companyName: '', address: '', taxCode: '', phone: '', email: '',
     bankAccount: '', bankName: '', representative: '', position: '',
@@ -12,7 +13,11 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
   };
   const [form, setForm] = useState(init || blank);
   const upd = (f) => (v) => setForm(p => ({ ...p, [f]: v }));
-  const updSale = (key) => (v) => setForm(p => ({ ...p, assignedSale: { code: '', name: '', accountId: '', ...(p.assignedSale || {}), [key]: v } }));
+  const selectSale = (uuid) => {
+    const p = saleProfiles.find(sp => sp.uuid === uuid);
+    if (!p) return;
+    setForm(prev => ({ ...prev, assignedSale: { code: p.ma_sale || '', name: p.name || '', accountId: p.uuid } }));
+  };
 
   return (
     <div>
@@ -32,8 +37,12 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
         {withAssignment && (
           <>
             <div className="col-span-2 border-t border-gray-100 pt-2 mt-1 text-xs font-semibold text-gray-500 uppercase">Sale phụ trách &amp; Phòng ban</div>
-            <Field label="Mã Sale" value={form.assignedSale?.code} onChange={updSale('code')} placeholder="VD: S01" />
-            <Field label="Tên Sale" value={form.assignedSale?.name} onChange={updSale('name')} placeholder="VD: Nguyễn Cẩm Ly" />
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Sale phụ trách</label>
+              <SaleSearchDropdown saleProfiles={saleProfiles} value={form.assignedSale?.accountId} onChange={selectSale}
+                placeholder="Chọn sale phụ trách..." className="w-full" />
+              <p className="text-xs text-gray-400 mt-1">Chọn đúng tên sale trong danh sách để mã sale được gán chính xác — sale đó sẽ thấy được khách hàng này.</p>
+            </div>
             <Select label="Phòng ban" value={form.departmentId || ''} onChange={upd('departmentId')}>
               <option value="">-- Chọn phòng ban --</option>
               {Object.entries(departments).map(([id, d]) => <option key={id} value={id}>{d.name}</option>)}
