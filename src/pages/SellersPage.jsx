@@ -4,6 +4,19 @@ import { Badge } from '../components/Badge';
 import { CustomerForm } from './CustomerForm';
 import { genSellerId } from '../helpers';
 
+// Format ngày từ YYYY-MM-DD → DD/MM/YY, nếu không phải ISO date thì hiện nguyên (backward compat)
+const fmtSellerDate = (val) => {
+  if (!val) return null;
+  const d = new Date(val);
+  if (!isNaN(d.getTime()) && val.includes('-')) {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+  return val; // fallback: hiện nguyên dữ liệu cũ (vd: "07/25")
+};
+
 export const SellersPage = ({ sellers, onSave, onDelete }) => {
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -56,7 +69,7 @@ export const SellersPage = ({ sellers, onSave, onDelete }) => {
               <div className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50">
                 <div>
                   <span className="font-mono font-bold text-blue-600 text-sm">{id}</span>
-                  {s.shortName && <span className="ml-2"><Badge color="purple">{s.shortName}</Badge></span>}
+                  {s.shortName && <span className="ml-2"><Badge color="purple">{fmtSellerDate(s.shortName)}</Badge></span>}
                   <span className="mx-2 text-gray-300">│</span>
                   <span className="font-medium text-gray-800">{s.companyName}</span>
                   {s.representative && <span className="text-gray-400 text-sm ml-2">• {s.representative}{s.position ? ` (${s.position})` : ''}</span>}

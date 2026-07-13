@@ -19,7 +19,7 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
       <div className="grid grid-cols-2 gap-3">
         <Field label={companyLabel} value={form.companyName} onChange={upd('companyName')} cols={2} required />
         {withShortName && (
-          <Field label="Tên viết tắt (≤5 ký tự)" value={form.shortName} onChange={v => upd('shortName')(v.slice(0, 5))} placeholder="VD: CTS" required />
+          <Field label="Ngày ký / Ngày hiệu lực" value={form.shortName} onChange={upd('shortName')} type="date" />
         )}
         <Field label="Địa chỉ" value={form.address} onChange={upd('address')} cols={2} />
         <Field label="Mã số thuế" value={form.taxCode} onChange={upd('taxCode')} />
@@ -45,7 +45,6 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
         <button
           onClick={() => {
             if (!form.companyName) return alert(`${companyLabel} không được để trống`);
-            if (withShortName && !form.shortName?.trim()) return alert('Tên viết tắt không được để trống');
             onSave(form);
           }}
           className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
