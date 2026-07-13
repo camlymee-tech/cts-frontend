@@ -125,7 +125,7 @@ export const api = {
   },
 
   async upsertCustomer({ _dbId, customerId, data, maSale }) {
-    const payload = { customer_id: customerId, data, updated_at: new Date().toISOString() };
+    const payload = { customer_id: customerId, data, ma_sale: maSale, updated_at: new Date().toISOString() };
     if (_dbId) {
       const { data: row, error } = await supabase
         .from('customers').update(payload).eq('id', _dbId).select().single();
@@ -134,7 +134,6 @@ export const api = {
     }
     const { data: s } = await supabase.auth.getSession();
     payload.created_by = s.session?.user?.id;
-    payload.ma_sale = maSale;
     const { data: row, error } = await supabase
       .from('customers').insert(payload).select().single();
     if (error) throw new Error(error.message);

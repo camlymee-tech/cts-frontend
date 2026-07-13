@@ -150,11 +150,13 @@ export default function App() {
   // --- Customers ---
   const saveCustomer = async (id, data) => {
     const { _dbId, _maSale, _createdBy, ...cleanData } = data;
+    // Ưu tiên mã Sale được gán trong form (ô "Mã Sale"); nếu để trống thì mặc định là người đang thao tác
+    const maSale = cleanData.assignedSale?.code?.trim() || profile?.ma_sale;
     const row = await api.upsertCustomer({
       _dbId,
       customerId: id,
       data: cleanData,
-      maSale: profile?.ma_sale,
+      maSale,
     });
     const updated = { ...customers, [id]: { ...cleanData, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by } };
     setCustomers(updated);
@@ -175,11 +177,12 @@ export default function App() {
     for (const { customerId, data } of rows) {
       try {
         const existing = updated[customerId];
+        const maSale = data.assignedSale?.code?.trim() || profile?.ma_sale;
         const row = await api.upsertCustomer({
           _dbId: existing?._dbId,
           customerId,
           data,
-          maSale: profile?.ma_sale,
+          maSale,
         });
         updated[customerId] = { ...data, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by };
         success++;
