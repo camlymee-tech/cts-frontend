@@ -1,15 +1,18 @@
 // File: src/pages/CustomersPage.jsx
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Badge } from '../components/Badge';
 import { CustomerForm } from './CustomerForm';
+import { downloadCustomerTemplate, parseCustomersFile, exportCustomersToExcel } from '../utils/customerExcel';
 
-export const CustomersPage = ({ customers, departments = {}, onSave, onDelete }) => {
+export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, onBulkImport }) => {
   const [search, setSearch] = useState('');
   const [saleFilter, setSaleFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState(null);
   const [newCode, setNewCode] = useState('');
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const deptName = (cid) => departments[cid]?.name || '';
 
@@ -34,12 +37,58 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete })
     setEditId(null);
   };
 
+  const handlePickFile = () => fileInputRef.current?.click();
+
+  const handleFileChosen = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // cho phép chọn lại cùng 1 file lần sau
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const { rows, errors } = await parseCustomersFile(file, departments);
+      if (rows.length === 0) {
+        alert(`Không nhập được khách hàng nào.\n\n${errors.join('\n') || 'File không có dữ liệu hợp lệ.'}`);
+        return;
+      }
+      const proceed = confirm(
+        `Tìm thấy ${rows.length} khách hàng trong file.` +
+        (errors.length ? `\nCó ${errors.length} dòng bị lỗi/cảnh báo (xem chi tiết sau khi nhập).` : '') +
+        `\n\nBấm OK để nhập vào hệ thống. Khách hàng có Mã KH đã tồn tại sẽ được cập nhật đè lên dữ liệu cũ.`
+      );
+      if (!proceed) return;
+
+      const result = await onBulkImport(rows);
+      let msg = `Đã nhập thành công ${result.success} khách hàng.`;
+      if (result.failed) msg += `\nLỗi khi lưu ${result.failed} khách hàng:\n${result.errors.join('\n')}`;
+      if (errors.length) msg += `\n\nCảnh báo từ file:\n${errors.join('\n')}`;
+      alert(msg);
+    } catch (err) {
+      alert('Không đọc được file: ' + err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExport = () => exportCustomersToExcel(filtered, departments);
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-800">👥 Khách hàng</h1>
-        <button onClick={() => { setShowAdd(true); setEditId(null); setNewCode(''); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Thêm khách hàng</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={downloadCustomerTemplate}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium px-2">📄 Tải file mẫu</button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChosen} className="hidden" />
+          <button onClick={handlePickFile} disabled={importing}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm disabled:opacity-50">
+            {importing ? '⏳ Đang nhập...' : '📥 Nhập Excel'}
+          </button>
+          <button onClick={handleExport}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">📤 Xuất Excel</button>
+          <button onClick={() => { setShowAdd(true); setEditId(null); setNewCode(''); }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Thêm khách hàng</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -94,7 +143,14 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete })
                 ) : (
                   <tr key={id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-5 py-3 font-mono font-bold text-blue-600">{id}</td>
-                    <td className="px-5 py-3 font-medium text-gray-800">{c.companyName}</td>
+                    <td className="px-5 py-3 font-medium text-gray-800 relative group cursor-default">
+                      {c.companyName}
+                      <div className="hidden group-hover:block absolute z-30 left-0 top-full mt-1 w-80 bg-gray-800 text-white text-xs rounded-lg shadow-xl p-3 space-y-1.5 pointer-events-none">
+                        <div><span className="text-gray-400">Mã số thuế: </span>{c.taxCode || '—'}</div>
+                        <div><span className="text-gray-400">Địa chỉ: </span>{c.address || '—'}</div>
+                        <div><span className="text-gray-400">Người đại diện: </span>{c.representative || '—'}{c.position ? ` (${c.position})` : ''}</div>
+                      </div>
+                    </td>
                     <td className="px-5 py-3 text-gray-600">{c.representative || '–'}</td>
                     <td className="px-5 py-3 text-gray-600 font-mono">{c.assignedSale?.code || '–'}</td>
                     <td className="px-5 py-3 text-gray-600">{c.assignedSale?.name || '–'}</td>

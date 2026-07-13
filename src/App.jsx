@@ -167,6 +167,31 @@ export default function App() {
     setCustomers(updated);
   };
 
+  // Nhập hàng loạt khách hàng từ file Excel
+  const bulkImportCustomers = async (rows) => {
+    let success = 0, failed = 0;
+    const errors = [];
+    const updated = { ...customers };
+    for (const { customerId, data } of rows) {
+      try {
+        const existing = updated[customerId];
+        const row = await api.upsertCustomer({
+          _dbId: existing?._dbId,
+          customerId,
+          data,
+          maSale: profile?.ma_sale,
+        });
+        updated[customerId] = { ...data, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by };
+        success++;
+      } catch (e) {
+        failed++;
+        errors.push(`${customerId}: ${e.message}`);
+      }
+    }
+    setCustomers(updated);
+    return { success, failed, errors };
+  };
+
   // --- Contracts ---
   const saveContract = async (contract, oldId = null, assignedSaleUuid = null) => {
     const { _dbId, _maSale, _createdBy, ...cleanContract } = contract;
@@ -311,7 +336,7 @@ export default function App() {
           <DepartmentsManager departments={departments} onSave={saveDepartment} onDelete={deleteDepartment} />
         </div>
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
-      case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} />;
+      case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
