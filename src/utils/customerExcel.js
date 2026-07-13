@@ -12,6 +12,8 @@ const removeDiacritics = (str = '') =>
 const normalizeHeader = (str = '') =>
   removeDiacritics(str).toLowerCase().replace(/[^a-z0-9]/g, '');
 
+export const normalizeText = normalizeHeader;
+
 // Các biến thể tiêu đề cột (đã chuẩn hoá bỏ dấu, bỏ khoảng trắng) ứng với từng field dữ liệu
 const HEADER_ALIASES = {
   customerId: ['makh', 'ma', 'macongty', 'mahkd', 'customerid'],
@@ -61,7 +63,8 @@ export function downloadCustomerTemplate() {
 }
 
 // Đọc file Excel khách hàng do người dùng chọn -> trả về { rows, errors }
-export async function parseCustomersFile(file, departments = {}) {
+// saleProfiles: danh sách tài khoản sale thật [{ uuid, name, ma_sale, deptName }] để đối chiếu tên trong file
+export async function parseCustomersFile(file, departments = {}, saleProfiles = []) {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -77,6 +80,13 @@ export async function parseCustomersFile(file, departments = {}) {
   const deptByName = {};
   Object.entries(departments).forEach(([id, d]) => {
     deptByName[normalizeHeader(d.name)] = id;
+  });
+
+  // Đối chiếu theo tên hoặc mã sale (không phân biệt hoa/thường, có dấu/không dấu)
+  const saleByKey = {};
+  saleProfiles.forEach((p) => {
+    if (p.name) saleByKey[normalizeHeader(p.name)] = p;
+    if (p.ma_sale) saleByKey[normalizeHeader(p.ma_sale)] = p;
   });
 
   const rows = [];
@@ -99,6 +109,13 @@ export async function parseCustomersFile(file, departments = {}) {
     if (!customerId) { errors.push(`Dòng ${rowNum}: thiếu "Mã KH", đã bỏ qua.`); continue; }
     if (!companyName) { errors.push(`Dòng ${rowNum} (${customerId}): thiếu "Tên công ty / HKD", đã bỏ qua.`); continue; }
     if (seenIds.has(customerId)) { errors.push(`Dòng ${rowNum}: mã KH "${customerId}" bị trùng trong file, đã bỏ qua.`); continue; }
+
+    // Đối chiếu tên sale trong file với danh sách tài khoản sale thật — không khớp thì bỏ qua cả dòng
+    const saleKeyRaw = obj.saleName || obj.saleCode || '';
+    const saleProfile = saleByKey[normalizeHeader(saleKeyRaw)];
+    if (!saleKeyRaw) { errors.push(`Dòng ${rowNum} (${customerId}): không có tên Sale, đã bỏ qua dòng này.`); continue; }
+    if (!saleProfile) { errors.push(`Dòng ${rowNum} (${customerId}): không tìm thấy Sale tên "${saleKeyRaw}" trong hệ thống, đã bỏ qua dòng này.`); continue; }
+
     seenIds.add(customerId);
 
     let departmentId = '';
@@ -119,7 +136,7 @@ export async function parseCustomersFile(file, departments = {}) {
         bankName: obj.bankName || '',
         representative: obj.representative || '',
         position: obj.position || '',
-        assignedSale: { code: obj.saleCode || '', name: obj.saleName || '', accountId: '' },
+        assignedSale: { code: saleProfile.ma_sale || '', name: saleProfile.name || '', accountId: saleProfile.uuid || '' },
         departmentId,
       },
     });

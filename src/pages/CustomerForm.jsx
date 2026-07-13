@@ -3,6 +3,21 @@ import { useState } from 'react';
 import { Field } from '../components/Field';
 import { Select } from '../components/Select';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
+import { normalizeText } from '../utils/customerExcel';
+
+// Với khách hàng cũ chưa gắn accountId (dữ liệu nhập trước khi có dropdown), tự đối chiếu
+// theo mã/tên sale đã lưu để điền sẵn — người dùng không cần chọn lại thủ công.
+const resolveAssignedSale = (assignedSale, saleProfiles) => {
+  const blank = { code: '', name: '', accountId: '' };
+  if (!assignedSale) return blank;
+  if (assignedSale.accountId) return assignedSale; // đã khớp sẵn, giữ nguyên
+  const match = saleProfiles.find((p) =>
+    (assignedSale.code && p.ma_sale && normalizeText(p.ma_sale) === normalizeText(assignedSale.code)) ||
+    (assignedSale.name && p.name && normalizeText(p.name) === normalizeText(assignedSale.name))
+  );
+  if (match) return { code: match.ma_sale || '', name: match.name || '', accountId: match.uuid };
+  return assignedSale; // không tìm thấy khớp, giữ nguyên dữ liệu cũ để không mất thông tin
+};
 
 export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [] }) => {
   const blank = {
@@ -11,7 +26,10 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     ...(withShortName ? { shortName: '' } : {}),
     ...(withAssignment ? { assignedSale: { code: '', name: '', accountId: '' }, departmentId: '' } : {}),
   };
-  const [form, setForm] = useState(init || blank);
+  const initialForm = init
+    ? { ...init, ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
+    : blank;
+  const [form, setForm] = useState(initialForm);
   const upd = (f) => (v) => setForm(p => ({ ...p, [f]: v }));
   const selectSale = (uuid) => {
     const p = saleProfiles.find(sp => sp.uuid === uuid);
