@@ -43,6 +43,21 @@ function buildFieldMap(headerRow) {
   return map;
 }
 
+// Tự dò dòng tiêu đề thật trong vài dòng đầu (nhiều file có vài dòng trống/tiêu đề phụ phía trên) —
+// quét tối đa 15 dòng đầu, chọn dòng khớp được nhiều cột nhất và bắt buộc phải nhận ra Mã KH + Tên công ty.
+function findHeaderRow(raw) {
+  let best = { rowIndex: 0, fieldMap: {}, score: -1 };
+  const maxScan = Math.min(raw.length, 15);
+  for (let r = 0; r < maxScan; r++) {
+    const fieldMap = buildFieldMap(raw[r] || []);
+    const values = Object.values(fieldMap);
+    const ok = values.includes('customerId') && values.includes('companyName');
+    const score = Object.keys(fieldMap).length + (ok ? 100 : 0);
+    if (ok && score > best.score) best = { rowIndex: r, fieldMap, score };
+  }
+  return best;
+}
+
 export const TEMPLATE_HEADERS = [
   'Mã KH', 'Tên công ty / HKD', 'Địa chỉ', 'Mã số thuế', 'Số điện thoại', 'Email',
   'Số tài khoản', 'Ngân hàng', 'Người đại diện', 'Chức vụ', 'Mã Sale', 'Tên Sale', 'Phòng ban',
@@ -72,9 +87,9 @@ export async function parseCustomersFile(file, departments = {}, saleProfiles = 
 
   if (raw.length < 2) return { rows: [], errors: ['File không có dữ liệu (cần ít nhất 1 dòng tiêu đề + 1 dòng khách hàng).'] };
 
-  const fieldMap = buildFieldMap(raw[0]);
+  const { rowIndex: headerRowIndex, fieldMap } = findHeaderRow(raw);
   if (!Object.values(fieldMap).includes('customerId') || !Object.values(fieldMap).includes('companyName')) {
-    return { rows: [], errors: ['Không nhận diện được cột "Mã KH" hoặc "Tên công ty / HKD". Vui lòng dùng đúng file mẫu.'] };
+    return { rows: [], errors: ['Không nhận diện được cột "Mã KH" hoặc "Tên công ty / HKD" trong 15 dòng đầu của file. Vui lòng dùng đúng file mẫu.'] };
   }
 
   const deptByName = {};
@@ -93,7 +108,7 @@ export async function parseCustomersFile(file, departments = {}, saleProfiles = 
   const errors = [];
   const seenIds = new Set();
 
-  for (let r = 1; r < raw.length; r++) {
+  for (let r = headerRowIndex + 1; r < raw.length; r++) {
     const line = raw[r];
     if (!line || line.every((c) => String(c).trim() === '')) continue; // bỏ qua dòng trống
     const rowNum = r + 1;

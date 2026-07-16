@@ -35,6 +35,20 @@ function buildFieldMap(headerRow) {
   return map;
 }
 
+// Tự dò dòng tiêu đề thật trong vài dòng đầu (nhiều file có vài dòng trống/tiêu đề phụ phía trên) —
+// quét tối đa 15 dòng đầu, chọn dòng khớp được nhiều cột nhất và bắt buộc phải nhận ra "Số hóa đơn".
+function findHeaderRow(raw) {
+  let best = { rowIndex: 0, fieldMap: {}, score: -1 };
+  const maxScan = Math.min(raw.length, 15);
+  for (let r = 0; r < maxScan; r++) {
+    const fieldMap = buildFieldMap(raw[r] || []);
+    const hasInvoiceNo = Object.values(fieldMap).includes('invoiceNo');
+    const score = Object.keys(fieldMap).length + (hasInvoiceNo ? 100 : 0);
+    if (hasInvoiceNo && score > best.score) best = { rowIndex: r, fieldMap, score };
+  }
+  return best;
+}
+
 function parseExcelDate(v) {
   if (v === '' || v === null || v === undefined) return '';
   if (typeof v === 'number') {
@@ -68,15 +82,15 @@ export async function parseInvoiceGoodsFile(file) {
 
   if (raw.length < 2) return { invoices: [], errors: ['File không có dữ liệu.'] };
 
-  const fieldMap = buildFieldMap(raw[0]);
+  const { rowIndex: headerRowIndex, fieldMap } = findHeaderRow(raw);
   if (!Object.values(fieldMap).includes('invoiceNo')) {
-    return { invoices: [], errors: ['Không nhận diện được cột "Số hóa đơn". Vui lòng kiểm tra lại file.'] };
+    return { invoices: [], errors: ['Không nhận diện được cột "Số hóa đơn" trong 15 dòng đầu của file. Vui lòng kiểm tra lại file.'] };
   }
 
   const groups = {}; // invoiceNo -> { meta..., goods: [] }
   const errors = [];
 
-  for (let r = 1; r < raw.length; r++) {
+  for (let r = headerRowIndex + 1; r < raw.length; r++) {
     const line = raw[r];
     if (!line || line.every((c) => String(c).trim() === '')) continue;
     const rowNum = r + 1;
