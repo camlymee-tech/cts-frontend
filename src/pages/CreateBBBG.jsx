@@ -8,6 +8,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
+import { normalizeText } from '../utils/customerExcel';
 import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId } from '../helpers';
 import { api } from '../lib/api';
@@ -107,9 +108,28 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     }
   };
 
-  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa (không đổi ảnh đính kèm)
+  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + Khách hàng + Bên bán (không đổi ảnh đính kèm)
   const applyInvoiceGoods = (inv) => {
     setGoods(inv.goods || []);
+
+    if (inv.customer_code && customers[inv.customer_code]) {
+      setCustomerId(inv.customer_code);
+    } else if (inv.customer_name) {
+      const target = normalizeText(inv.customer_name);
+      const found = Object.entries(customers).find(([, c]) => normalizeText(c.companyName) === target);
+      if (found) setCustomerId(found[0]);
+    }
+
+    if (inv.seller_tax_code) {
+      const targetTax = inv.seller_tax_code.replace(/\D/g, '');
+      const found = Object.entries(sellers).find(([, s]) => (s.taxCode || '').replace(/\D/g, '') === targetTax && targetTax);
+      if (found) { setSellerId(found[0]); return; }
+    }
+    if (inv.seller_name) {
+      const target = normalizeText(inv.seller_name);
+      const found = Object.entries(sellers).find(([, s]) => normalizeText(s.companyName) === target);
+      if (found) setSellerId(found[0]);
+    }
   };
 
   const handleFile = async (e) => {
