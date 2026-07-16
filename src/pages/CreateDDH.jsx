@@ -13,7 +13,7 @@ import { buildContractId, calcTotals, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
-export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [], invoiceGoods = [] }) => {
+export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer }) => {
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -95,17 +95,43 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   };
 
   // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + ngày + Khách hàng + Bên bán
-  const applyInvoiceGoods = (inv) => {
+  const applyInvoiceGoods = async (inv) => {
     setGoods(inv.goods || []);
     if (inv.invoice_date) setDate(inv.invoice_date);
 
     // Đối chiếu Khách hàng: ưu tiên đúng Mã KH, không có thì so tên công ty
+    let matchedCustomerId = null;
     if (inv.customer_code && customers[inv.customer_code]) {
-      setCustomerId(inv.customer_code);
+      matchedCustomerId = inv.customer_code;
     } else if (inv.customer_name) {
       const target = normalizeText(inv.customer_name);
       const found = Object.entries(customers).find(([, c]) => normalizeText(c.companyName) === target);
-      if (found) setCustomerId(found[0]);
+      if (found) matchedCustomerId = found[0];
+    }
+
+    if (matchedCustomerId) {
+      setCustomerId(matchedCustomerId);
+    } else if (inv.customer_name && onCreateCustomer) {
+      // Khách hàng trong hóa đơn chưa có trong hệ thống — tự tạo mới và lưu luôn
+      const newId = inv.customer_code || `AUTO-${inv.invoice_no}`;
+      if (customers[newId]) {
+        setCustomerId(newId);
+      } else {
+        try {
+          await onCreateCustomer(newId, {
+            companyName: inv.customer_name,
+            address: '', taxCode: '', phone: '', email: '',
+            bankAccount: '', bankName: '', representative: '', position: '',
+            assignedSale: !isAdmin && profile
+              ? { code: profile.ma_sale || '', name: profile.full_name || '', accountId: profile.id }
+              : { code: '', name: '', accountId: '' },
+            departmentId: '',
+          });
+          setCustomerId(newId);
+        } catch (err) {
+          alert('Không tự tạo được khách hàng mới từ hóa đơn: ' + err.message);
+        }
+      }
     }
 
     // Đối chiếu Bên bán: ưu tiên mã số thuế, không có thì so tên công ty
