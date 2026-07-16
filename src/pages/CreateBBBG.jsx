@@ -1,6 +1,5 @@
 // File: src/pages/CreateBBBG.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Select } from '../components/Select';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { Alert } from '../components/Alert';
@@ -35,8 +34,31 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const customer = customers[customerId] || {};
   const saleCode = customer.assignedSale?.code || '';
 
+  const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
+
   const matchingHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
   const matchingDDHs = Object.values(contracts).filter(c => c.type === 'DDH' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
+
+  // Toàn bộ HĐNT/ĐĐH để tự tìm/chọn thủ công — ưu tiên hiện các bản ghi cùng KH+bên bán lên đầu (đánh dấu ⭐)
+  const matchingHDNTIds = new Set(matchingHDNTs.map(h => h.contractId));
+  const allHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT').sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const hdntOptions = [
+    { value: '', label: '-- Không gắn --' },
+    ...[...matchingHDNTs, ...allHDNTs.filter(h => !matchingHDNTIds.has(h.contractId))].map(h => ({
+      value: h.contractId,
+      label: `${h.contractId}${matchingHDNTIds.has(h.contractId) ? ' ⭐' : ''} — ${customerLabel(h)}`,
+    })),
+  ];
+
+  const matchingDDHIds = new Set(matchingDDHs.map(d => d.contractId));
+  const allDDHs = Object.values(contracts).filter(c => c.type === 'DDH').sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const ddhOptions = [
+    { value: '', label: '-- Không gắn --' },
+    ...[...matchingDDHs, ...allDDHs.filter(d => !matchingDDHIds.has(d.contractId))].map(d => ({
+      value: d.contractId,
+      label: `${d.contractId}${matchingDDHIds.has(d.contractId) ? ' ⭐' : ''} — ${customerLabel(d)}`,
+    })),
+  ];
 
   useEffect(() => {
     setHdntId(matchingHDNTs[0]?.contractId || '');
@@ -226,14 +248,8 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
-          <Select label="Gắn HĐNT" value={hdntId} onChange={setHdntId}>
-            <option value="">-- Không gắn --</option>
-            {matchingHDNTs.map(h => <option key={h.contractId} value={h.contractId}>{h.contractId}</option>)}
-          </Select>
-          <Select label="Gắn ĐĐH" value={ddhId} onChange={selectDDH}>
-            <option value="">-- Không gắn --</option>
-            {matchingDDHs.map(d => <option key={d.contractId} value={d.contractId}>{d.contractId}</option>)}
-          </Select>
+          <SearchableSelect label="Gắn HĐNT" value={hdntId} onChange={setHdntId} placeholder="-- Không gắn --" options={hdntOptions} />
+          <SearchableSelect label="Gắn ĐĐH" value={ddhId} onChange={selectDDH} placeholder="-- Không gắn --" options={ddhOptions} />
         </div>
 
         {Object.keys(sellers).length === 0 && (

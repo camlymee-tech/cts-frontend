@@ -1,6 +1,5 @@
 // File: src/pages/CreateDDH.jsx
 import { useState, useEffect, useRef } from 'react';
-import { Select } from '../components/Select';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { Alert } from '../components/Alert';
@@ -36,9 +35,22 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const customer = customers[customerId] || {};
   const saleCode = customer.assignedSale?.code || '';
 
+  const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
+
   const matchingHDNTs = Object.values(contracts)
     .filter(c => c.type === 'HDNT' && c.customerId === customerId && c.sellerId === sellerId)
     .sort((a, b) => b.contractId.localeCompare(a.contractId));
+
+  // Toàn bộ HĐNT để tự tìm/chọn thủ công — ưu tiên hiện các HĐNT cùng KH+bên bán lên đầu (đánh dấu ⭐)
+  const matchingIds = new Set(matchingHDNTs.map(h => h.contractId));
+  const allHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT').sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const hdntOptions = [
+    { value: '', label: '-- Không gắn --' },
+    ...[...matchingHDNTs, ...allHDNTs.filter(h => !matchingIds.has(h.contractId))].map(h => ({
+      value: h.contractId,
+      label: `${h.contractId}${matchingIds.has(h.contractId) ? ' ⭐' : ''} — ${customerLabel(h)}`,
+    })),
+  ];
 
   useEffect(() => { setHdntId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
 
@@ -226,10 +238,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
-          <Select label="Gắn HĐNT" value={hdntId} onChange={setHdntId}>
-            <option value="">-- Không gắn --</option>
-            {matchingHDNTs.map(h => <option key={h.contractId} value={h.contractId}>{h.contractId}</option>)}
-          </Select>
+          <SearchableSelect label="Gắn HĐNT" value={hdntId} onChange={setHdntId} placeholder="-- Không gắn --" options={hdntOptions} />
         </div>
 
         {Object.keys(sellers).length === 0 && (
