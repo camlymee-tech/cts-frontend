@@ -7,12 +7,13 @@ import { Alert } from '../components/Alert';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
+import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
 import { DDHPreview } from '../previews/DDHPreview';
 import { buildContractId, calcTotals, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
-export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [], invoiceGoods = [] }) => {
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -78,6 +79,12 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     } finally {
       setAiLoading(false);
     }
+  };
+
+  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + ngày
+  const applyInvoiceGoods = (inv) => {
+    setGoods(inv.goods || []);
+    if (inv.invoice_date) setDate(inv.invoice_date);
   };
 
   const handleFile = async (e) => {
@@ -231,6 +238,12 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
             <span className="text-xs text-gray-400">hoặc Cách 2: <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Ctrl/Cmd + V</kbd> dán ảnh hóa đơn</span>
             <span className="text-xs text-gray-400">hoặc Cách 3: bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
+          {invoiceGoods.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs text-gray-400 mb-1">hoặc Cách 4: chọn từ hóa đơn đã nhập Excel sẵn</div>
+              <InvoiceGoodsPicker invoiceGoods={invoiceGoods} onApply={applyInvoiceGoods} />
+            </div>
+          )}
           {aiError && <Alert type="error">{aiError}</Alert>}
           {aiMismatch && (
             <Alert type="warn">

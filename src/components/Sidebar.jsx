@@ -27,6 +27,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
+    { id: 'invoice_goods', icon: '📦', label: 'Hàng hóa theo hóa đơn' },
     { id: 'my-profile', icon: '👤', label: 'Hồ sơ của tôi' },
   ];
 

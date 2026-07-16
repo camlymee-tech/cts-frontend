@@ -182,4 +182,27 @@ export const api = {
     const { error } = await supabase.from('profiles').delete().eq('id', userId);
     if (error) throw new Error(error.message);
   },
+
+  // --- Invoice Goods: hàng hóa theo số hóa đơn (nhập từ Excel), dùng để tự điền khi tạo ĐĐH/BBBG ---
+  async listInvoiceGoods() {
+    const { data, error } = await supabase.from('invoice_goods').select('*').order('invoice_no');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsertInvoiceGoodsBatch(rows) {
+    const { data: s } = await supabase.auth.getSession();
+    const payload = rows.map(r => ({ ...r, created_by: s.session?.user?.id, updated_at: new Date().toISOString() }));
+    const { data, error } = await supabase
+      .from('invoice_goods')
+      .upsert(payload, { onConflict: 'invoice_no' })
+      .select();
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async deleteInvoiceGoods(id) {
+    const { error } = await supabase.from('invoice_goods').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
 };

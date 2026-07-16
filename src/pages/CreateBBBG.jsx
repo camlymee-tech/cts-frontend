@@ -7,12 +7,13 @@ import { Alert } from '../components/Alert';
 import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
+import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
 import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
-export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [], invoiceGoods = [] }) => {
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -104,6 +105,11 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     } finally {
       setAiLoading(false);
     }
+  };
+
+  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa (không đổi ảnh đính kèm)
+  const applyInvoiceGoods = (inv) => {
+    setGoods(inv.goods || []);
   };
 
   const handleFile = async (e) => {
@@ -235,6 +241,12 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
             <span className="text-xs text-gray-400">hoặc bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}
+          {invoiceGoods.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs text-gray-400 mb-1">hoặc chọn từ hóa đơn đã nhập Excel sẵn</div>
+              <InvoiceGoodsPicker invoiceGoods={invoiceGoods} onApply={applyInvoiceGoods} />
+            </div>
+          )}
           <GoodsTable goods={goods} onChange={setGoods} />
         </div>
 
