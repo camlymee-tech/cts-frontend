@@ -4,7 +4,7 @@ import { Badge } from '../components/Badge';
 import { CustomerForm } from './CustomerForm';
 import { downloadCustomerTemplate, parseCustomersFile, exportCustomersToExcel } from '../utils/customerExcel';
 
-export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, onBulkImport, saleProfiles = [] }) => {
+export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, onBulkImport, saleProfiles = [], isAdmin = false, profile = null }) => {
   const [search, setSearch] = useState('');
   const [saleFilter, setSaleFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
@@ -13,6 +13,11 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
   const [newCode, setNewCode] = useState('');
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Sale tự tạo khách hàng → tự gán vào chính họ, không cần chọn
+  const autoSaleAssign = !isAdmin && profile
+    ? { code: profile.ma_sale || '', name: profile.full_name || '', accountId: profile.id }
+    : null;
 
   const deptName = (cid) => departments[cid]?.name || '';
 
@@ -115,7 +120,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             <p className="text-xs text-gray-400 mt-1">Tự nhập theo ý muốn, không được trùng mã đã có.</p>
           </div>
-          <CustomerForm companyLabel="Tên công ty / HKD" withAssignment departments={departments} saleProfiles={saleProfiles} onSave={handleAdd} onCancel={() => { setShowAdd(false); setNewCode(""); }} />
+          <CustomerForm companyLabel="Tên công ty / HKD" withAssignment departments={departments} saleProfiles={isAdmin ? saleProfiles : []} autoSaleAssign={autoSaleAssign} onSave={handleAdd} onCancel={() => { setShowAdd(false); setNewCode(""); }} />
         </div>
       )}
 
@@ -138,7 +143,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
                 editId === id ? (
                   <tr key={id}><td colSpan="7" className="p-5 bg-blue-50/30 border-t border-gray-100">
                     <div className="text-sm font-medium text-blue-700 mb-3">{id}</div>
-                    <CustomerForm companyLabel="Tên công ty / HKD" withAssignment departments={departments} saleProfiles={saleProfiles} init={c} onSave={handleEdit} onCancel={() => setEditId(null)} />
+                    <CustomerForm companyLabel="Tên công ty / HKD" withAssignment departments={departments} saleProfiles={isAdmin ? saleProfiles : []} autoSaleAssign={autoSaleAssign} init={c} onSave={handleEdit} onCancel={() => setEditId(null)} />
                   </td></tr>
                 ) : (
                   <tr key={id} className="border-t border-gray-100 hover:bg-gray-50">

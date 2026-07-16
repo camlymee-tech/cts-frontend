@@ -19,12 +19,12 @@ const resolveAssignedSale = (assignedSale, saleProfiles) => {
   return assignedSale; // không tìm thấy khớp, giữ nguyên dữ liệu cũ để không mất thông tin
 };
 
-export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [] }) => {
+export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [], autoSaleAssign = null }) => {
   const blank = {
     companyName: '', address: '', taxCode: '', phone: '', email: '',
     bankAccount: '', bankName: '', representative: '', position: '',
     ...(withShortName ? { shortName: '' } : {}),
-    ...(withAssignment ? { assignedSale: { code: '', name: '', accountId: '' }, departmentId: '' } : {}),
+    ...(withAssignment ? { assignedSale: autoSaleAssign || { code: '', name: '', accountId: '' }, departmentId: '' } : {}),
   };
   const initialForm = init
     ? { ...init, ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
@@ -55,12 +55,19 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
         {withAssignment && (
           <>
             <div className="col-span-2 border-t border-gray-100 pt-2 mt-1 text-xs font-semibold text-gray-500 uppercase">Sale phụ trách &amp; Phòng ban</div>
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Sale phụ trách</label>
-              <SaleSearchDropdown saleProfiles={saleProfiles} value={form.assignedSale?.accountId} onChange={selectSale}
-                placeholder="Chọn sale phụ trách..." className="w-full" />
-              <p className="text-xs text-gray-400 mt-1">Chọn đúng tên sale trong danh sách để mã sale được gán chính xác — sale đó sẽ thấy được khách hàng này.</p>
-            </div>
+            {autoSaleAssign ? (
+              // Sale tự tạo → tự động gán vào chính họ, không cần chọn
+              <div className="col-span-2 text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                👤 Sale phụ trách: <strong>{autoSaleAssign.name || autoSaleAssign.code || 'Tài khoản của bạn'}</strong>
+              </div>
+            ) : (
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Sale phụ trách</label>
+                <SaleSearchDropdown saleProfiles={saleProfiles} value={form.assignedSale?.accountId} onChange={selectSale}
+                  placeholder="Chọn sale phụ trách..." className="w-full" />
+                <p className="text-xs text-gray-400 mt-1">Chọn đúng tên sale trong danh sách để mã sale được gán chính xác — sale đó sẽ thấy được khách hàng này.</p>
+              </div>
+            )}
             <Select label="Phòng ban" value={form.departmentId || ''} onChange={upd('departmentId')}>
               <option value="">-- Chọn phòng ban --</option>
               {Object.entries(departments).map(([id, d]) => <option key={id} value={id}>{d.name}</option>)}
