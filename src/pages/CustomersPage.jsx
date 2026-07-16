@@ -51,7 +51,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
 
     setImporting(true);
     try {
-      const { rows, errors } = await parseCustomersFile(file, departments);
+      const { rows, errors } = await parseCustomersFile(file, departments, saleProfiles);
       if (rows.length === 0) {
         alert(`Không nhập được khách hàng nào.\n\n${errors.join('\n') || 'File không có dữ liệu hợp lệ.'}`);
         return;
@@ -130,6 +130,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
         ) : (
           <table className="w-full text-sm min-w-[760px]">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th className="text-left px-5 py-3 w-14">STT</th>
               <th className="text-left px-5 py-3">Mã KH</th>
               <th className="text-left px-5 py-3">Tên công ty / HKD</th>
               <th className="text-left px-5 py-3">Người đại diện</th>
@@ -139,14 +140,15 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
               <th className="px-5 py-3"></th>
             </tr></thead>
             <tbody>
-              {filtered.map(([id, c]) => (
+              {filtered.map(([id, c], idx) => (
                 editId === id ? (
-                  <tr key={id}><td colSpan="7" className="p-5 bg-blue-50/30 border-t border-gray-100">
+                  <tr key={id}><td colSpan="8" className="p-5 bg-blue-50/30 border-t border-gray-100">
                     <div className="text-sm font-medium text-blue-700 mb-3">{id}</div>
                     <CustomerForm companyLabel="Tên công ty / HKD" withAssignment departments={departments} saleProfiles={isAdmin ? saleProfiles : []} autoSaleAssign={autoSaleAssign} init={c} onSave={handleEdit} onCancel={() => setEditId(null)} />
                   </td></tr>
                 ) : (
                   <tr key={id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-3 text-gray-400">{idx + 1}</td>
                     <td className="px-5 py-3 font-mono font-bold text-blue-600">{id}</td>
                     <td className="px-5 py-3 font-medium text-gray-800 relative group cursor-default">
                       {c.companyName}

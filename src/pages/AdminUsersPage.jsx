@@ -9,6 +9,9 @@ export const AdminUsersPage = ({ departments }) => {
   const [savingId, setSavingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [edits, setEdits] = useState({});
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   const deptOptions = Object.entries(departments || {});
 
@@ -65,6 +68,17 @@ export const AdminUsersPage = ({ departments }) => {
 
   const pendingCount = profiles.filter(p => !p.approved && p.role !== 'admin').length;
 
+  const filtered = profiles.filter(p => {
+    const s = search.trim().toLowerCase();
+    const matchSearch = !s
+      || (p.full_name || '').toLowerCase().includes(s)
+      || (p.email || '').toLowerCase().includes(s)
+      || (edits[p.id]?.ma_sale || '').toLowerCase().includes(s);
+    const matchDept = !deptFilter || edits[p.id]?.department_id === deptFilter;
+    const matchRole = !roleFilter || edits[p.id]?.role === roleFilter;
+    return matchSearch && matchDept && matchRole;
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -84,10 +98,30 @@ export const AdminUsersPage = ({ departments }) => {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{error}</div>}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo tên, email, mã sale..."
+          className="flex-1 min-w-48 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">Tất cả phòng ban</option>
+          {deptOptions.map(([id, d]) => <option key={id} value={id}>{d.name}</option>)}
+        </select>
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">Tất cả vai trò</option>
+          <option value="sale">Sale</option>
+          <option value="admin">Admin</option>
+        </select>
+        {(search || deptFilter || roleFilter) && (
+          <button onClick={() => { setSearch(''); setDeptFilter(''); setRoleFilter(''); }} className="text-sm text-gray-500 hover:text-gray-700 px-2">✕ Xóa lọc</button>
+        )}
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
+              <th className="text-left px-4 py-2.5 w-14">STT</th>
               <th className="text-left px-4 py-2.5">Họ tên</th>
               <th className="text-left px-4 py-2.5">Email</th>
               <th className="text-left px-4 py-2.5">Trạng thái</th>
@@ -98,12 +132,13 @@ export const AdminUsersPage = ({ departments }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {profiles.map(p => {
+            {filtered.map((p, idx) => {
               const isApproved = edits[p.id]?.approved;
               const isDeleting = deletingId === p.id;
               const deptName = departments?.[p.department_id]?.name || '';
               return (
                 <tr key={p.id} className={!isApproved ? 'bg-amber-50/40' : ''}>
+                  <td className="px-4 py-2.5 text-gray-400">{idx + 1}</td>
                   <td className="px-4 py-2.5 font-medium">{p.full_name || <span className="text-gray-400">(chưa có tên)</span>}</td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{p.email}</td>
                   <td className="px-4 py-2.5">
@@ -160,8 +195,8 @@ export const AdminUsersPage = ({ departments }) => {
             })}
           </tbody>
         </table>
-        {profiles.length === 0 && (
-          <div className="text-center text-gray-400 py-8">Chưa có tài khoản nào.</div>
+        {filtered.length === 0 && (
+          <div className="text-center text-gray-400 py-8">{profiles.length === 0 ? 'Chưa có tài khoản nào.' : 'Không tìm thấy tài khoản phù hợp.'}</div>
         )}
       </div>
     </div>
