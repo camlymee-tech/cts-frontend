@@ -136,6 +136,7 @@ export default function App() {
     try {
       const rows = invoices.map(inv => ({
         invoice_no: inv.invoiceNo,
+        group_key: inv.groupKey,
         invoice_date: inv.invoiceDate || null,
         customer_code: inv.customerCode || null,
         customer_name: inv.customerName || null,
@@ -147,8 +148,8 @@ export default function App() {
       const saved = await api.upsertInvoiceGoodsBatch(rows);
       success = saved.length;
       // Cập nhật lại state từ danh sách mới nhất (upsert nên id có thể là cũ hoặc mới)
-      const merged = { ...Object.fromEntries(invoiceGoods.map(r => [r.invoice_no, r])) };
-      saved.forEach(r => { merged[r.invoice_no] = r; });
+      const merged = { ...Object.fromEntries(invoiceGoods.map(r => [r.group_key || r.invoice_no, r])) };
+      saved.forEach(r => { merged[r.group_key || r.invoice_no] = r; });
       setInvoiceGoods(Object.values(merged));
     } catch (e) {
       failed = invoices.length;

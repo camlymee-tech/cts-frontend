@@ -195,7 +195,7 @@ export const api = {
     const payload = rows.map(r => ({ ...r, created_by: s.session?.user?.id, updated_at: new Date().toISOString() }));
     const { data, error } = await supabase
       .from('invoice_goods')
-      .upsert(payload, { onConflict: 'invoice_no' })
+      .upsert(payload, { onConflict: 'group_key' })
       .select();
     if (error) throw new Error(error.message);
     return data || [];

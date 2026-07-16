@@ -50,6 +50,15 @@ function parseExcelDate(v) {
   return s;
 }
 
+// Đọc số % dù ghi dạng "8%", "8", hoặc số thập phân 0.08 (Excel lưu % dưới dạng phân số)
+function parsePercent(v) {
+  if (v === '' || v === null || v === undefined) return 0;
+  if (typeof v === 'number') return v > 0 && v < 1 ? Math.round(v * 10000) / 100 : v;
+  const s = String(v).trim().replace('%', '').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
 // Trả về { invoices: [{invoiceNo, invoiceDate, customerCode, customerName, sellerName, sellerTaxCode, goods:[...], total}], errors: [] }
 export async function parseInvoiceGoodsFile(file) {
   const buf = await file.arrayBuffer();
@@ -81,12 +90,19 @@ export async function parseInvoiceGoodsFile(file) {
     const invoiceNo = String(obj.invoiceNo || '').trim();
     if (!invoiceNo) { errors.push(`Dòng ${rowNum}: thiếu Số hóa đơn, đã bỏ qua.`); continue; }
 
-    if (!groups[invoiceNo]) {
-      groups[invoiceNo] = {
+    const customerName = String(obj.customerName || '').trim();
+    const customerCode = String(obj.customerCode || '').trim();
+    // Số hóa đơn có thể bị lặp lại giữa các khách hàng khác nhau (không phải mã duy nhất) —
+    // nên phải gộp theo cặp Số hóa đơn + Tên khách hàng (lấy Tên khách hàng làm gốc), tránh gộp nhầm hàng hóa của khách khác.
+    const groupKey = `${invoiceNo}||${normalizeText(customerName || customerCode)}`;
+
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
         invoiceNo,
+        groupKey,
         invoiceDate: parseExcelDate(obj.invoiceDate),
-        customerCode: String(obj.customerCode || '').trim(),
-        customerName: String(obj.customerName || '').trim(),
+        customerCode,
+        customerName,
         sellerName: String(obj.sellerName || '').trim(),
         sellerTaxCode: String(obj.sellerTaxCode || '').trim(),
         goods: [],
@@ -96,7 +112,7 @@ export async function parseInvoiceGoodsFile(file) {
     const tenHang = String(obj.tenHang || '').trim();
     if (!tenHang) continue; // dòng chỉ có thông tin chung, không có mặt hàng — bỏ qua phần hàng hóa
 
-    const g = groups[invoiceNo];
+    const g = groups[groupKey];
     const soLuong = Number(obj.soLuong) || 0;
     const donGia = Number(obj.donGia) || 0;
     g.goods.push({
@@ -106,7 +122,7 @@ export async function parseInvoiceGoodsFile(file) {
       soLuong,
       donGia,
       thanhTien: Number(obj.thanhTien) || soLuong * donGia,
-      vatRate: Number(obj.vatRate) || 0,
+      vatRate: parsePercent(obj.vatRate),
     });
   }
 
