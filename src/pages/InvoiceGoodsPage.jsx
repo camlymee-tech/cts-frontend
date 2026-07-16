@@ -2,10 +2,13 @@
 import { useState, useRef } from 'react';
 import { parseInvoiceGoodsFile } from '../utils/invoiceGoodsExcel';
 import { fmtNum } from '../helpers';
+import { InvoiceGoodsBulkViewer } from './InvoiceGoodsBulkViewer';
 
-export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete }) => {
+export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, onDeleteMany }) => {
   const [search, setSearch] = useState('');
   const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
   const fileRef = useRef(null);
 
   const filtered = invoiceGoods.filter((inv) => {
@@ -19,6 +22,29 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete }) 
   });
 
   const handlePickFile = () => fileRef.current?.click();
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const visibleIds = filtered.map(inv => inv.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const toggleAllVisible = () => {
+    setSelectedIds(prev => {
+      if (allVisibleSelected) {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...visibleIds]);
+    });
+  };
+
+  const selectedInvoices = invoiceGoods.filter(inv => selectedIds.has(inv.id));
 
   const handleFileChosen = async (e) => {
     const file = e.target.files?.[0];
@@ -71,6 +97,26 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete }) 
       <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-300" />
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-3">
+          <div className="text-sm text-blue-800 font-medium">✓ Đã chọn {selectedIds.size} hóa đơn</div>
+          <div className="flex gap-2">
+            <button onClick={() => setBulkOpen(true)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
+              🖨️ In gộp
+            </button>
+            <button
+              onClick={async () => { const ok = await onDeleteMany(Array.from(selectedIds)); if (ok) setSelectedIds(new Set()); }}
+              className="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-red-100"
+            >
+              🗑️ Xóa gộp
+            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-sm text-blue-700 hover:underline px-2">Bỏ chọn</button>
+          </div>
+        </div>
+      )}
+
+      {bulkOpen && <InvoiceGoodsBulkViewer invoices={selectedInvoices} onClose={() => setBulkOpen(false)} />}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         {filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-400">
@@ -79,6 +125,9 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete }) 
         ) : (
           <table className="w-full text-sm min-w-[760px]">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th className="px-4 py-3 w-8">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} className="cursor-pointer" />
+              </th>
               <th className="text-left px-5 py-3 w-14">STT</th>
               <th className="text-left px-5 py-3">Số hóa đơn</th>
               <th className="text-left px-5 py-3">Ngày</th>
@@ -90,8 +139,25 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete }) 
             <tbody>
               {filtered.map((inv, idx) => (
                 <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <input type="checkbox" checked={selectedIds.has(inv.id)} onChange={() => toggleOne(inv.id)} className="cursor-pointer" />
+                  </td>
                   <td className="px-5 py-3 text-gray-400">{idx + 1}</td>
-                  <td className="px-5 py-3 font-mono font-bold text-blue-600">{inv.invoice_no}</td>
+                  <td className="px-5 py-3 font-mono font-bold text-blue-600 relative group cursor-default">
+                    {inv.invoice_no}
+                    <div className="hidden group-hover:block absolute z-30 left-0 top-full mt-1 w-96 bg-gray-800 text-white text-xs rounded-lg shadow-xl p-3 pointer-events-none">
+                      <div className="font-semibold mb-1.5">Chi tiết hàng hóa ({inv.goods?.length || 0} mặt hàng):</div>
+                      <div className="space-y-1 max-h-56 overflow-y-auto">
+                        {(inv.goods || []).map((g, i) => (
+                          <div key={i} className="flex justify-between gap-2 border-b border-gray-700 pb-1">
+                            <span className="flex-1">{i + 1}. {g.tenHang} ({g.dvt}) — SL {fmtNum(g.soLuong)} × {fmtNum(g.donGia)}</span>
+                            <span className="whitespace-nowrap">{fmtNum(g.thanhTien)} đ</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-right font-semibold mt-1.5 pt-1 border-t border-gray-600">Tổng: {fmtNum(inv.total || 0)} đ</div>
+                    </div>
+                  </td>
                   <td className="px-5 py-3 text-gray-600">{inv.invoice_date || '–'}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.customer_name || '–'}{inv.customer_code ? ` (${inv.customer_code})` : ''}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.goods?.length || 0}</td>

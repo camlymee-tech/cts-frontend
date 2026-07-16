@@ -164,6 +164,13 @@ export default function App() {
     setInvoiceGoods(prev => prev.filter(r => r.id !== id));
   };
 
+  const bulkDeleteInvoiceGoods = async (ids) => {
+    if (!confirm(`Xóa ${ids.length} hóa đơn đã chọn khỏi danh sách hàng hóa? Thao tác không thể hoàn tác.`)) return false;
+    await api.deleteInvoiceGoodsMany(ids);
+    setInvoiceGoods(prev => prev.filter(r => !ids.includes(r.id)));
+    return true;
+  };
+
   // --- Sellers ---
   const saveSeller = async (id, data) => {
     const updated = { ...sellers, [id]: data };
@@ -379,7 +386,7 @@ export default function App() {
         </div>
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
-      case 'invoice_goods': return <InvoiceGoodsPage invoiceGoods={invoiceGoods} onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} />;
+      case 'invoice_goods': return <InvoiceGoodsPage invoiceGoods={invoiceGoods} onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
