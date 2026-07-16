@@ -371,6 +371,7 @@ export default function App() {
 
   // Sale chưa chọn phòng ban → yêu cầu chọn trước khi vào app
   // Chưa điền đủ thông tin (tên + phòng ban + mã sale) → yêu cầu tự điền trước khi vào app
+  const isAdmin = profile?.role === 'admin';
   if (profile && profile.role !== 'admin' && (!profile.full_name || !profile.department_id || !profile.ma_sale)) {
     return <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
       onDone={(updated) => setProfile(updated)} />;
@@ -379,7 +380,6 @@ export default function App() {
   const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
   Object.values(contracts).forEach(c => { if (counts[c.type] !== undefined) counts[c.type]++; });
   const noSellers = Object.keys(sellers).length === 0;
-  const isAdmin = profile?.role === 'admin';
 
   const renderPage = () => {
     switch (page) {
