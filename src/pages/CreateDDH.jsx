@@ -10,7 +10,7 @@ import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
 import { normalizeText } from '../utils/customerExcel';
 import { CustomerForm } from './CustomerForm';
 import { DDHPreview } from '../previews/DDHPreview';
-import { buildContractId, calcTotals, fmtNum } from '../helpers';
+import { buildContractId, calcTotals, fmtNum, resolveSaleCode } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
@@ -36,7 +36,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const attachRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
-  const saleCode = customer.assignedSale?.code || '';
+  const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
   const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
 

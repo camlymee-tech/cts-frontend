@@ -10,7 +10,7 @@ import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
 import { normalizeText } from '../utils/customerExcel';
 import { CustomerForm } from './CustomerForm';
 import { BBBGPreview } from '../previews/BBBGPreview';
-import { buildContractId } from '../helpers';
+import { buildContractId, resolveSaleCode } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
@@ -35,7 +35,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const fileRef = useRef();
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
-  const saleCode = customer.assignedSale?.code || '';
+  const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
   const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
 

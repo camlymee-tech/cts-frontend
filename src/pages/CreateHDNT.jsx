@@ -7,9 +7,9 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { Alert } from '../components/Alert';
 import { HDNTPreview } from '../previews/HDNTPreview';
-import { buildContractId } from '../helpers';
+import { buildContractId, resolveSaleCode } from '../helpers';
 
-export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [] }) => {
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [step, setStep] = useState(isEdit ? 2 : 0);
@@ -21,7 +21,7 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const seller = sellers[sellerId] || {};
   const customer = customers[customerId] || {};
-  const saleCode = customer.assignedSale?.code || '';
+  const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
   const autoContractId = buildContractId({ type: 'HDNT', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
   const contractId = idOverride !== null ? idOverride : autoContractId;

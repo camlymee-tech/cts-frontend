@@ -1,4 +1,19 @@
 // File: src/helpers.js
+import { normalizeText } from './utils/customerExcel';
+
+// Lấy đúng Mã Sale của khách hàng để dùng khi sinh số hợp đồng/ĐĐH.
+// Một số khách hàng cũ chỉ lưu Tên Sale mà chưa lưu Mã Sale (dữ liệu trước khi có dropdown chọn sale) —
+// hàm này tự đối chiếu theo tên với hồ sơ đang đăng nhập hoặc danh sách saleProfiles (admin) để tìm ra mã đúng.
+export const resolveSaleCode = (customer, { profile, saleProfiles = [] } = {}) => {
+  const assigned = customer?.assignedSale;
+  if (assigned?.code) return assigned.code;
+  const name = assigned?.name;
+  if (!name) return '';
+  const target = normalizeText(name);
+  if (profile?.full_name && normalizeText(profile.full_name) === target) return profile.ma_sale || '';
+  const found = saleProfiles.find((p) => normalizeText(p.name) === target);
+  return found?.ma_sale || '';
+};
 
 export const fmtDate = (d) => {
   if (!d) return '';
