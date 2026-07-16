@@ -8,12 +8,15 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
 import { normalizeText } from '../utils/customerExcel';
+import { CustomerForm } from './CustomerForm';
 import { DDHPreview } from '../previews/DDHPreview';
 import { buildContractId, calcTotals, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
-export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer }) => {
+export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer, onUpdateSeller }) => {
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [editingSeller, setEditingSeller] = useState(false);
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -241,8 +244,28 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
 
         {(customerId || sellerId) && (
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <PartyInfoCard title="Bên Mua (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null} />
-            <PartyInfoCard title="Bên Bán (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null} />
+            <div>
+              <PartyInfoCard title="Bên Mua (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null}
+                onEdit={customerId ? () => setEditingCustomer(v => !v) : null} />
+              {editingCustomer && customerId && (
+                <div className="mt-2 bg-white border border-gray-200 rounded-lg p-4">
+                  <CustomerForm companyLabel="Tên công ty / HKD" init={customer}
+                    onSave={async (form) => { await onCreateCustomer(customerId, form); setEditingCustomer(false); }}
+                    onCancel={() => setEditingCustomer(false)} />
+                </div>
+              )}
+            </div>
+            <div>
+              <PartyInfoCard title="Bên Bán (tự điền)" p={seller} extra={seller.shortName ? <span className="text-gray-400 font-normal"> • Viết tắt: {seller.shortName}</span> : null}
+                onEdit={sellerId ? () => setEditingSeller(v => !v) : null} />
+              {editingSeller && sellerId && (
+                <div className="mt-2 bg-white border border-gray-200 rounded-lg p-4">
+                  <CustomerForm companyLabel="Tên công ty" withShortName init={seller}
+                    onSave={async (form) => { await onUpdateSeller(sellerId, form); setEditingSeller(false); }}
+                    onCancel={() => setEditingSeller(false)} />
+                </div>
+              )}
+            </div>
           </div>
         )}
 

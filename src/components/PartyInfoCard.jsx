@@ -1,7 +1,10 @@
 // File: src/components/PartyInfoCard.jsx
-export const PartyInfoCard = ({ title, p, extra }) => (
+export const PartyInfoCard = ({ title, p, extra, onEdit }) => (
   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
-    <div className="font-semibold text-gray-700 mb-1">{title}</div>
+    <div className="font-semibold text-gray-700 mb-1 flex items-center justify-between">
+      <span>{title}</span>
+      {onEdit && <button type="button" onClick={onEdit} className="text-blue-600 hover:text-blue-800 text-xs font-medium">✏️ Sửa</button>}
+    </div>
     {p && p.companyName ? (
       <div className="text-gray-600 space-y-0.5">
         <div><strong className="text-gray-800">{p.companyName}</strong>{extra}</div>
