@@ -130,11 +130,15 @@ export default function App() {
   const handleLogout = () => supabase.auth.signOut();
 
   // --- Invoice Goods (hàng hóa theo số hóa đơn, nhập từ Excel để chọn nhanh khi tạo ĐĐH/BBBG) ---
-  const bulkImportInvoiceGoods = async (invoices) => {
+  const bulkImportInvoiceGoods = async (invoices, onProgress) => {
     let success = 0, failed = 0;
     const errors = [];
-    try {
-      const rows = invoices.map(inv => ({
+    const BATCH_SIZE = 300; // chia nhỏ để tránh timeout/quá tải khi file lớn (hàng nghìn hóa đơn)
+    const merged = { ...Object.fromEntries(invoiceGoods.map(r => [r.group_key || r.invoice_no, r])) };
+
+    for (let i = 0; i < invoices.length; i += BATCH_SIZE) {
+      const chunk = invoices.slice(i, i + BATCH_SIZE);
+      const rows = chunk.map(inv => ({
         invoice_no: inv.invoiceNo,
         group_key: inv.groupKey,
         invoice_date: inv.invoiceDate || null,
@@ -145,16 +149,18 @@ export default function App() {
         goods: inv.goods,
         total: inv.total || 0,
       }));
-      const saved = await api.upsertInvoiceGoodsBatch(rows);
-      success = saved.length;
-      // Cập nhật lại state từ danh sách mới nhất (upsert nên id có thể là cũ hoặc mới)
-      const merged = { ...Object.fromEntries(invoiceGoods.map(r => [r.group_key || r.invoice_no, r])) };
-      saved.forEach(r => { merged[r.group_key || r.invoice_no] = r; });
-      setInvoiceGoods(Object.values(merged));
-    } catch (e) {
-      failed = invoices.length;
-      errors.push(e.message);
+      try {
+        const saved = await api.upsertInvoiceGoodsBatch(rows);
+        success += saved.length;
+        saved.forEach(r => { merged[r.group_key || r.invoice_no] = r; });
+      } catch (e) {
+        failed += chunk.length;
+        errors.push(`Đợt ${Math.floor(i / BATCH_SIZE) + 1}: ${e.message}`);
+      }
+      onProgress?.(Math.min(i + BATCH_SIZE, invoices.length), invoices.length);
     }
+
+    setInvoiceGoods(Object.values(merged));
     return { success, failed, errors };
   };
 

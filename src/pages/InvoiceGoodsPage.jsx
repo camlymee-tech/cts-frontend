@@ -4,11 +4,15 @@ import { parseInvoiceGoodsFile } from '../utils/invoiceGoodsExcel';
 import { fmtNum } from '../helpers';
 import { InvoiceGoodsBulkViewer } from './InvoiceGoodsBulkViewer';
 
+const PAGE_SIZE = 50;
+
 export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, onDeleteMany }) => {
   const [search, setSearch] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(null); // { done, total } | null
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const fileRef = useRef(null);
 
   const filtered = invoiceGoods.filter((inv) => {
@@ -21,6 +25,8 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
     );
   });
 
+  const list = filtered.slice(0, visibleCount);
+
   const handlePickFile = () => fileRef.current?.click();
 
   const toggleOne = (id) => {
@@ -31,7 +37,8 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
     });
   };
 
-  const visibleIds = filtered.map(inv => inv.id);
+  // Chỉ áp dụng "chọn tất cả" cho các dòng đang hiển thị (trang hiện tại), tránh chọn nhầm hàng nghìn dòng ẩn
+  const visibleIds = list.map(inv => inv.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
   const toggleAllVisible = () => {
     setSelectedIds(prev => {
@@ -52,6 +59,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
     if (!file) return;
 
     setImporting(true);
+    setImportProgress(null);
     try {
       const { invoices, errors } = await parseInvoiceGoodsFile(file);
       if (invoices.length === 0) {
@@ -61,11 +69,12 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
       const proceed = confirm(
         `Tìm thấy ${invoices.length} hóa đơn trong file.` +
         (errors.length ? `\nCó ${errors.length} dòng bị bỏ qua (thiếu Số hóa đơn hoặc Tên hàng).` : '') +
-        `\n\nBấm OK để nhập vào hệ thống. Số hóa đơn đã có sẽ được cập nhật đè lên dữ liệu cũ.`
+        `\n\nBấm OK để nhập vào hệ thống. Số hóa đơn đã có sẽ được cập nhật đè lên dữ liệu cũ.` +
+        (invoices.length > 300 ? `\n\nFile khá lớn — hệ thống sẽ nhập theo từng đợt, có thể mất vài phút, đừng tắt trình duyệt.` : '')
       );
       if (!proceed) return;
 
-      const result = await onBulkImport(invoices);
+      const result = await onBulkImport(invoices, (done, total) => setImportProgress({ done, total }));
       let msg = `Đã nhập thành công ${result.success} hóa đơn.`;
       if (result.failed) msg += `\nLỗi: ${result.errors.join('\n')}`;
       alert(msg);
@@ -73,6 +82,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
       alert('Không đọc được file: ' + err.message);
     } finally {
       setImporting(false);
+      setImportProgress(null);
     }
   };
 
@@ -84,7 +94,9 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChosen} className="hidden" />
           <button onClick={handlePickFile} disabled={importing}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow disabled:opacity-50">
-            {importing ? '⏳ Đang nhập...' : '📥 Nhập Excel'}
+            {importing
+              ? (importProgress ? `⏳ Đang nhập ${importProgress.done}/${importProgress.total}...` : '⏳ Đang đọc file...')
+              : '📥 Nhập Excel'}
           </button>
         </div>
       </div>
@@ -94,8 +106,12 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
         Sau khi nhập, khi tạo <b>Đơn đặt hàng</b> hoặc <b>Biên bản bàn giao</b>, chỉ cần chọn đúng Số hóa đơn là hàng hóa + giá trị sẽ tự động điền vào.
       </div>
 
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
+      <input value={search} onChange={(e) => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+
+      {filtered.length > 0 && (
+        <div className="text-xs text-gray-400 mb-2">Hiện {list.length} / {filtered.length} hóa đơn{invoiceGoods.length !== filtered.length ? ` (tổng cộng ${invoiceGoods.length})` : ''}</div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-3">
@@ -137,7 +153,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
               <th className="px-5 py-3"></th>
             </tr></thead>
             <tbody>
-              {filtered.map((inv, idx) => (
+              {list.map((inv, idx) => (
                 <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <input type="checkbox" checked={selectedIds.has(inv.id)} onChange={() => toggleOne(inv.id)} className="cursor-pointer" />
@@ -167,6 +183,13 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], onBulkImport, onDelete, on
               ))}
             </tbody>
           </table>
+        )}
+        {visibleCount < filtered.length && (
+          <div className="p-4 text-center border-t border-gray-100">
+            <button onClick={() => setVisibleCount(v => v + PAGE_SIZE)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              Xem thêm ({filtered.length - visibleCount} hóa đơn còn lại)
+            </button>
+          </div>
         )}
       </div>
     </div>
