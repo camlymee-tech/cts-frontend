@@ -4,10 +4,11 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
 
-export const CompleteProfilePage = ({ profile, departments, onDone, isEdit = false }) => {
+export const CompleteProfilePage = ({ profile, departments, onDone, isEdit = false, isAdmin = false }) => {
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [departmentId, setDepartmentId] = useState(profile?.department_id || '');
+  const [maSale, setMaSale] = useState(profile?.ma_sale || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -16,12 +17,14 @@ export const CompleteProfilePage = ({ profile, departments, onDone, isEdit = fal
     e.preventDefault();
     if (!fullName.trim()) return setError('Vui lòng nhập họ và tên');
     if (!departmentId) return setError('Vui lòng chọn phòng ban');
+    if (!isAdmin && !maSale.trim()) return setError('Vui lòng nhập Mã Sale của bạn');
     setLoading(true); setError(''); setSaved(false);
     try {
       const updated = await api.updateProfile(profile.id, {
         full_name: fullName.trim(),
         phone: phone.trim() || null,
         department_id: departmentId,
+        ma_sale: maSale.trim() || null,
       });
       if (isEdit) {
         setSaved(true);
@@ -75,6 +78,16 @@ export const CompleteProfilePage = ({ profile, departments, onDone, isEdit = fal
               ))}
             </select>
           </div>
+
+          {!isAdmin && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mã Sale <span className="text-red-500">*</span></label>
+              <input type="text" value={maSale} onChange={e => setMaSale(e.target.value)}
+                placeholder="VD: CTS18" required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <p className="text-xs text-gray-400 mt-1">Mã này dùng để tự sinh số hợp đồng/đơn hàng và để bạn xem được đúng khách hàng/hợp đồng của mình.</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>

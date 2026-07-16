@@ -136,8 +136,9 @@ export const AdminUsersPage = ({ departments }) => {
               const isApproved = edits[p.id]?.approved;
               const isDeleting = deletingId === p.id;
               const deptName = departments?.[p.department_id]?.name || '';
+              const missingMaSale = p.role !== 'admin' && !edits[p.id]?.ma_sale;
               return (
-                <tr key={p.id} className={!isApproved ? 'bg-amber-50/40' : ''}>
+                <tr key={p.id} className={missingMaSale ? 'bg-red-50/50' : !isApproved ? 'bg-amber-50/40' : ''}>
                   <td className="px-4 py-2.5 text-gray-400">{idx + 1}</td>
                   <td className="px-4 py-2.5 font-medium">{p.full_name || <span className="text-gray-400">(chưa có tên)</span>}</td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{p.email}</td>
@@ -165,7 +166,8 @@ export const AdminUsersPage = ({ departments }) => {
                   <td className="px-4 py-2.5">
                     <input type="text" value={edits[p.id]?.ma_sale || ''} onChange={e => setEdit(p.id, 'ma_sale', e.target.value)}
                       placeholder="VD: S01"
-                      className="border border-gray-300 rounded-lg px-2 py-1 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      className={`border rounded-lg px-2 py-1 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-blue-400 ${missingMaSale ? 'border-red-300 bg-red-50' : 'border-gray-300'}`} />
+                    {missingMaSale && <div className="text-[10px] text-red-600 mt-0.5 whitespace-nowrap">⚠️ Thiếu — cần điền</div>}
                   </td>
                   <td className="px-4 py-2.5">
                     <select value={edits[p.id]?.role || 'sale'} onChange={e => setEdit(p.id, 'role', e.target.value)}
