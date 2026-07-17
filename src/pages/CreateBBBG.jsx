@@ -17,6 +17,7 @@ import { pdfFirstPageToImage } from '../lib/pdfToImage';
 export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
+  const [sourceInvoiceNo, setSourceInvoiceNo] = useState(editData?.invoiceNo || '');
   const [sellerOverride, setSellerOverride] = useState(editData?.sellerSnapshot || null); // sửa riêng cho đơn này, không đổi bên bán gốc
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
@@ -77,6 +78,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     const d = contracts[id];
     setGoods(d?.goods?.length ? d.goods : []);
     setVatInvoiceImage(d?.vatInvoiceImage || null);
+    setSourceInvoiceNo(d?.invoiceNo || '');
   };
 
   const fileRef2 = useRef();
@@ -137,6 +139,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + Khách hàng + Bên bán (không đổi ảnh đính kèm)
   const applyInvoiceGoods = async (inv) => {
     setGoods(inv.goods || []);
+    setSourceInvoiceNo(inv.invoice_no || '');
 
     let matchedCustomerId = null;
     if (inv.customer_code && customers[inv.customer_code]) {
@@ -211,7 +214,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     contractId, type: 'BBBG', customerId, sellerId, saleCode, stt,
     customerName: customer.companyName, date, status: editData?.status || 'Hoàn thành', goods,
     customerSnapshot: customer, sellerSnapshot: seller,
-    vatInvoiceImage,
+    vatInvoiceImage, invoiceNo: sourceInvoiceNo || null,
     relatedContracts: { hdnt: hdntId, ddh: ddhId }
   } : null;
 
@@ -287,7 +290,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-5 gap-4 mb-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">STT (3 số) <span className="text-red-500">*</span></label>
             <input value={stt} onChange={e => setStt(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="VD: 001"
@@ -296,6 +299,11 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Ngày lập</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Số hóa đơn (không bắt buộc)</label>
+            <input value={sourceInvoiceNo} onChange={e => setSourceInvoiceNo(e.target.value)} placeholder="VD: 00000123"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
           <SearchableSelect label="Gắn HĐNT" value={hdntId} onChange={setHdntId} placeholder="-- Không gắn --" options={hdntOptions} />
