@@ -18,6 +18,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
   const [sellerOverride, setSellerOverride] = useState(editData?.sellerSnapshot || null); // sửa riêng cho đơn này, không đổi bên bán gốc
+  const [appliedInvoiceDate, setAppliedInvoiceDate] = useState(null); // ngày của hóa đơn vừa áp dụng — để cảnh báo nếu trùng ngày đặt hàng
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -98,10 +99,10 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     }
   };
 
-  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + ngày + Khách hàng + Bên bán
+  // Chọn nhanh từ hóa đơn đã nhập Excel sẵn — tự điền hàng hóa + Khách hàng + Bên bán (không tự đổi Ngày đặt hàng)
   const applyInvoiceGoods = async (inv) => {
     setGoods(inv.goods || []);
-    if (inv.invoice_date) setDate(inv.invoice_date);
+    setAppliedInvoiceDate(inv.invoice_date || null);
 
     // Đối chiếu Khách hàng: ưu tiên đúng Mã KH, không có thì so tên công ty
     let matchedCustomerId = null;
@@ -213,6 +214,10 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
     if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
+    if (appliedInvoiceDate && date === appliedInvoiceDate) {
+      const proceed = confirm(`⚠️ Ngày đặt hàng (${date}) đang trùng với ngày hóa đơn đã áp dụng.\nNgày ĐĐH không nên trùng ngày hóa đơn — vui lòng sửa lại "Ngày đặt hàng".\n\nBấm OK nếu vẫn muốn lưu, hoặc Hủy để quay lại sửa.`);
+      if (!proceed) return;
+    }
     await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
     setPage('ddh');
   };
