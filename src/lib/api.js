@@ -123,12 +123,20 @@ export const api = {
 
   // ───────── Khách hàng (bảng customers, RLS theo người tạo) ─────────
   async listCustomers() {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('created_at', { ascending: true });
-    if (error) throw new Error(error.message);
-    return data || [];
+    // Supabase mặc định chỉ trả tối đa 1000 dòng/lần — phải tự phân trang để lấy đủ toàn bộ
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from('customers').select('*').order('created_at', { ascending: true })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
   },
 
   async upsertCustomer({ _dbId, customerId, data, maSale }) {
