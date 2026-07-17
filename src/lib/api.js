@@ -191,8 +191,33 @@ export const api = {
   },
 
   // --- Invoice Goods: hàng hóa theo số hóa đơn (nhập từ Excel), dùng để tự điền khi tạo ĐĐH/BBBG ---
-  async listInvoiceGoods() {
-    const { data, error } = await supabase.from('invoice_goods').select('*').order('invoice_no');
+  // Dùng RPC phân trang + lọc server-side thay vì tải hết bảng (đã lên tới hàng chục nghìn dòng,
+  // select('*') trần khiến supabase-js tự động lặp request 1000 dòng/lần để lấy hết → rất chậm).
+  async listInvoiceGoodsPaged({ search = '', seller = '', sale = '', dateFrom = '', dateTo = '', limit = 50, offset = 0 } = {}) {
+    const { data, error } = await supabase.rpc('list_invoice_goods_paged', {
+      p_search: search || null,
+      p_seller: seller || null,
+      p_sale: sale || null,
+      p_date_from: dateFrom || null,
+      p_date_to: dateTo || null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message);
+    const rows = data || [];
+    return { rows, totalCount: rows[0]?.total_count ?? 0 };
+  },
+
+  async invoiceGoodsFilterOptions() {
+    const { data, error } = await supabase.rpc('list_invoice_goods_filter_options');
+    if (error) throw new Error(error.message);
+    const row = data?.[0] || {};
+    return { sellers: row.sellers || [], sales: row.sales || [] };
+  },
+
+  // Tìm kiếm nhẹ (tối đa ~20 kết quả) dùng cho InvoiceGoodsPicker khi tạo ĐĐH/BBBG
+  async searchInvoiceGoods(query, limit = 20) {
+    const { data, error } = await supabase.rpc('search_invoice_goods', { p_query: query || null, p_limit: limit });
     if (error) throw new Error(error.message);
     return data || [];
   },

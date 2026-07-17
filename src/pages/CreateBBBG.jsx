@@ -14,7 +14,7 @@ import { buildContractId, resolveSaleCode } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 
-export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer, onUpdateSeller }) => {
+export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
   const [sourceInvoiceNo, setSourceInvoiceNo] = useState(editData?.invoiceNo || '');
@@ -335,12 +335,10 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
             <span className="text-xs text-gray-400">hoặc bấm "+ Thêm dòng" để nhập tay bên dưới</span>
           </div>
           {aiError && <Alert type="error">{aiError}</Alert>}
-          {invoiceGoods.length > 0 && (
-            <div className="mb-3">
-              <div className="text-xs text-gray-400 mb-1">hoặc chọn từ hóa đơn đã nhập Excel sẵn</div>
-              <InvoiceGoodsPicker invoiceGoods={invoiceGoods} onApply={applyInvoiceGoods} />
-            </div>
-          )}
+          <div className="mb-3">
+            <div className="text-xs text-gray-400 mb-1">hoặc chọn từ hóa đơn đã nhập Excel sẵn</div>
+            <InvoiceGoodsPicker onApply={applyInvoiceGoods} />
+          </div>
           <GoodsTable goods={goods} onChange={setGoods} />
         </div>
 

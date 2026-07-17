@@ -56,8 +56,6 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
-  const [invoiceGoods, setInvoiceGoods] = useState([]); // danh sách hóa đơn + hàng hóa nhập từ Excel, để chọn nhanh khi tạo ĐĐH/BBBG
-  const [invoiceGoodsLoaded, setInvoiceGoodsLoaded] = useState(false);
 
   // Supabase auth
   useEffect(() => {
@@ -126,30 +124,15 @@ export default function App() {
     })();
   }, [session]);
 
-  // Chỉ tải "Hàng hóa theo hóa đơn" khi thực sự cần (vào trang đó, hoặc mở tạo/sửa ĐĐH/BBBG) —
-  // tránh tải hàng chục nghìn dòng ngay từ đầu, giúp app mở nhanh hơn.
-  const INVOICE_GOODS_PAGES = ['invoice_goods', 'create-ddh', 'create-bbbg', 'edit-ddh', 'edit-bbbg'];
-  useEffect(() => {
-    if (!session || invoiceGoodsLoaded || !INVOICE_GOODS_PAGES.includes(page)) return;
-    (async () => {
-      try {
-        const rows = await api.listInvoiceGoods();
-        setInvoiceGoods(rows || []);
-        setInvoiceGoodsLoaded(true);
-      } catch (e) {
-        console.error('Không tải được Hàng hóa theo hóa đơn:', e.message);
-      }
-    })();
-  }, [session, page, invoiceGoodsLoaded]);
-
   const handleLogout = () => supabase.auth.signOut();
 
   // --- Invoice Goods (hàng hóa theo số hóa đơn, nhập từ Excel để chọn nhanh khi tạo ĐĐH/BBBG) ---
+  // Không còn giữ mảng đầy đủ trong state App nữa (đã lên hàng chục nghìn dòng) — InvoiceGoodsPage
+  // tự quản lý dữ liệu của nó qua RPC phân trang, InvoiceGoodsPicker tự tìm kiếm qua RPC riêng.
   const bulkImportInvoiceGoods = async (invoices, onProgress) => {
     let success = 0, failed = 0;
     const errors = [];
     const BATCH_SIZE = 300; // chia nhỏ để tránh timeout/quá tải khi file lớn (hàng nghìn hóa đơn)
-    const merged = { ...Object.fromEntries(invoiceGoods.map(r => [r.group_key || r.invoice_no, r])) };
 
     for (let i = 0; i < invoices.length; i += BATCH_SIZE) {
       const chunk = invoices.slice(i, i + BATCH_SIZE);
@@ -167,7 +150,6 @@ export default function App() {
       try {
         const saved = await api.upsertInvoiceGoodsBatch(rows);
         success += saved.length;
-        saved.forEach(r => { merged[r.group_key || r.invoice_no] = r; });
       } catch (e) {
         failed += chunk.length;
         errors.push(`Đợt ${Math.floor(i / BATCH_SIZE) + 1}: ${e.message}`);
@@ -175,20 +157,18 @@ export default function App() {
       onProgress?.(Math.min(i + BATCH_SIZE, invoices.length), invoices.length);
     }
 
-    setInvoiceGoods(Object.values(merged));
     return { success, failed, errors };
   };
 
   const deleteInvoiceGoodsRow = async (id) => {
-    if (!confirm('Xóa hóa đơn này khỏi danh sách hàng hóa?')) return;
+    if (!confirm('Xóa hóa đơn này khỏi danh sách hàng hóa?')) return false;
     await api.deleteInvoiceGoods(id);
-    setInvoiceGoods(prev => prev.filter(r => r.id !== id));
+    return true;
   };
 
   const bulkDeleteInvoiceGoods = async (ids) => {
     if (!confirm(`Xóa ${ids.length} hóa đơn đã chọn khỏi danh sách hàng hóa? Thao tác không thể hoàn tác.`)) return false;
     await api.deleteInvoiceGoodsMany(ids);
-    setInvoiceGoods(prev => prev.filter(r => !ids.includes(r.id)));
     return true;
   };
 
@@ -407,7 +387,7 @@ export default function App() {
         </div>
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
-      case 'invoice_goods': return <InvoiceGoodsPage invoiceGoods={invoiceGoods} invoiceGoodsLoaded={invoiceGoodsLoaded} customers={customers} sellers={sellers} onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
+      case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
@@ -418,8 +398,8 @@ export default function App() {
       case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} />;
-      case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} invoiceGoods={invoiceGoods} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
-      case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} invoiceGoods={invoiceGoods} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
+      case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
+      case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
       case 'create-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
       case 'create-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
       case 'create-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
@@ -427,8 +407,8 @@ export default function App() {
       case 'create-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
       case 'create-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
       case 'edit-hdnt':    return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} invoiceGoods={invoiceGoods} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
-      case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} invoiceGoods={invoiceGoods} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
+      case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
+      case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
       case 'edit-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
       case 'edit-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
       case 'edit-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;

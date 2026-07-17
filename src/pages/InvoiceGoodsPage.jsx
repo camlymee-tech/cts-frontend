@@ -1,27 +1,17 @@
 // File: src/pages/InvoiceGoodsPage.jsx
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { parseInvoiceGoodsFile } from '../utils/invoiceGoodsExcel';
-import { normalizeText } from '../utils/customerExcel';
 import { fmtNum } from '../helpers';
+import { api } from '../lib/api';
+import { Pagination } from '../components/Pagination';
 import { InvoiceGoodsBulkViewer } from './InvoiceGoodsBulkViewer';
 
 const PAGE_SIZE = 50;
 
-// Đối chiếu khách hàng của hóa đơn với danh sách Khách hàng thật để lấy đúng Sale phụ trách —
-// giống hệt cách "Áp dụng hóa đơn" bên ĐĐH/BBBG đang làm (ưu tiên Mã KH, không có thì so tên).
-function resolveSaleName(inv, customers) {
-  if (inv.customer_code && customers[inv.customer_code]) {
-    return customers[inv.customer_code].assignedSale?.name || '';
-  }
-  if (inv.customer_name) {
-    const target = normalizeText(inv.customer_name);
-    const found = Object.values(customers).find((c) => normalizeText(c.companyName) === target);
-    if (found) return found.assignedSale?.name || '';
-  }
-  return '';
-}
-
-export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true, customers = {}, sellers = {}, onBulkImport, onDelete, onDeleteMany }) => {
+// Bảng invoice_goods đã lên tới hàng chục nghìn dòng — không còn tải hết về client để lọc/phân trang
+// nữa (từng khiến supabase-js tự lặp request 1000 dòng/lần để lấy hết, rất chậm). Giờ dùng RPC
+// list_invoice_goods_paged để lọc + phân trang ngay ở DB, chỉ tải đúng số dòng cần hiển thị.
+export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany }) => {
   const [search, setSearch] = useState('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [saleFilter, setSaleFilter] = useState('');
@@ -31,41 +21,57 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
   const [importProgress, setImportProgress] = useState(null); // { done, total } | null
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const fileRef = useRef(null);
 
-  // Gắn sẵn tên Sale (đối chiếu theo khách hàng) vào từng hóa đơn để lọc/hiển thị
-  const enriched = useMemo(
-    () => invoiceGoods.map((inv) => ({ ...inv, _saleName: resolveSaleName(inv, customers) })),
-    [invoiceGoods, customers]
-  );
+  const [rows, setRows] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1); // 1-indexed
+  const [loading, setLoading] = useState(true);
+  const [sellerOptions, setSellerOptions] = useState([]);
+  const [saleOptions, setSaleOptions] = useState([]);
 
-  const sellerOptions = useMemo(
-    () => [...new Set(enriched.map((inv) => inv.seller_name).filter(Boolean))].sort(),
-    [enriched]
-  );
-  const saleOptions = useMemo(
-    () => [...new Set(enriched.map((inv) => inv._saleName).filter(Boolean))].sort(),
-    [enriched]
-  );
+  const maxPage = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // Đánh dấu request đang gọi mới nhất — nếu đổi filter/trang liên tiếp nhanh, request cũ trả về
+  // trễ hơn request mới sẽ bị bỏ qua, tránh ghi đè kết quả đúng bằng dữ liệu đã lỗi thời.
+  const requestIdRef = useRef(0);
 
-  const resetPage = () => setVisibleCount(PAGE_SIZE);
+  // Danh sách option cho 2 dropdown lọc — tải riêng 1 lần, nhẹ, không đụng cột hàng hóa nặng
+  useEffect(() => {
+    api.invoiceGoodsFilterOptions()
+      .then(({ sellers: s, sales }) => { setSellerOptions(s); setSaleOptions(sales); })
+      .catch(() => {});
+  }, []);
 
-  const filtered = enriched.filter((inv) => {
-    const s = search.trim().toLowerCase();
-    const matchSearch = !s
-      || (inv.invoice_no || '').toLowerCase().includes(s)
-      || (inv.customer_name || '').toLowerCase().includes(s)
-      || (inv.customer_code || '').toLowerCase().includes(s);
-    const matchSeller = !sellerFilter || inv.seller_name === sellerFilter;
-    const matchSale = !saleFilter || inv._saleName === saleFilter;
-    const matchFrom = !dateFrom || (inv.invoice_date && inv.invoice_date >= dateFrom);
-    const matchTo = !dateTo || (inv.invoice_date && inv.invoice_date <= dateTo);
-    return matchSearch && matchSeller && matchSale && matchFrom && matchTo;
-  });
+  const loadPage = useCallback(async (pageToLoad) => {
+    const myRequestId = ++requestIdRef.current;
+    setLoading(true);
+    try {
+      const { rows: newRows, totalCount: tc } = await api.listInvoiceGoodsPaged({
+        search, seller: sellerFilter, sale: saleFilter, dateFrom, dateTo,
+        limit: PAGE_SIZE, offset: (pageToLoad - 1) * PAGE_SIZE,
+      });
+      if (myRequestId !== requestIdRef.current) return; // đã có request mới hơn chạy sau, bỏ kết quả này
+      // Trang hiện tại vừa bị xóa hết dòng cuối (VD: xóa dòng duy nhất ở trang cuối) — lùi về trang trước
+      if (newRows.length === 0 && pageToLoad > 1 && tc > 0) {
+        setPage(pageToLoad - 1);
+        return;
+      }
+      setRows(newRows);
+      setTotalCount(tc);
+      setPage(pageToLoad);
+    } catch (e) {
+      console.error('Không tải được danh sách hóa đơn:', e.message);
+    } finally {
+      if (myRequestId === requestIdRef.current) setLoading(false);
+    }
+  }, [search, sellerFilter, saleFilter, dateFrom, dateTo]);
 
-  const list = filtered.slice(0, visibleCount);
-  const hasActiveFilters = search || sellerFilter || saleFilter || dateFrom || dateTo;
+  // Gõ tìm kiếm: debounce 300ms để tránh gọi API liên tục theo từng ký tự; đổi bộ lọc luôn quay về trang 1
+  useEffect(() => {
+    const t = setTimeout(() => { loadPage(1); setSelectedIds(new Set()); }, search ? 300 : 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, sellerFilter, saleFilter, dateFrom, dateTo]);
 
   const handlePickFile = () => fileRef.current?.click();
 
@@ -77,8 +83,8 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
     });
   };
 
-  // Chỉ áp dụng "chọn tất cả" cho các dòng đang hiển thị (trang hiện tại), tránh chọn nhầm hàng nghìn dòng ẩn
-  const visibleIds = list.map(inv => inv.id);
+  // Chỉ áp dụng "chọn tất cả" cho các dòng đang tải sẵn (trang hiện tại), tránh chọn nhầm hàng nghìn dòng chưa tải
+  const visibleIds = rows.map(inv => inv.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
   const toggleAllVisible = () => {
     setSelectedIds(prev => {
@@ -91,7 +97,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
     });
   };
 
-  const selectedInvoices = invoiceGoods.filter(inv => selectedIds.has(inv.id));
+  const selectedInvoices = rows.filter(inv => selectedIds.has(inv.id));
 
   const handleFileChosen = async (e) => {
     const file = e.target.files?.[0];
@@ -118,6 +124,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
       let msg = `Đã nhập thành công ${result.success} hóa đơn.`;
       if (result.failed) msg += `\nLỗi: ${result.errors.join('\n')}`;
       alert(msg);
+      await loadPage(1); // tải lại để phản ánh dữ liệu vừa nhập
     } catch (err) {
       alert('Không đọc được file: ' + err.message);
     } finally {
@@ -126,10 +133,25 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
     }
   };
 
-  const clearFilters = () => {
-    setSearch(''); setSellerFilter(''); setSaleFilter(''); setDateFrom(''); setDateTo('');
-    setVisibleCount(PAGE_SIZE);
+  const handleDeleteOne = async (id) => {
+    const ok = await onDelete(id);
+    if (ok) {
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+      await loadPage(page); // tải lại trang hiện tại từ server (tự lùi trang nếu vừa xóa hết dòng cuối)
+    }
   };
+
+  const handleDeleteMany = async () => {
+    const ids = Array.from(selectedIds);
+    const ok = await onDeleteMany(ids);
+    if (ok) {
+      setSelectedIds(new Set());
+      await loadPage(page);
+    }
+  };
+
+  const clearFilters = () => { setSearch(''); setSellerFilter(''); setSaleFilter(''); setDateFrom(''); setDateTo(''); };
+  const hasActiveFilters = search || sellerFilter || saleFilter || dateFrom || dateTo;
 
   return (
     <div>
@@ -152,12 +174,12 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
       </div>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
-        <input value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
           className="flex-1 min-w-[220px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
 
         <div>
           <label className="block text-xs text-gray-500 mb-1">Công ty bán</label>
-          <select value={sellerFilter} onChange={(e) => { setSellerFilter(e.target.value); resetPage(); }}
+          <select value={sellerFilter} onChange={(e) => setSellerFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
             <option value="">Tất cả bên bán</option>
             {sellerOptions.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -166,7 +188,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
 
         <div>
           <label className="block text-xs text-gray-500 mb-1">Sale phụ trách</label>
-          <select value={saleFilter} onChange={(e) => { setSaleFilter(e.target.value); resetPage(); }}
+          <select value={saleFilter} onChange={(e) => setSaleFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
             <option value="">Tất cả Sale</option>
             {saleOptions.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -175,12 +197,12 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
 
         <div>
           <label className="block text-xs text-gray-500 mb-1">Từ ngày</label>
-          <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); resetPage(); }}
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Đến ngày</label>
-          <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); resetPage(); }}
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         </div>
 
@@ -189,8 +211,8 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
         )}
       </div>
 
-      {filtered.length > 0 && (
-        <div className="text-xs text-gray-400 mb-2">Hiện {list.length} / {filtered.length} hóa đơn{invoiceGoods.length !== filtered.length ? ` (tổng cộng ${invoiceGoods.length})` : ''}</div>
+      {totalCount > 0 && (
+        <div className="text-xs text-gray-400 mb-2">Trang {page}/{maxPage} — tổng cộng {totalCount} hóa đơn</div>
       )}
 
       {selectedIds.size > 0 && (
@@ -200,10 +222,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
             <button onClick={() => setBulkOpen(true)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
               🖨️ In gộp
             </button>
-            <button
-              onClick={async () => { const ok = await onDeleteMany(Array.from(selectedIds)); if (ok) setSelectedIds(new Set()); }}
-              className="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-red-100"
-            >
+            <button onClick={handleDeleteMany} className="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-red-100">
               🗑️ Xóa gộp
             </button>
             <button onClick={() => setSelectedIds(new Set())} className="text-sm text-blue-700 hover:underline px-2">Bỏ chọn</button>
@@ -214,9 +233,9 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
       {bulkOpen && <InvoiceGoodsBulkViewer invoices={selectedInvoices} onClose={() => setBulkOpen(false)} />}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-        {filtered.length === 0 ? (
+        {rows.length === 0 ? (
           <div className="p-10 text-center text-gray-400">
-            {!invoiceGoodsLoaded ? '⏳ Đang tải danh sách hóa đơn...' : invoiceGoods.length === 0 ? 'Chưa có hóa đơn nào. Bấm "Nhập Excel" để bắt đầu.' : 'Không tìm thấy hóa đơn phù hợp.'}
+            {loading ? '⏳ Đang tải danh sách hóa đơn...' : hasActiveFilters ? 'Không tìm thấy hóa đơn phù hợp.' : 'Chưa có hóa đơn nào. Bấm "Nhập Excel" để bắt đầu.'}
           </div>
         ) : (
           <table className="w-full text-sm min-w-[900px]">
@@ -235,12 +254,12 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
               <th className="px-5 py-3"></th>
             </tr></thead>
             <tbody>
-              {list.map((inv, idx) => (
+              {rows.map((inv, idx) => (
                 <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <input type="checkbox" checked={selectedIds.has(inv.id)} onChange={() => toggleOne(inv.id)} className="cursor-pointer" />
                   </td>
-                  <td className="px-5 py-3 text-gray-400">{idx + 1}</td>
+                  <td className="px-5 py-3 text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</td>
                   <td className="px-5 py-3 font-mono font-bold text-blue-600 relative group cursor-default">
                     {inv.invoice_no}
                     <div className="hidden group-hover:block absolute z-30 left-0 top-full mt-1 w-96 bg-gray-800 text-white text-xs rounded-lg shadow-xl p-3 pointer-events-none">
@@ -259,22 +278,16 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true,
                   <td className="px-5 py-3 text-gray-600">{inv.invoice_date || '–'}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.customer_name || '–'}{inv.customer_code ? ` (${inv.customer_code})` : ''}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.seller_name || '–'}</td>
-                  <td className="px-5 py-3 text-gray-600">{inv._saleName || <span className="text-gray-300">—</span>}</td>
+                  <td className="px-5 py-3 text-gray-600">{inv.sale_name || <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.goods?.length || 0}</td>
                   <td className="px-5 py-3 text-right font-medium">{fmtNum(inv.total || 0)}</td>
-                  <td className="px-5 py-3 text-right"><button onClick={() => onDelete(inv.id)} className="text-red-500 hover:text-red-700">Xóa</button></td>
+                  <td className="px-5 py-3 text-right"><button onClick={() => handleDeleteOne(inv.id)} className="text-red-500 hover:text-red-700">Xóa</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
-        {visibleCount < filtered.length && (
-          <div className="p-4 text-center border-t border-gray-100">
-            <button onClick={() => setVisibleCount(v => v + PAGE_SIZE)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-              Xem thêm ({filtered.length - visibleCount} hóa đơn còn lại)
-            </button>
-          </div>
-        )}
+        <Pagination page={page} maxPage={maxPage} onChange={loadPage} disabled={loading} />
       </div>
     </div>
   );
