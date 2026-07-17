@@ -285,7 +285,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">STT (3 số) <span className="text-red-500">*</span></label>
             <input value={stt} onChange={e => setStt(e.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="VD: 001"
@@ -294,6 +294,11 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Ngày đặt hàng</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Số hóa đơn (không bắt buộc)</label>
+            <input value={sourceInvoiceNo} onChange={e => setSourceInvoiceNo(e.target.value)} placeholder="VD: 00000123"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           </div>
           <SearchableSelect label="Gắn HĐNT" value={hdntId} onChange={setHdntId} placeholder="-- Không gắn --" options={hdntOptions} />
