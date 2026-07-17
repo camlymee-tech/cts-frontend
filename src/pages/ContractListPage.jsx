@@ -1,5 +1,6 @@
 // File: src/pages/ContractListPage.jsx
 import { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
 import { BulkContractViewer } from './BulkContractViewer';
@@ -74,11 +75,37 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
 
   const selectedContracts = allOfType.filter(c => selectedIds.has(c.contractId));
 
+  const exportToExcel = () => {
+    const data = filtered.map(c => {
+      const sale = saleMap[c._createdBy] || saleMap[c._maSale];
+      const row = {
+        'Số hợp đồng': c.contractId,
+        'Khách hàng': customerLabel(c),
+        'Ngày': c.date || '',
+      };
+      if (showTotal) row['Tổng tiền'] = calcTotals(c.goods).total || 0;
+      row['Sale'] = sale?.name || c._maSale || '';
+      row['Phòng ban'] = sale?.deptName || '';
+      row['Trạng thái'] = c.status || '';
+      return row;
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = Object.keys(data[0] || {}).map(() => ({ wch: 22 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, labels[type].slice(0, 31));
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `${labels[type].replace(/\s+/g, '_')}_${today}.xlsx`);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">{labels[type]}</h1>
-        <button onClick={() => setPage(createPages[type])} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Tạo mới</button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportToExcel} disabled={filtered.length === 0}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm disabled:opacity-50">📤 Xuất Excel</button>
+          <button onClick={() => setPage(createPages[type])} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Tạo mới</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
