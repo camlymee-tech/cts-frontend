@@ -17,6 +17,7 @@ import { pdfFirstPageToImage } from '../lib/pdfToImage';
 export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], invoiceGoods = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
+  const [sellerOverride, setSellerOverride] = useState(editData?.sellerSnapshot || null); // sửa riêng cho đơn này, không đổi bên bán gốc
   const isEdit = !!editData;
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
@@ -34,7 +35,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
   const attachRef = useRef();
-  const seller = sellers[sellerId] || {};
+  const seller = sellerOverride || sellers[sellerId] || {};
   const customer = customers[customerId] || {};
   const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
@@ -236,7 +237,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
           />
           <SearchableSelect
             label="Công ty bên bán" required
-            value={sellerId} onChange={setSellerId}
+            value={sellerId} onChange={(id) => { setSellerId(id); setSellerOverride(null); }}
             placeholder="-- Chọn bên bán --"
             options={Object.entries(sellers).map(([id, s]) => ({ value: id, label: `${s.shortName ? `[${s.shortName}] ` : ''}${s.companyName}` }))}
           />
@@ -260,8 +261,9 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
                 onEdit={sellerId ? () => setEditingSeller(v => !v) : null} />
               {editingSeller && sellerId && (
                 <div className="mt-2 bg-white border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs text-amber-600 mb-2">⚠️ Chỉnh sửa này chỉ áp dụng riêng cho đơn hàng này, không thay đổi thông tin gốc của bên bán.</p>
                   <CustomerForm companyLabel="Tên công ty" withShortName init={seller}
-                    onSave={async (form) => { await onUpdateSeller(sellerId, form); setEditingSeller(false); }}
+                    onSave={(form) => { setSellerOverride(form); setEditingSeller(false); }}
                     onCancel={() => setEditingSeller(false)} />
                 </div>
               )}
