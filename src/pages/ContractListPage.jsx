@@ -7,10 +7,12 @@ import { BulkContractViewer } from './BulkContractViewer';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
+const INVOICE_NO_TYPES = ['DDH', 'BBBG']; // chỉ loại Mua bán mới có tính năng chọn số hóa đơn có sẵn
 const PAGE_SIZE = 30;
 
 export const ContractListPage = ({ type, contracts, customers, sellers, saleMap = {}, saleProfiles = [], setPage, setViewContract, onDelete, onDeleteMany, onAssign, onEdit }) => {
   const [assigningId, setAssigningId] = useState(null); // contractId đang được giao
+  const showInvoiceNo = INVOICE_NO_TYPES.includes(type);
   const [search, setSearch] = useState('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -92,6 +94,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
         'Bên bán': sellerLabel(c),
         'Ngày': c.date || '',
       };
+      if (showInvoiceNo) row['Số hóa đơn'] = c.invoiceNo || '';
       if (showTotal) row['Tổng tiền'] = calcTotals(c.goods).total || 0;
       row['Sale'] = sale?.name || c._maSale || '';
       row['Phòng ban'] = sale?.deptName || '';
@@ -175,6 +178,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
               <th className="text-left px-5 py-3">Số hợp đồng</th>
               <th className="text-left px-5 py-3">Khách hàng</th>
               <th className="text-left px-5 py-3">Bên bán</th>
+              {showInvoiceNo && <th className="text-left px-5 py-3">Số hóa đơn</th>}
               <th className="text-left px-5 py-3">Ngày</th>
               {showTotal && <th className="text-left px-5 py-3">Tổng tiền</th>}
               <th className="text-left px-5 py-3">Sale</th>
@@ -193,6 +197,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
                     <td className="px-5 py-3 font-mono font-bold text-blue-700">{c.contractId}</td>
                     <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500 text-xs">{sellerLabel(c)}</td>
+                    {showInvoiceNo && <td className="px-5 py-3 font-mono text-gray-500 text-xs">{c.invoiceNo || '–'}</td>}
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
                     <td className="px-5 py-3 text-gray-600 text-xs">
