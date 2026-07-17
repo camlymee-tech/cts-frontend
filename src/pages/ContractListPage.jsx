@@ -12,6 +12,7 @@ const PAGE_SIZE = 30;
 export const ContractListPage = ({ type, contracts, customers, sellers, saleMap = {}, saleProfiles = [], setPage, setViewContract, onDelete, onDeleteMany, onAssign, onEdit }) => {
   const [assigningId, setAssigningId] = useState(null); // contractId đang được giao
   const [search, setSearch] = useState('');
+  const [sellerFilter, setSellerFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -31,26 +32,33 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
   const showTotal = FEE_TYPES.includes(type);
 
   const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
+  const sellerLabel = (c) => c.sellerSnapshot?.companyName || sellers[c.sellerId]?.companyName || c.sellerId || '';
 
   const allOfType = useMemo(
     () => Object.values(contracts).filter(c => c.type === type).sort((a, b) => (b.date || '').localeCompare(a.date || '')),
     [contracts, type]
   );
 
+  const sellerOptions = useMemo(
+    () => Object.entries(sellers).map(([id, s]) => ({ id, name: s.companyName })).sort((a, b) => a.name.localeCompare(b.name)),
+    [sellers]
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allOfType.filter(c => {
       const matchSearch = !q || c.contractId.toLowerCase().includes(q) || customerLabel(c).toLowerCase().includes(q);
+      const matchSeller = !sellerFilter || c.sellerId === sellerFilter;
       const matchFrom = !fromDate || (c.date || '') >= fromDate;
       const matchTo = !toDate || (c.date || '') <= toDate;
-      return matchSearch && matchFrom && matchTo;
+      return matchSearch && matchSeller && matchFrom && matchTo;
     });
-  }, [allOfType, search, fromDate, toDate, customers]);
+  }, [allOfType, search, sellerFilter, fromDate, toDate, customers]);
 
   const list = filtered.slice(0, visibleCount);
-  const hasFilter = search || fromDate || toDate;
+  const hasFilter = search || sellerFilter || fromDate || toDate;
 
-  const resetFilters = () => { setSearch(''); setFromDate(''); setToDate(''); setVisibleCount(PAGE_SIZE); setSelectedIds(new Set()); };
+  const resetFilters = () => { setSearch(''); setSellerFilter(''); setFromDate(''); setToDate(''); setVisibleCount(PAGE_SIZE); setSelectedIds(new Set()); };
 
   const toggleOne = (id) => {
     setSelectedIds(prev => {
@@ -81,6 +89,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
       const row = {
         'Số hợp đồng': c.contractId,
         'Khách hàng': customerLabel(c),
+        'Bên bán': sellerLabel(c),
         'Ngày': c.date || '',
       };
       if (showTotal) row['Tổng tiền'] = calcTotals(c.goods).total || 0;
@@ -112,6 +121,11 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
         <input value={search} onChange={e => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }}
           placeholder="🔍 Tìm theo số hợp đồng hoặc tên khách hàng..."
           className="flex-1 min-w-48 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <select value={sellerFilter} onChange={e => { setSellerFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">Tất cả bên bán</option>
+          {sellerOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
         <div className="flex items-center gap-1.5 text-sm text-gray-500">
           <span>Từ</span>
           <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
@@ -160,6 +174,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
               </th>
               <th className="text-left px-5 py-3">Số hợp đồng</th>
               <th className="text-left px-5 py-3">Khách hàng</th>
+              <th className="text-left px-5 py-3">Bên bán</th>
               <th className="text-left px-5 py-3">Ngày</th>
               {showTotal && <th className="text-left px-5 py-3">Tổng tiền</th>}
               <th className="text-left px-5 py-3">Sale</th>
@@ -177,6 +192,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
                     </td>
                     <td className="px-5 py-3 font-mono font-bold text-blue-700">{c.contractId}</td>
                     <td className="px-5 py-3 text-gray-700">{customerLabel(c)}</td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{sellerLabel(c)}</td>
                     <td className="px-5 py-3 text-gray-500">{c.date}</td>
                     {showTotal && <td className="px-5 py-3 text-gray-700 font-medium">{total ? fmtNum(total) + ' đ' : '–'}</td>}
                     <td className="px-5 py-3 text-gray-600 text-xs">
