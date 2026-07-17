@@ -21,7 +21,7 @@ function resolveSaleName(inv, customers) {
   return '';
 }
 
-export const InvoiceGoodsPage = ({ invoiceGoods = [], customers = {}, sellers = {}, onBulkImport, onDelete, onDeleteMany }) => {
+export const InvoiceGoodsPage = ({ invoiceGoods = [], invoiceGoodsLoaded = true, customers = {}, sellers = {}, onBulkImport, onDelete, onDeleteMany }) => {
   const [search, setSearch] = useState('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [saleFilter, setSaleFilter] = useState('');
@@ -216,7 +216,7 @@ export const InvoiceGoodsPage = ({ invoiceGoods = [], customers = {}, sellers = 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         {filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-400">
-            {invoiceGoods.length === 0 ? 'Chưa có hóa đơn nào. Bấm "Nhập Excel" để bắt đầu.' : 'Không tìm thấy hóa đơn phù hợp.'}
+            {!invoiceGoodsLoaded ? '⏳ Đang tải danh sách hóa đơn...' : invoiceGoods.length === 0 ? 'Chưa có hóa đơn nào. Bấm "Nhập Excel" để bắt đầu.' : 'Không tìm thấy hóa đơn phù hợp.'}
           </div>
         ) : (
           <table className="w-full text-sm min-w-[900px]">

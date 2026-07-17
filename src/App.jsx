@@ -57,6 +57,7 @@ export default function App() {
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
   const [invoiceGoods, setInvoiceGoods] = useState([]); // danh sách hóa đơn + hàng hóa nhập từ Excel, để chọn nhanh khi tạo ĐĐH/BBBG
+  const [invoiceGoodsLoaded, setInvoiceGoodsLoaded] = useState(false);
 
   // Supabase auth
   useEffect(() => {
@@ -69,13 +70,12 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const [sl, dp, custRows, contractRows, prof, invGoodsRows] = await Promise.all([
+      const [sl, dp, custRows, contractRows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
         api.listCustomers(),
         api.listContracts(),
         api.getMyProfile(),
-        api.listInvoiceGoods(),
       ]);
       if (dp) setDepartments(dp);
       let sellersData = sl || {};
@@ -101,7 +101,6 @@ export default function App() {
         contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
       });
       setContracts(contractsMap);
-      setInvoiceGoods(invGoodsRows || []);
 
       // Build saleMap + saleProfiles để hiện tên + phòng ban và dropdown giao sale (admin dùng)
       if (prof?.role === 'admin') {
@@ -126,6 +125,22 @@ export default function App() {
       setDataReady(true);
     })();
   }, [session]);
+
+  // Chỉ tải "Hàng hóa theo hóa đơn" khi thực sự cần (vào trang đó, hoặc mở tạo/sửa ĐĐH/BBBG) —
+  // tránh tải hàng chục nghìn dòng ngay từ đầu, giúp app mở nhanh hơn.
+  const INVOICE_GOODS_PAGES = ['invoice_goods', 'create-ddh', 'create-bbbg', 'edit-ddh', 'edit-bbbg'];
+  useEffect(() => {
+    if (!session || invoiceGoodsLoaded || !INVOICE_GOODS_PAGES.includes(page)) return;
+    (async () => {
+      try {
+        const rows = await api.listInvoiceGoods();
+        setInvoiceGoods(rows || []);
+        setInvoiceGoodsLoaded(true);
+      } catch (e) {
+        console.error('Không tải được Hàng hóa theo hóa đơn:', e.message);
+      }
+    })();
+  }, [session, page, invoiceGoodsLoaded]);
 
   const handleLogout = () => supabase.auth.signOut();
 
@@ -392,7 +407,7 @@ export default function App() {
         </div>
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
-      case 'invoice_goods': return <InvoiceGoodsPage invoiceGoods={invoiceGoods} customers={customers} sellers={sellers} onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
+      case 'invoice_goods': return <InvoiceGoodsPage invoiceGoods={invoiceGoods} invoiceGoodsLoaded={invoiceGoodsLoaded} customers={customers} sellers={sellers} onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
