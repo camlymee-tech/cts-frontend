@@ -69,17 +69,24 @@ export const api = {
   },
 
   async getContractFull(dbId) {
-    // Load toàn bộ dữ liệu hợp đồng (kể cả vatInvoiceImage) khi bấm Xem.
-    const { data, error } = await supabase.from('contracts').select('*').eq('id', dbId).single();
+    // Load toàn bộ dữ liệu hợp đồng khi bấm Xem — ghép ngược vat_invoice_image (cột riêng) vào
+    // data.vatInvoiceImage để phần hiển thị (ContractViewer, previews...) dùng y như cũ, không cần đổi.
+    const { data: row, error } = await supabase.from('contracts').select('*').eq('id', dbId).single();
     if (error) throw new Error(error.message);
-    return data;
+    if (row.vat_invoice_image) row.data = { ...row.data, vatInvoiceImage: row.vat_invoice_image };
+    return row;
   },
 
   async upsertContract({ _dbId, category, docType, contract, maSale }) {
+    // vatInvoiceImage (ảnh hóa đơn base64) tách ra cột riêng `vat_invoice_image`, KHÔNG nhúng trong jsonb `data` nữa —
+    // vì cùng 1 cột jsonb nặng (do ảnh) khiến Postgres phải giải nén toàn bộ mỗi lần đọc dù chỉ cần vài field nhẹ,
+    // làm list_contracts_slim chậm hẳn dù đã cố lọc bỏ field này khỏi kết quả trả về.
+    const { vatInvoiceImage, ...restContract } = contract;
     const payload = {
       category, doc_type: docType,
       contract_id: contract.contractId,
-      data: contract,
+      data: restContract,
+      vat_invoice_image: vatInvoiceImage || null,
       updated_at: new Date().toISOString(),
     };
     if (_dbId) {
