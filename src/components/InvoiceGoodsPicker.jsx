@@ -1,5 +1,6 @@
 // File: src/components/InvoiceGoodsPicker.jsx
 import { useState, useRef, useEffect } from 'react';
+import { api } from '../lib/api';
 
 // Đổi ngày yyyy-mm-dd sang dd/mm/yyyy cho dễ đọc; giữ nguyên nếu không đúng định dạng
 const fmtDateShort = (d) => {
@@ -17,10 +18,12 @@ const labelOf = (inv) => {
   return parts.join(' • ');
 };
 
-export const InvoiceGoodsPicker = ({ invoiceGoods = [], onApply }) => {
-  const [selectedId, setSelectedId] = useState('');
+export const InvoiceGoodsPicker = ({ onApply }) => {
+  const [selected, setSelected] = useState(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const boxRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -34,21 +37,26 @@ export const InvoiceGoodsPicker = ({ invoiceGoods = [], onApply }) => {
 
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 0); }, [open]);
 
-  if (invoiceGoods.length === 0) return null;
+  // Tìm kiếm qua RPC (server-side) thay vì lọc mảng hàng chục nghìn dòng ở client — debounce 300ms
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const rows = await api.searchInvoiceGoods(query.trim());
+        if (!cancelled) setResults(rows);
+      } catch {
+        if (!cancelled) setResults([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, query]);
 
-  const match = invoiceGoods.find((inv) => inv.id === selectedId);
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? invoiceGoods.filter((inv) =>
-        inv.invoice_no.toLowerCase().includes(q) ||
-        (inv.customer_name || '').toLowerCase().includes(q) ||
-        (inv.customer_code || '').toLowerCase().includes(q) ||
-        (inv.seller_name || '').toLowerCase().includes(q)
-      )
-    : invoiceGoods;
-
-  const pick = (inv) => { setSelectedId(inv.id); setQuery(''); setOpen(false); };
-  const apply = () => { if (match) onApply(match); };
+  const pick = (inv) => { setSelected(inv); setQuery(''); setOpen(false); };
+  const apply = () => { if (selected) onApply(selected); };
 
   return (
     <div className="flex items-center gap-2 flex-wrap bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
@@ -56,8 +64,8 @@ export const InvoiceGoodsPicker = ({ invoiceGoods = [], onApply }) => {
       <div ref={boxRef} className="relative min-w-[280px]">
         <button type="button" onClick={() => setOpen((o) => !o)}
           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <span className={`truncate ${match ? 'text-gray-800' : 'text-gray-400'}`}>
-            {match ? labelOf(match) : '-- Chọn --'}
+          <span className={`truncate ${selected ? 'text-gray-800' : 'text-gray-400'}`}>
+            {selected ? labelOf(selected) : '-- Chọn --'}
           </span>
           <span className="text-gray-400 ml-2 shrink-0">▾</span>
         </button>
@@ -73,11 +81,13 @@ export const InvoiceGoodsPicker = ({ invoiceGoods = [], onApply }) => {
               />
             </div>
             <div className="overflow-y-auto max-h-64">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <div className="px-3 py-3 text-sm text-gray-400 text-center">Đang tìm...</div>
+              ) : results.length === 0 ? (
                 <div className="px-3 py-3 text-sm text-gray-400 text-center">Không tìm thấy kết quả</div>
-              ) : filtered.map((inv) => (
+              ) : results.map((inv) => (
                 <button key={inv.id} type="button" onClick={() => pick(inv)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${inv.id === selectedId ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700'}`}>
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${inv.id === selected?.id ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700'}`}>
                   {labelOf(inv)}
                 </button>
               ))}
@@ -85,13 +95,13 @@ export const InvoiceGoodsPicker = ({ invoiceGoods = [], onApply }) => {
           </div>
         )}
       </div>
-      <button onClick={apply} disabled={!match}
+      <button onClick={apply} disabled={!selected}
         className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50">
         Áp dụng
       </button>
-      {match && (
+      {selected && (
         <span className="text-xs text-gray-500">
-          {match.goods?.length || 0} mặt hàng
+          {selected.goods?.length || 0} mặt hàng
         </span>
       )}
     </div>

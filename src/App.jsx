@@ -127,6 +127,8 @@ export default function App() {
     })();
   }, [session]);
 
+  const handleLogout = () => supabase.auth.signOut();
+
   // Chỉ tải "Theo dõi dòng tiền" khi thực sự cần (vào trang đó) — dữ liệu này riêng biệt,
   // không cần tải ngay lúc mở app.
   const CASH_FLOW_PAGES = ['cash_flow'];
@@ -157,8 +159,6 @@ export default function App() {
     await api.deleteCashFlowBatch(id);
     setCashFlowBatches(prev => prev.filter(r => r.id !== id));
   };
-
-  const handleLogout = () => supabase.auth.signOut();
 
   // --- Invoice Goods (hàng hóa theo số hóa đơn, nhập từ Excel để chọn nhanh khi tạo ĐĐH/BBBG) ---
   // Không còn giữ mảng đầy đủ trong state App nữa (đã lên hàng chục nghìn dòng) — InvoiceGoodsPage
