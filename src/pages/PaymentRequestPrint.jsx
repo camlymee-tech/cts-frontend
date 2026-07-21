@@ -22,12 +22,24 @@ const fmtDateVN = (d) => {
 const blankVoucherRow = () => ({ dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
+// Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ
+const MoneyInput = ({ value, onChange, className }) => {
+  const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
+  return (
+    <input
+      type="text" inputMode="numeric" value={display}
+      onChange={(e) => { const raw = e.target.value.replace(/\D/g, ''); onChange(raw === '' ? '' : raw); }}
+      className={className}
+    />
+  );
+};
+
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const customer = customers[customerId] || initialCustomer;
   const batchesOfCustomer = initialBatches ? initialBatches.filter(b => !customerId || b.customer_id === customerId) : [];
 
-  const requestDate = todayISO(); // ngày đề nghị luôn lấy ngày hôm nay, không cần chọn tay
+  const [requestDate, setRequestDate] = useState(todayISO());
 
   const [sellerId, setSellerId] = useState('');
   const [receiveAccount, setReceiveAccount] = useState('');
@@ -154,7 +166,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>
+              <input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Cty thu tiền (bên bán)</label>
               <select value={sellerId} onChange={e => pickSeller(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
@@ -188,8 +204,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             {voucherRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.ctsPhaiThu} onChange={e => setVoucherField(i, 'ctsPhaiThu', e.target.value)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.daThuKhach} onChange={e => setVoucherField(i, 'daThuKhach', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <button onClick={() => removeVoucherRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
             ))}
@@ -216,8 +232,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.tyGia} onChange={e => setFxField(i, 'tyGia', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.soTe} onChange={e => setFxField(i, 'soTe', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
@@ -252,6 +268,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tr className="no-border">
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
             <td className="no-border">Tên khách hàng: <b>{customer?.companyName || ''}</b></td>
+          </tr>
+          <tr className="no-border">
+            <td className="no-border" colSpan={2}>Công ty bên bán: <b>{sellers[sellerId]?.companyName || '—'}</b></td>
           </tr>
           <tr className="no-border">
             <td className="no-border" colSpan={2}>Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
