@@ -24,12 +24,27 @@ const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '', thanhTien: '' });
 export const PaymentRequestPrint = ({ customerId, customer, batches = [], onClose }) => {
   const [requestDate, setRequestDate] = useState(todayISO());
   const [dueDate, setDueDate] = useState(todayISO());
-  const [receiveAccount, setReceiveAccount] = useState(customer?.bankAccount ? `${customer.bankAccount}${customer.bankName ? ` (${customer.bankName})` : ''}` : '');
+  const firstBankBatch = batches.find(b => b.bank_account);
+  const [receiveAccount, setReceiveAccount] = useState(
+    firstBankBatch ? `${firstBankBatch.bank_account}${firstBankBatch.bank_name ? ` (${firstBankBatch.bank_name})` : ''}`
+      : (customer?.bankAccount ? `${customer.bankAccount}${customer.bankName ? ` (${customer.bankName})` : ''}` : '')
+  );
   const [receiverName, setReceiverName] = useState(customer?.representative || '');
   const [refundMethod, setRefundMethod] = useState('');
   const [note, setNote] = useState('');
 
-  const [voucherRows, setVoucherRows] = useState([blankVoucherRow()]);
+  const [voucherRows, setVoucherRows] = useState(
+    batches.length > 0
+      ? batches.map((b, i) => ({
+          so: String(i + 1),
+          maDonHang: b.batch_code || '',
+          dienGiai: b.goods_desc || '',
+          ctsPhaiThu: b.deposit_vnd ?? '',
+          daThuKhach: b.customer_paid_total ?? '',
+          chenhLech: '',
+        }))
+      : [blankVoucherRow()]
+  );
   const [fxRows, setFxRows] = useState([blankFxRow()]);
 
   const num = (v) => Number(v) || 0;

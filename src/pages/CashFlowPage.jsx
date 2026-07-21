@@ -1,108 +1,104 @@
 // File: src/pages/CashFlowPage.jsx
-import { useState } from 'react';
-import { SearchableSelect } from '../components/SearchableSelect';
+// Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
+import { useState, useMemo } from 'react';
 import { fmtNum } from '../helpers';
 import { CashFlowSummary } from './CashFlowSummary';
+import { PaymentRequestPrint } from './PaymentRequestPrint';
 
-const FIELD_LABELS = {
-  batch_code: 'Mã lô',
-  seller_name: 'Công ty (bên bán)',
-  order_date: 'Ngày đặt hàng',
-  goods_desc: 'Mô tả hàng hóa',
-  exchange_rate: 'Tỷ giá',
-  amount_cny: 'Tiền hàng (tệ)',
-  amount_vnd: 'Tiền hàng (VNĐ)',
-  deposit_vnd: 'Tiền cọc (VNĐ)',
-  customer_paid_total: 'Tổng KH đã chuyển (VNĐ)',
-  customer_paid_date: 'Ngày KH chuyển tiền',
-  customer_paid_status: 'Trạng thái chuyển tiền KH',
-  paid_to_factory: 'Đã chuyển cho xưởng (VNĐ)',
-  factory_paid_date: 'Ngày chuyển xưởng',
-  factory_paid_status: 'Trạng thái TT xưởng',
-  total_due_on_arrival: 'Tổng phải thu khi hàng về (VNĐ)',
-  deposit_deduct: 'Trừ tiền cọc (VNĐ)',
-  amount_due_more: 'Số tiền KH cần thanh toán thêm (VNĐ)',
-  arrival_date: 'Ngày hàng về',
-  customer_final_payment_date: 'Ngày KH thanh toán phần còn lại',
-  actual_collected: 'Số tiền đã thu thực tế (VNĐ)',
-  remaining_debt: 'Công nợ còn lại (VNĐ)',
-  total_customer_transferred: 'Tổng tiền KH chuyển vào Cty',
-  invoice_amount: 'HÓA ĐƠN',
-  diff_amount: 'Chênh lệch',
-  invoice_no: 'SỐ HÓA ĐƠN',
-  note: 'Ghi chú',
+const num = (v) => Number(v) || 0;
+
+// Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
+export const deriveComputed = (r) => {
+  const cnyConverted = r.exchange_rate ? num(r.amount_vnd) / num(r.exchange_rate) : 0;
+  const cnyDiff = cnyConverted - num(r.cny_transferred);
+  const totalDueOnArrival = num(r.service_fee) + num(r.vat_amount);
+  const depositDeduct = r.deposit_deduct !== undefined && r.deposit_deduct !== null && r.deposit_deduct !== ''
+    ? num(r.deposit_deduct) : num(r.deposit_vnd);
+  const amountDueMore = totalDueOnArrival - depositDeduct;
+  const remainingDebt = amountDueMore - num(r.actual_collected);
+  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
+  const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
+  const isOverdue = r.payment_due_date && new Date(r.payment_due_date) < new Date() && remainingDebt > 0;
+  const overdueDays = isOverdue ? Math.floor((new Date() - new Date(r.payment_due_date)) / 86400000) : 0;
+  return { cnyConverted, cnyDiff, totalDueOnArrival, depositDeduct, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount, isOverdue, overdueDays };
 };
 
-const NUMBER_FIELDS = ['exchange_rate', 'amount_cny', 'amount_vnd', 'deposit_vnd', 'customer_paid_total',
-  'paid_to_factory', 'total_due_on_arrival', 'deposit_deduct', 'amount_due_more', 'actual_collected',
-  'remaining_debt', 'total_customer_transferred', 'invoice_amount', 'diff_amount'];
-const DATE_FIELDS = ['order_date', 'customer_paid_date', 'factory_paid_date', 'arrival_date', 'customer_final_payment_date'];
-
-const BLANK = Object.fromEntries(Object.keys(FIELD_LABELS).map(k => [k, '']));
-
-const FIELD_GROUPS = [
-  { title: 'Thông tin chung', fields: ['batch_code', 'seller_name', 'order_date', 'goods_desc'] },
-  { title: 'Tiền hàng', fields: ['exchange_rate', 'amount_cny', 'amount_vnd', 'deposit_vnd'] },
-  { title: 'Khách hàng chuyển tiền', fields: ['customer_paid_total', 'customer_paid_date', 'customer_paid_status'] },
-  { title: 'Chuyển cho xưởng', fields: ['paid_to_factory', 'factory_paid_date', 'factory_paid_status'] },
-  { title: 'Khi hàng về', fields: ['total_due_on_arrival', 'deposit_deduct', 'amount_due_more', 'arrival_date', 'customer_final_payment_date', 'actual_collected', 'remaining_debt'] },
-  { title: 'Đối chiếu hóa đơn', fields: ['total_customer_transferred', 'invoice_amount', 'diff_amount', 'invoice_no'] },
-  { title: 'Ghi chú', fields: ['note'] },
+// Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
+const COLS = [
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 110 },
+  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200 },
+  { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220 },
+  { key: 'order_date', label: 'Ngày đặt hàng', type: 'date', w: 130 },
+  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 220 },
+  { key: 'amount_vnd', label: 'Tiền hàng (VNĐ)', type: 'number', w: 130 },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 120 },
+  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 150 },
+  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 140 },
+  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 140 },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 160 },
+  { key: 'customer_paid_status', label: 'Trạng thái chuyển tiền KH', type: 'text', w: 150 },
+  { key: 'paid_to_factory', label: 'Đã chuyển cho xưởng (VNĐ)', type: 'number', w: 150, adminOnly: true },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 140, adminOnly: true },
+  { key: 'factory_paid_status', label: 'Trạng thái TT xưởng', type: 'text', w: 140 },
+  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 90 },
+  { key: 'amount_cny', label: 'Tiền hàng tệ', type: 'number', w: 110 },
+  { key: 'cnyConverted', label: 'Tiền quy đổi (CNY)', type: 'computed', w: 130 },
+  { key: 'cny_transferred', label: 'Số tiền chuyển (CNY)', type: 'number', w: 140 },
+  { key: 'cnyDiff', label: 'Chênh lệch còn (CNY)', type: 'computed', w: 140 },
+  { key: 'vat_percent', label: '% VAT áp dụng', type: 'number', w: 110 },
+  { key: 'service_fee', label: 'Phí dịch vụ (VNĐ)', type: 'number', w: 130 },
+  { key: 'vat_amount', label: 'Tiền thuế VAT (VNĐ)', type: 'number', w: 130 },
+  { key: 'totalDueOnArrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'computed', w: 170 },
+  { key: 'deposit_deduct', label: 'Trừ tiền cọc (VNĐ)', type: 'number', w: 130 },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 150 },
+  { key: 'arrival_date', label: 'Ngày hàng về', type: 'date', w: 120 },
+  { key: 'payment_due_date', label: 'Ngày hạn thanh toán', type: 'date', w: 140 },
+  { key: 'actual_collected', label: 'Số tiền đã thu thực tế (VNĐ)', type: 'number', w: 150 },
+  { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 170 },
+  { key: 'remainingDebt', label: 'Công nợ còn lại (VNĐ)', type: 'computed', w: 150 },
+  { key: 'overdue', label: 'Công nợ quá hạn', type: 'computed', w: 130 },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 160 },
+  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 140 },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 120 },
+  { key: 'invoice_no', label: 'Số hóa đơn', type: 'text', w: 120 },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 200 },
 ];
 
-const BatchForm = ({ init, customerId, onSave, onCancel }) => {
-  const [form, setForm] = useState(init || BLANK);
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
+const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 
-  const submit = async () => {
-    const payload = { customer_id: customerId };
-    Object.entries(form).forEach(([k, v]) => {
-      if (NUMBER_FIELDS.includes(k)) payload[k] = v === '' ? null : Number(v);
-      else payload[k] = v === '' ? null : v;
-    });
-    await onSave(payload);
-  };
+const BLANK_ROW = { customer_id: '', seller_id: '' };
 
-  return (
-    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
-      {FIELD_GROUPS.map(g => (
-        <div key={g.title}>
-          <div className="text-xs font-semibold text-gray-500 uppercase mb-2">{g.title}</div>
-          <div className="grid grid-cols-4 gap-3">
-            {g.fields.map(k => (
-              <div key={k} className={k === 'goods_desc' || k === 'note' ? 'col-span-4' : ''}>
-                <label className="block text-xs text-gray-500 mb-1">{FIELD_LABELS[k]}</label>
-                <input
-                  type={DATE_FIELDS.includes(k) ? 'date' : NUMBER_FIELDS.includes(k) ? 'number' : 'text'}
-                  value={form[k] ?? ''}
-                  onChange={e => set(k, e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      <div className="flex gap-2 pt-2">
-        <button onClick={submit} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Lưu lô hàng</button>
-        <button onClick={onCancel} className="bg-gray-100 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Hủy</button>
-      </div>
-    </div>
-  );
+const Cell = ({ col, value, onChange, onBlur, disabled }) => {
+  if (col.type === 'computed') {
+    const isMoney = typeof value === 'number';
+    return <div className="px-2 py-1.5 text-right text-gray-500 bg-gray-50 whitespace-nowrap">{isMoney ? fmtNum(value) : (value || '')}</div>;
+  }
+  const common = "w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-400";
+  if (col.type === 'date') {
+    return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
+  }
+  if (col.type === 'number') {
+    return <input type="number" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
+  }
+  return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
 
-export const CashFlowPage = ({ batches = [], customers = {}, onSave, onDelete }) => {
-  const [view, setView] = useState('batches'); // 'batches' | 'summary'
+export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete }) => {
+  const [view, setView] = useState('batches'); // 'batches' | 'summary' | 'print'
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [addCustomerId, setAddCustomerId] = useState('');
+  const [drafts, setDrafts] = useState({}); // { [rowId]: { field: value } } — chỉnh sửa tạm trước khi lưu
+  const [newRow, setNewRow] = useState(BLANK_ROW);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [saving, setSaving] = useState(null);
 
-  const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
   const customerLabel = (id) => customers[id] ? `${customers[id].companyName} (${id})` : (id || '—');
+  const sellerLabel = (id) => sellers[id] ? sellers[id].companyName : (id || '—');
 
-  const filtered = batches.filter(b => {
+  const merged = useMemo(() => batches.map(b => ({ ...b, ...(drafts[b.id] || {}) })), [batches, drafts]);
+
+  const filtered = merged.filter(b => {
     const s = search.trim().toLowerCase();
     const matchSearch = !s
       || (b.batch_code || '').toLowerCase().includes(s)
@@ -112,42 +108,161 @@ export const CashFlowPage = ({ batches = [], customers = {}, onSave, onDelete })
     return matchSearch && matchCustomer;
   });
 
-  const handleSave = async (payload) => {
-    await onSave(editId, payload);
-    setEditId(null);
-    setShowAdd(false);
-    setAddCustomerId('');
+  const buildPayload = (row) => {
+    const computed = deriveComputed(row);
+    const payload = { customer_id: row.customer_id || null, seller_id: row.seller_id || null };
+    COLS.forEach(c => {
+      if (c.type === 'computed') return;
+      const v = row[c.key];
+      if (NUMBER_KEYS.includes(c.key)) payload[c.key] = (v === '' || v === undefined || v === null) ? null : Number(v);
+      else if (DATE_KEYS.includes(c.key)) payload[c.key] = v || null;
+      else payload[c.key] = v ?? null;
+    });
+    // Lưu kèm các cột tổng hợp quan trọng để tiện xuất báo cáo/đối chiếu về sau
+    payload.total_due_on_arrival = computed.totalDueOnArrival;
+    payload.amount_due_more = computed.amountDueMore;
+    payload.remaining_debt = computed.remainingDebt;
+    payload.total_customer_transferred = computed.totalCustomerTransferred;
+    payload.diff_amount = computed.diffAmount;
+    return payload;
   };
 
-  if (view === 'summary') {
-    return <CashFlowSummary batches={batches} customers={customers} onBack={() => setView('batches')} />;
+  const commitRow = async (id, row) => {
+    setSaving(id || 'new');
+    try {
+      const saved = await onSave(id, buildPayload(row));
+      if (id) setDrafts(d => { const next = { ...d }; delete next[id]; return next; });
+      else setNewRow(BLANK_ROW);
+      return saved;
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const editExisting = (row, key, value) => {
+    setDrafts(d => {
+      const current = { ...(d[row.id] || {}), [key]: value };
+      if (key === 'seller_id' && sellers[value]) {
+        current.bank_account = sellers[value].bankAccount || '';
+        current.bank_name = sellers[value].bankName || '';
+      }
+      return { ...d, [row.id]: current };
+    });
+  };
+
+  const editNew = (key, value) => {
+    setNewRow(r => {
+      const next = { ...r, [key]: value };
+      if (key === 'seller_id' && sellers[value]) {
+        next.bank_account = sellers[value].bankAccount || '';
+        next.bank_name = sellers[value].bankName || '';
+      }
+      return next;
+    });
+  };
+
+  const toggleSelect = (id) => setSelectedIds(s => {
+    const next = new Set(s);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const selectedBatches = merged.filter(b => selectedIds.has(b.id));
+
+  if (view === 'summary') return <CashFlowSummary batches={batches} customers={customers} sellers={sellers} onBack={() => setView('batches')} />;
+  if (view === 'print') {
+    const firstCustomer = selectedBatches[0]?.customer_id;
+    return (
+      <PaymentRequestPrint
+        customerId={firstCustomer}
+        customer={customers[firstCustomer]}
+        batches={selectedBatches}
+        onClose={() => setView('batches')}
+      />
+    );
   }
+
+  const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
+  const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.companyName }));
+
+  const renderRow = (row, isNew) => {
+    const computed = deriveComputed(row);
+    const disabledAdminOnly = !isAdmin;
+    return (
+      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
+        {!isNew && (
+          <td className="sticky left-0 bg-white px-2 border-r border-gray-200">
+            <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} />
+          </td>
+        )}
+        {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
+        {COLS.map(col => {
+          if (col.type === 'seller') {
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+                <select value={row.seller_id || ''} onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
+                  onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
+                  className="w-full border-0 bg-white text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  <option value="">-- Chọn --</option>
+                  {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </td>
+            );
+          }
+          if (col.type === 'customer') {
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+                <select value={row.customer_id || ''} onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
+                  onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
+                  className="w-full border-0 bg-white text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  <option value="">-- Chọn khách hàng --</option>
+                  {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </td>
+            );
+          }
+          if (col.type === 'computed') {
+            const map = { cnyConverted: computed.cnyConverted, cnyDiff: computed.cnyDiff, totalDueOnArrival: computed.totalDueOnArrival,
+              amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt, totalCustomerTransferred: computed.totalCustomerTransferred,
+              diffAmount: computed.diffAmount, overdue: computed.isOverdue ? computed.remainingDebt : 0 };
+            return <td key={col.key} style={{ minWidth: col.w }} className={`border-r border-gray-100 ${computed.isOverdue && col.key === 'overdue' ? 'text-red-600 font-medium' : ''}`}><Cell col={col} value={map[col.key]} /></td>;
+          }
+          const disabled = col.adminOnly && disabledAdminOnly;
+          return (
+            <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+              <Cell col={col} value={row[col.key]} disabled={disabled}
+                onChange={(v) => isNew ? editNew(col.key, v) : editExisting(row, col.key, v)}
+                onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }} />
+            </td>
+          );
+        })}
+        {!isNew && (
+          <td className="sticky right-0 bg-white px-2 border-l border-gray-200 whitespace-nowrap">
+            {saving === row.id && <span className="text-xs text-blue-500 mr-2">Đang lưu...</span>}
+            <button onClick={() => onDelete(row.id)} className="text-red-500 hover:text-red-700 text-xs">Xóa</button>
+          </td>
+        )}
+        {isNew && <td className="sticky right-0 bg-blue-50/40 px-2 border-l border-gray-200"></td>}
+      </tr>
+    );
+  };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button onClick={() => setView('print')} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">
+              🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
+            </button>
+          )}
           <button onClick={() => setView('summary')}
             className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">📊 Tổng hợp công nợ</button>
-          <button onClick={() => { setShowAdd(true); setEditId(null); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Thêm lô hàng</button>
         </div>
       </div>
 
-      {showAdd && (
-        <div className="mb-6">
-          <div className="mb-3 max-w-sm">
-            <SearchableSelect label="Khách hàng" required value={addCustomerId} onChange={setAddCustomerId}
-              placeholder="-- Chọn khách hàng --" options={customerOptions} />
-          </div>
-          {addCustomerId ? (
-            <BatchForm customerId={addCustomerId} onSave={handleSave} onCancel={() => { setShowAdd(false); setAddCustomerId(''); }} />
-          ) : (
-            <div className="text-sm text-gray-400 italic">Chọn khách hàng trước để nhập thông tin lô hàng.</div>
-          )}
-        </div>
-      )}
+      <p className="text-xs text-gray-400 mb-3">Nhập trực tiếp vào bảng như Excel — mỗi ô tự lưu khi bấm ra ngoài (Tab/click chỗ khác). Kéo ngang để xem hết các cột. Dòng cuối màu xanh nhạt để thêm lô mới.</p>
 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
@@ -159,51 +274,24 @@ export const CashFlowPage = ({ batches = [], customers = {}, onSave, onDelete })
         </select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-        {filtered.length === 0 ? (
-          <div className="p-10 text-center text-gray-400">
-            {batches.length === 0 ? 'Chưa có lô hàng nào. Bấm "+ Thêm lô hàng" để bắt đầu.' : 'Không tìm thấy lô hàng phù hợp.'}
-          </div>
-        ) : (
-          <table className="w-full text-sm min-w-[900px]">
-            <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <th className="text-left px-4 py-3 w-14">STT</th>
-              <th className="text-left px-4 py-3">Mã lô</th>
-              <th className="text-left px-4 py-3">Khách hàng</th>
-              <th className="text-left px-4 py-3">Ngày đặt hàng</th>
-              <th className="text-right px-4 py-3">Tiền hàng (VNĐ)</th>
-              <th className="text-right px-4 py-3">Tiền cọc</th>
-              <th className="text-right px-4 py-3">Công nợ còn lại</th>
-              <th className="text-left px-4 py-3">Số hóa đơn</th>
-              <th className="px-4 py-3"></th>
-            </tr></thead>
-            <tbody>
-              {filtered.map((b, idx) => (
-                editId === b.id ? (
-                  <tr key={b.id}><td colSpan="9" className="p-4 bg-blue-50/30 border-t border-gray-100">
-                    <div className="text-sm font-medium text-blue-700 mb-2">{customerLabel(b.customer_id)}</div>
-                    <BatchForm init={b} customerId={b.customer_id} onSave={handleSave} onCancel={() => setEditId(null)} />
-                  </td></tr>
-                ) : (
-                  <tr key={b.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
-                    <td className="px-4 py-3 font-mono font-medium text-gray-700">{b.batch_code || '—'}</td>
-                    <td className="px-4 py-3 text-gray-700">{customerLabel(b.customer_id)}</td>
-                    <td className="px-4 py-3 text-gray-500">{b.order_date || '—'}</td>
-                    <td className="px-4 py-3 text-right">{fmtNum(b.amount_vnd)}</td>
-                    <td className="px-4 py-3 text-right">{fmtNum(b.deposit_vnd)}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${Number(b.remaining_debt) > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(b.remaining_debt)}</td>
-                    <td className="px-4 py-3 font-mono text-gray-500 text-xs">{b.invoice_no || '—'}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button onClick={() => { setEditId(b.id); setShowAdd(false); }} className="text-blue-600 hover:text-blue-800 mr-3">Sửa</button>
-                      <button onClick={() => onDelete(b.id)} className="text-red-500 hover:text-red-700">Xóa</button>
-                    </td>
-                  </tr>
-                )
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
+        <table className="text-sm border-collapse" style={{ minWidth: 3200 }}>
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th className="sticky left-0 bg-gray-50 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
+              {COLS.map(col => (
+                <th key={col.key} style={{ minWidth: col.w }} className={`text-left px-2 py-2 border-r border-gray-100 font-medium ${col.adminOnly ? 'text-amber-600' : ''}`}>
+                  {col.label}{col.adminOnly && <span title="Chỉ admin sửa được"> 🔒</span>}
+                </th>
               ))}
-            </tbody>
-          </table>
-        )}
+              <th className="sticky right-0 bg-gray-50 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(row => renderRow(row, false))}
+            {renderRow(newRow, true)}
+          </tbody>
+        </table>
       </div>
     </div>
   );
