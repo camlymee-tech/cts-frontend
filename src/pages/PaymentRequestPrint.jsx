@@ -19,23 +19,19 @@ const fmtDateVN = (d) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 
-const blankVoucherRow = () => ({ so: '', maDonHang: '', dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
-const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '', thanhTien: '' });
+const blankVoucherRow = () => ({ dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
+const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
-// customerId/customer: nếu có sẵn (đến từ nút "In DNTT" ở Tổng hợp) thì khoá luôn, không cho đổi.
-// Nếu không có (vào thẳng từ menu "Đề Nghị Thanh Toán") thì hiện ô chọn khách hàng trước.
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const customer = customers[customerId] || initialCustomer;
   const batchesOfCustomer = initialBatches ? initialBatches.filter(b => !customerId || b.customer_id === customerId) : [];
 
+  const requestDate = todayISO(); // ngày đề nghị luôn lấy ngày hôm nay, không cần chọn tay
+
   const [sellerId, setSellerId] = useState('');
-  const [requestDate, setRequestDate] = useState(todayISO());
-  const [dueDate, setDueDate] = useState(todayISO());
   const [receiveAccount, setReceiveAccount] = useState('');
   const [bankName, setBankName] = useState('');
-  const [receiverName, setReceiverName] = useState(initialCustomer?.representative || '');
-  const [refundMethod, setRefundMethod] = useState('');
   const [note, setNote] = useState('');
   const [voucherRows, setVoucherRows] = useState([blankVoucherRow()]);
   const [fxRows, setFxRows] = useState([blankFxRow()]);
@@ -44,9 +40,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // Nếu mở kèm sẵn danh sách lô của khách (đến từ nút "In DNTT") — tự điền bảng chứng từ từ đó
   useEffect(() => {
     if (batchesOfCustomer.length > 0) {
-      setVoucherRows(batchesOfCustomer.map((b, i) => ({
-        so: String(i + 1), maDonHang: b.batch_code || '', dienGiai: b.goods_desc || '',
-        ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
+      setVoucherRows(batchesOfCustomer.map(b => ({
+        dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
       })));
       const firstBank = batchesOfCustomer.find(b => b.bank_account);
       if (firstBank) { setReceiveAccount(firstBank.bank_account || ''); setBankName(firstBank.bank_name || ''); }
@@ -64,7 +59,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const phaiThuKhach = chenhLech >= 0 ? chenhLech : 0;
   const phaiTraKhach = chenhLech < 0 ? chenhLech : 0;
 
-  const totalTienChuyen = fxRows.reduce((s, r) => s + num(r.thanhTien), 0);
+  // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
+  const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
+  const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
   const chenhLechConLai = totalTienChuyen + chenhLech;
   const soTienBangChu = numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
@@ -81,31 +78,27 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (sellers[id]) { setReceiveAccount(sellers[id].bankAccount || ''); setBankName(sellers[id].bankName || ''); }
   };
 
-  // Lưu ngược từng dòng chứng từ vào bảng theo dõi lô hàng (khớp Mã đơn hàng nếu có, không thì tạo lô mới)
+  // Lưu ngược từng dòng chứng từ thành 1 lô hàng mới trong bảng theo dõi của khách hàng này
   const handleSaveToSystem = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
-    const rowsToSave = voucherRows.filter(r => r.maDonHang.trim() || num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim());
+    const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim());
     if (rowsToSave.length === 0) return alert('Chưa có dòng chứng từ nào để lưu.');
     setSaving(true);
     try {
       for (const r of rowsToSave) {
-        const code = r.maDonHang.trim();
-        // Chỉ khớp lô có sẵn khi có Mã đơn hàng trùng khớp của đúng khách hàng này — để trống thì luôn tạo lô mới, tránh ghi đè nhầm
-        const existing = code ? (initialBatches || []).find(b => b.customer_id === customerId && (b.batch_code || '').trim() === code) : null;
-        await onSave(existing?.id || null, {
+        await onSave(null, {
           customer_id: customerId,
-          seller_id: sellerId || existing?.seller_id || null,
-          batch_code: code || null,
+          seller_id: sellerId || null,
           goods_desc: r.dienGiai || null,
           deposit_vnd: r.ctsPhaiThu === '' ? null : num(r.ctsPhaiThu),
           customer_paid_total: r.daThuKhach === '' ? null : num(r.daThuKhach),
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
-          order_date: existing?.order_date || requestDate,
-          note: note || existing?.note || null,
+          order_date: requestDate,
+          note: note || null,
         });
       }
-      alert(`Đã lưu ${rowsToSave.length} dòng vào bảng theo dõi dòng tiền của khách hàng này.`);
+      alert(`Đã lưu ${rowsToSave.length} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này.`);
     } catch (err) {
       alert('Có lỗi khi lưu: ' + err.message);
     } finally {
@@ -130,7 +123,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   };
 
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
-  const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.companyName }));
+  const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
   return (
     <div>
@@ -148,7 +141,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 no-print">
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
         {!initialCustomerId && (
           <div className="max-w-sm">
             <label className="block text-xs text-gray-500 mb-1">Khách hàng <span className="text-red-500">*</span></label>
@@ -170,18 +163,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Ngày đề nghị</label>
-              <input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Ngày yêu cầu thanh toán</label>
-              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Hình thức trả lại</label>
-              <input value={refundMethod} onChange={e => setRefundMethod(e.target.value)} placeholder="VD: chuyển khoản ngân hàng" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
               <label className="block text-xs text-gray-500 mb-1">Số tài khoản nhận tiền</label>
               <input value={receiveAccount} onChange={e => setReceiveAccount(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
@@ -189,27 +170,26 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <label className="block text-xs text-gray-500 mb-1">Ngân hàng</label>
               <input value={bankName} onChange={e => setBankName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Tên người nhận</label>
-              <input value={receiverName} onChange={e => setReceiverName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
           </div>
         )}
 
         {customerId && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-gray-600 uppercase">Bảng chứng từ — mỗi dòng sẽ lưu thành 1 lô hàng (CTS phải thu = tiền cọc, Đã thu khách = tổng KH đã chuyển)</label>
+            <label className="text-xs font-semibold text-gray-600 uppercase">Bảng chứng từ — mỗi dòng sẽ lưu thành 1 lô hàng mới</label>
             <button onClick={addVoucherRow} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm dòng</button>
+          </div>
+          <div className="grid grid-cols-12 gap-2 mb-1 px-1">
+            <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
+            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc)</label>
+            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển)</label>
           </div>
           <div className="space-y-2">
             {voucherRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input value={r.so} onChange={e => setVoucherField(i, 'so', e.target.value)} placeholder="Số" className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input value={r.maDonHang} onChange={e => setVoucherField(i, 'maDonHang', e.target.value)} placeholder="Mã đơn hàng" className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} placeholder="Diễn giải" className="col-span-4 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.ctsPhaiThu} onChange={e => setVoucherField(i, 'ctsPhaiThu', e.target.value)} placeholder="CTS phải thu" className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.daThuKhach} onChange={e => setVoucherField(i, 'daThuKhach', e.target.value)} placeholder="Đã thu khách" className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input type="number" value={r.ctsPhaiThu} onChange={e => setVoucherField(i, 'ctsPhaiThu', e.target.value)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input type="number" value={r.daThuKhach} onChange={e => setVoucherField(i, 'daThuKhach', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 <button onClick={() => removeVoucherRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
             ))}
@@ -226,13 +206,19 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <label className="text-xs font-semibold text-gray-600 uppercase">Thanh toán ngoại tệ cho khách (nếu trả qua tài khoản Trung Quốc)</label>
             <button onClick={addFxRow} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm dòng</button>
           </div>
+          <div className="grid grid-cols-12 gap-2 mb-1 px-1">
+            <label className="col-span-6 text-xs text-gray-500">Nội dung / tài khoản nhận</label>
+            <label className="col-span-2 text-xs text-gray-500">Tỷ giá</label>
+            <label className="col-span-2 text-xs text-gray-500">Số tệ</label>
+            <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>
+          </div>
           <div className="space-y-2">
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} placeholder="Nội dung / tài khoản nhận" className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.tyGia} onChange={e => setFxField(i, 'tyGia', e.target.value)} placeholder="Tỷ giá" className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.soTe} onChange={e => setFxField(i, 'soTe', e.target.value)} placeholder="Số tệ" className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <input type="number" value={r.thanhTien} onChange={e => setFxField(i, 'thanhTien', e.target.value)} placeholder="Thành tiền" className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input type="number" value={r.tyGia} onChange={e => setFxField(i, 'tyGia', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input type="number" value={r.soTe} onChange={e => setFxField(i, 'soTe', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
             ))}
@@ -262,36 +248,29 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         <table className="no-border"><tbody>
           <tr className="no-border">
             <td className="no-border">Ngày đề nghị: <b>{fmtDateVN(requestDate)}</b></td>
-            <td className="no-border">Ngày yêu cầu TT: <b>{fmtDateVN(dueDate)}</b></td>
           </tr>
           <tr className="no-border">
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
             <td className="no-border">Tên khách hàng: <b>{customer?.companyName || ''}</b></td>
           </tr>
           <tr className="no-border">
-            <td className="no-border">Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
-            <td className="no-border">Tên người nhận: <b>{receiverName}</b></td>
+            <td className="no-border" colSpan={2}>Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
           </tr>
-          <tr className="no-border"><td className="no-border" colSpan={2}>Hình thức trả lại: <b>{refundMethod}</b></td></tr>
         </tbody></table>
 
         <p style={{ marginTop: 10, marginBottom: 4 }}>Đề nghị thanh toán theo bảng kê sau:</p>
         <table style={{ marginBottom: 8 }}>
           <thead>
             <tr>
-              <th style={{ width: 30 }}>Số</th>
-              <th style={{ width: 90 }}>Mã đơn hàng</th>
               <th>Diễn giải</th>
-              <th style={{ width: 110 }}>CTS Phải thu</th>
-              <th style={{ width: 110 }}>Đã thu khách</th>
-              <th style={{ width: 110 }}>Chênh lệch</th>
+              <th style={{ width: 120 }}>CTS Phải thu</th>
+              <th style={{ width: 120 }}>Đã thu khách</th>
+              <th style={{ width: 120 }}>Chênh lệch</th>
             </tr>
           </thead>
           <tbody>
             {voucherRows.map((r, i) => (
               <tr key={i}>
-                <td style={{ textAlign: 'center' }}>{r.so}</td>
-                <td>{r.maDonHang}</td>
                 <td>{r.dienGiai}</td>
                 <td style={{ textAlign: 'right' }}>{r.ctsPhaiThu ? fmtNum(r.ctsPhaiThu) : ''}</td>
                 <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>
@@ -323,7 +302,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
                 <td style={{ textAlign: 'right' }}>{r.soTe ? fmtNum(r.soTe) : ''}</td>
-                <td style={{ textAlign: 'right' }}>{r.thanhTien ? fmtNum(r.thanhTien) : ''}</td>
+                <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>
               </tr>
             ))}
             <tr>

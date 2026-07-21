@@ -181,7 +181,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   }
 
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
-  const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.companyName }));
+  const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
   const renderRow = (row, isNew) => {
     const computed = deriveComputed(row);
