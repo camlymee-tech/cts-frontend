@@ -199,21 +199,35 @@ export const api = {
   },
 
   // --- Invoice Goods: hàng hóa theo số hóa đơn (nhập từ Excel), dùng để tự điền khi tạo ĐĐH/BBBG ---
-  async listInvoiceGoods() {
-    // Supabase mặc định chỉ trả tối đa 1000 dòng/lần — phải tự phân trang để lấy đủ toàn bộ
-    const PAGE = 1000;
-    let all = [];
-    let from = 0;
-    while (true) {
-      const { data, error } = await supabase
-        .from('invoice_goods').select('*').order('invoice_no')
-        .range(from, from + PAGE - 1);
-      if (error) throw new Error(error.message);
-      all = all.concat(data || []);
-      if (!data || data.length < PAGE) break;
-      from += PAGE;
-    }
-    return all;
+  // Dùng RPC phân trang + lọc server-side thay vì tải hết bảng (đã lên tới hàng chục nghìn dòng,
+  // select('*') trần khiến supabase-js tự động lặp request 1000 dòng/lần để lấy hết → rất chậm).
+  async listInvoiceGoodsPaged({ search = '', seller = '', sale = '', dateFrom = '', dateTo = '', limit = 50, offset = 0 } = {}) {
+    const { data, error } = await supabase.rpc('list_invoice_goods_paged', {
+      p_search: search || null,
+      p_seller: seller || null,
+      p_sale: sale || null,
+      p_date_from: dateFrom || null,
+      p_date_to: dateTo || null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message);
+    const rows = data || [];
+    return { rows, totalCount: rows[0]?.total_count ?? 0 };
+  },
+
+  async invoiceGoodsFilterOptions() {
+    const { data, error } = await supabase.rpc('list_invoice_goods_filter_options');
+    if (error) throw new Error(error.message);
+    const row = data?.[0] || {};
+    return { sellers: row.sellers || [], sales: row.sales || [] };
+  },
+
+  // Tìm kiếm nhẹ (tối đa ~20 kết quả) dùng cho InvoiceGoodsPicker khi tạo ĐĐH/BBBG
+  async searchInvoiceGoods(query, limit = 20) {
+    const { data, error } = await supabase.rpc('search_invoice_goods', { p_query: query || null, p_limit: limit });
+    if (error) throw new Error(error.message);
+    return data || [];
   },
 
   async upsertInvoiceGoodsBatch(rows) {
@@ -234,6 +248,44 @@ export const api = {
 
   async deleteInvoiceGoodsMany(ids) {
     const { error } = await supabase.from('invoice_goods').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- Cash Flow Batches: theo dõi dòng tiền theo từng lô hàng ---
+  async listCashFlowBatches() {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from('cash_flow_batches').select('*').order('order_date', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  },
+
+  async upsertCashFlowBatch(id, fields) {
+    const { data: s } = await supabase.auth.getSession();
+    const payload = { ...fields, updated_at: new Date().toISOString() };
+    if (id) {
+      const { data, error } = await supabase
+        .from('cash_flow_batches').update(payload).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    payload.created_by = s.session?.user?.id;
+    const { data, error } = await supabase
+      .from('cash_flow_batches').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteCashFlowBatch(id) {
+    const { error } = await supabase.from('cash_flow_batches').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
 };
