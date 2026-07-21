@@ -8,6 +8,7 @@ import { SellersPage } from './pages/SellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
 import { CashFlowSummary } from './pages/CashFlowSummary';
+import { PaymentRequestPrint } from './pages/PaymentRequestPrint';
 import { ApiKeyManager } from './pages/ApiKeyManager';
 import { DepartmentsManager } from './pages/DepartmentsManager';
 import { ContractListPage } from './pages/ContractListPage';
@@ -53,6 +54,7 @@ export default function App() {
   const [contracts, setContracts] = useState({});
   const [viewContract, setViewContract] = useState(null);
   const [editContractData, setEditContractData] = useState(null);
+  const [paymentRequestCustomerId, setPaymentRequestCustomerId] = useState('');
   const [dataReady, setDataReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
@@ -131,7 +133,7 @@ export default function App() {
 
   // Chỉ tải "Theo dõi dòng tiền" khi thực sự cần (vào trang đó) — dữ liệu này riêng biệt,
   // không cần tải ngay lúc mở app.
-  const CASH_FLOW_PAGES = ['cash_flow'];
+  const CASH_FLOW_PAGES = ['cash_flow', 'payment_request'];
   useEffect(() => {
     if (!session || cashFlowLoaded || !CASH_FLOW_PAGES.includes(page)) return;
     (async () => {
@@ -423,6 +425,11 @@ export default function App() {
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
       case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} />;
+      case 'payment_request': return <PaymentRequestPrint
+          customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
+          batches={cashFlowBatches} customers={customers} sellers={sellers}
+          onSave={saveCashFlowBatch} onSelectCustomer={setPaymentRequestCustomerId}
+          onClose={() => setPage('cash_flow')} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;

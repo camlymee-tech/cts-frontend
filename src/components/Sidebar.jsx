@@ -29,6 +29,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
     { id: 'invoice_goods', icon: '📦', label: 'Hàng hóa theo hóa đơn' },
     { id: 'cash_flow', icon: '💰', label: 'Theo dõi dòng tiền' },
+    { id: 'payment_request', icon: '🧾', label: 'Đề Nghị Thanh Toán' },
     { id: 'my-profile', icon: '👤', label: 'Hồ sơ của tôi' },
   ];
 

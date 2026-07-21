@@ -71,6 +71,9 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         customerId={printCustomerId}
         customer={customers[printCustomerId]}
         batches={batchesOfCustomer}
+        customers={customers}
+        sellers={sellers}
+        onSave={onSave}
         onClose={() => setPrintCustomerId(null)}
       />
     );
