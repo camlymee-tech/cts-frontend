@@ -2,11 +2,12 @@
 import { useState, useMemo } from 'react';
 import { fmtNum } from '../helpers';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
-import { deriveComputed } from './CashFlowPage';
+import { CashFlowPage, deriveComputed } from './CashFlowPage';
 
-export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, onBack }) => {
+export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete }) => {
   const [search, setSearch] = useState('');
   const [printCustomerId, setPrintCustomerId] = useState(null);
+  const [detailCustomerId, setDetailCustomerId] = useState(undefined); // undefined = không xem chi tiết; '' = xem tất cả; 'KHxxx' = 1 khách
 
   const rows = useMemo(() => {
     const byCustomer = {};
@@ -52,6 +53,17 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, on
     totalRemainingDebt: acc.totalRemainingDebt + r.totalRemainingDebt,
   }), { batchCount: 0, totalAmountVnd: 0, totalDeposit: 0, totalDueMore: 0, totalCollected: 0, totalRemainingDebt: 0 });
 
+  if (detailCustomerId !== undefined) {
+    return (
+      <CashFlowPage
+        batches={batches} customers={customers} sellers={sellers} isAdmin={isAdmin}
+        onSave={onSave} onDelete={onDelete}
+        initialCustomerFilter={detailCustomerId}
+        onBack={() => setDetailCustomerId(undefined)}
+      />
+    );
+  }
+
   if (printCustomerId) {
     const batchesOfCustomer = batches.filter(b => b.customer_id === printCustomerId);
     return (
@@ -68,9 +80,10 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, on
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-gray-500 hover:text-gray-700">← Quay lại</button>
-          <h1 className="text-2xl font-bold text-gray-800">📊 Bảng báo cáo tổng hợp công nợ</h1>
+          <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền — 📊 Tổng hợp công nợ</h1>
         </div>
+        <button onClick={() => setDetailCustomerId('')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Nhập / xem lô hàng</button>
       </div>
 
       <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã hoặc tên khách hàng..."
@@ -109,7 +122,8 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, on
                   <td className={`px-4 py-3 text-right font-semibold ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
                   <td className="px-4 py-3 text-right">{r.maxOverdueDays || '—'}</td>
                   <td className="px-4 py-3 text-right">{r.batchesInDebt}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800 mr-3">🔍 Chi tiết</button>
                     <button onClick={() => setPrintCustomerId(r.customerId)} className="text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">🖨️ In DNTT</button>
                   </td>
                 </tr>

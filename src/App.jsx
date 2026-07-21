@@ -7,7 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { SellersPage } from './pages/SellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
-import { CashFlowPage } from './pages/CashFlowPage';
+import { CashFlowSummary } from './pages/CashFlowSummary';
 import { ApiKeyManager } from './pages/ApiKeyManager';
 import { DepartmentsManager } from './pages/DepartmentsManager';
 import { ContractListPage } from './pages/ContractListPage';
@@ -422,7 +422,7 @@ export default function App() {
       ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} />;
-      case 'cash_flow': return <CashFlowPage batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} />;
+      case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;

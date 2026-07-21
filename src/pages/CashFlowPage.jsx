@@ -2,7 +2,6 @@
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
 import { useState, useMemo } from 'react';
 import { fmtNum } from '../helpers';
-import { CashFlowSummary } from './CashFlowSummary';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 
 const num = (v) => Number(v) || 0;
@@ -84,10 +83,10 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
 
-export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete }) => {
-  const [view, setView] = useState('batches'); // 'batches' | 'summary' | 'print'
+export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack }) => {
+  const [view, setView] = useState('batches'); // 'batches' | 'print'
   const [search, setSearch] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('');
+  const [customerFilter, setCustomerFilter] = useState(initialCustomerFilter);
   const [drafts, setDrafts] = useState({}); // { [rowId]: { field: value } } — chỉnh sửa tạm trước khi lưu
   const [newRow, setNewRow] = useState(BLANK_ROW);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -169,7 +168,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
   const selectedBatches = merged.filter(b => selectedIds.has(b.id));
 
-  if (view === 'summary') return <CashFlowSummary batches={batches} customers={customers} sellers={sellers} onBack={() => setView('batches')} />;
   if (view === 'print') {
     const firstCustomer = selectedBatches[0]?.customer_id;
     return (
@@ -257,8 +255,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
             </button>
           )}
-          <button onClick={() => setView('summary')}
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">📊 Tổng hợp công nợ</button>
+          <button onClick={onBack}
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">📊 ← Quay lại tổng hợp</button>
         </div>
       </div>
 
