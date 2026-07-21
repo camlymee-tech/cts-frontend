@@ -113,7 +113,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       }
       alert(`Đã lưu ${rowsToSave.length} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này.`);
       // Sau khi lưu xong, reset về trống để làm tiếp đề nghị thanh toán mới
-      if (!initialCustomerId) { setCustomerId(''); onSelectCustomer?.(''); }
+      if (onSelectCustomer) { setCustomerId(''); onSelectCustomer(''); }
       setSellerId('');
       setReceiveAccount('');
       setBankName('');
@@ -164,7 +164,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
-        {!initialCustomerId && (
+        {!!onSelectCustomer && !customerId && (
           <div className="max-w-sm">
             <SearchableSelect label="Khách hàng" required value={customerId}
               onChange={(v) => { setCustomerId(v); onSelectCustomer?.(v); }}
