@@ -2,6 +2,7 @@
 // Giấy Đề Nghị Thanh Toán — vừa là màn nhập liệu thật (lưu ngược vào bảng lô hàng), vừa in ra giấy.
 import { useState, useEffect } from 'react';
 import { fmtNum, numberToWords } from '../helpers';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 const PRINT_STYLE = `
   @page { size: A4 portrait; margin: 15mm; }
@@ -111,6 +112,15 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         });
       }
       alert(`Đã lưu ${rowsToSave.length} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này.`);
+      // Sau khi lưu xong, reset về trống để làm tiếp đề nghị thanh toán mới
+      if (!initialCustomerId) { setCustomerId(''); onSelectCustomer?.(''); }
+      setSellerId('');
+      setReceiveAccount('');
+      setBankName('');
+      setNote('');
+      setVoucherRows([blankVoucherRow()]);
+      setFxRows([blankFxRow()]);
+      setRequestDate(todayISO());
     } catch (err) {
       alert('Có lỗi khi lưu: ' + err.message);
     } finally {
@@ -156,12 +166,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
         {!initialCustomerId && (
           <div className="max-w-sm">
-            <label className="block text-xs text-gray-500 mb-1">Khách hàng <span className="text-red-500">*</span></label>
-            <select value={customerId} onChange={e => { setCustomerId(e.target.value); onSelectCustomer?.(e.target.value); }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-              <option value="">-- Chọn khách hàng --</option>
-              {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <SearchableSelect label="Khách hàng" required value={customerId}
+              onChange={(v) => { setCustomerId(v); onSelectCustomer?.(v); }}
+              placeholder="-- Chọn khách hàng --" options={customerOptions} />
           </div>
         )}
 
@@ -172,11 +179,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Cty thu tiền (bên bán)</label>
-              <select value={sellerId} onChange={e => pickSeller(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                <option value="">-- Chọn --</option>
-                {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <SearchableSelect label="Cty thu tiền (bên bán)" value={sellerId} onChange={pickSeller}
+                placeholder="-- Chọn --" options={sellerOptions} />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số tài khoản nhận tiền</label>
@@ -259,7 +263,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         </tbody></table>
 
         <h2 style={{ textAlign: 'center', margin: '10px 0 2px' }}>GIẤY ĐỀ NGHỊ THANH TOÁN</h2>
-        <p style={{ textAlign: 'center', fontStyle: 'italic', marginTop: 0 }}>(V/v: Trả lại tiền thừa cho khách hàng)</p>
 
         <table className="no-border"><tbody>
           <tr className="no-border">
