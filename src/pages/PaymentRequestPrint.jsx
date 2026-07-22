@@ -97,21 +97,24 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim());
     if (rowsToSave.length === 0) return alert('Chưa có dòng chứng từ nào để lưu.');
     setSaving(true);
-    // Tỷ giá + Số tệ lấy từ dòng "Thanh toán ngoại tệ" đầu tiên (nếu có) để đồng bộ sang bảng theo dõi
-    const firstFx = fxRows.find(r => num(r.tyGia) || num(r.soTe));
+    // Tỷ giá + Số tệ lấy từ dòng "Thanh toán ngoại tệ" tương ứng (khớp theo thứ tự dòng; nếu không đủ dòng thì lấy dòng đầu)
+    const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     try {
-      for (const r of rowsToSave) {
+      for (let i = 0; i < rowsToSave.length; i++) {
+        const r = rowsToSave[i];
+        const fx = fxWithData[i] || fxWithData[0];
         await onSave(null, {
           customer_id: customerId,
           seller_id: sellerId || null,
           goods_desc: r.dienGiai || null,
           deposit_vnd: r.ctsPhaiThu === '' ? null : num(r.ctsPhaiThu),
           customer_paid_total: r.daThuKhach === '' ? null : num(r.daThuKhach),
+          customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
-          exchange_rate: firstFx ? num(firstFx.tyGia) : null,
-          amount_cny: firstFx ? num(firstFx.soTe) : null,
-          cny_transferred: firstFx ? num(firstFx.soTe) : null,
+          exchange_rate: fx ? num(fx.tyGia) : null,
+          amount_cny: fx ? num(fx.soTe) : null,
+          cny_transferred: fx ? num(fx.soTe) : null,
           order_date: requestDate,
           note: note || null,
         });

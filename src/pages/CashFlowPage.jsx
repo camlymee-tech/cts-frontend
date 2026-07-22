@@ -32,7 +32,6 @@ const COLS = [
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 140 },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 140 },
   { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 160 },
-  { key: 'paid_to_factory', label: 'Đã chuyển cho xưởng (VNĐ)', type: 'number', w: 150 },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 140 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 90 },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 140 },
