@@ -11,7 +11,7 @@ const num = (v) => Number(v) || 0;
 export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
   const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
-  const amountDueMore = num(r.total_due_on_arrival) - num(r.deposit_vnd);
+  const amountDueMore = num(r.total_due_on_arrival) - remainderAfterGoods; // Còn phải thanh toán = Tổng phải thu khi hàng về - Phần dư sau khi thanh toán tiền hàng
   const remainingDebt = amountDueMore - num(r.actual_collected);
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
@@ -26,14 +26,27 @@ const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'c
 // không gộp Mô tả/Tiền cọc/Tổng KH đã chuyển/Tỷ giá/Số tệ vì mỗi dòng chứng từ có thể khác nhau.
 const MERGEABLE_KEYS = ['seller_id', 'customer_id', 'customer_paid_date', 'bank_account', 'bank_name', 'payment_request_no'];
 
+// Đổi vị trí cột (0,1,2...) thành chữ cái kiểu Excel (A, B, ..., Z, AA, AB...)
+const excelColLetter = (n) => {
+  let s = '';
+  n += 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+};
+
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
+// formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 120 },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 130, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 240, fromDntt: true },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 240, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170 },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'M×N' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 140, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 170, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 160, fromDntt: true },
@@ -42,14 +55,14 @@ const COLS = [
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 160 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 200 },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 200, formula: 'H-F' },
   { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 190 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170 },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 170 },
   { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 190 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180 },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 160 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140 },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140, formula: 'U-T' },
   { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
@@ -124,7 +137,7 @@ const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
 const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   if (col.type === 'computed') {
     const isMoney = typeof value === 'number';
-    return <div className="px-2 py-1.5 text-right text-blue-900 bg-blue-50/70 whitespace-nowrap font-medium">{isMoney ? fmtNum(value) : (value || '')}</div>;
+    return <div className="px-2 py-1.5 text-right text-emerald-800 bg-emerald-50 whitespace-nowrap font-medium">{isMoney ? fmtNum(value) : (value || '')}</div>;
   }
   if (col.type === 'checkbox') {
     return (
@@ -135,7 +148,7 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   }
   const common = `w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`;
   if (col.type === 'date') {
-    return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
+    return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
   }
   if (col.type === 'number') {
     const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
@@ -428,8 +441,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="sticky left-0 bg-gray-50 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
-              {COLS.map(col => (
-                <th key={col.key} style={{ minWidth: col.w }} className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''}`}>
+              {COLS.map((col, i) => (
+                <th key={col.key} style={{ minWidth: col.w }}
+                  className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''} ${col.type === 'computed' ? 'text-emerald-700 bg-emerald-50' : ''}`}>
+                  <div className="text-[10px] font-mono text-gray-400 mb-0.5">{excelColLetter(i)}{col.formula ? ` = ${col.formula}` : ''}</div>
                   {col.label}
                 </th>
               ))}
