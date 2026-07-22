@@ -9,23 +9,22 @@ const num = (v) => Number(v) || 0;
 
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
 export const deriveComputed = (r) => {
-  const amountVnd = num(r.customer_paid_total) - num(r.deposit_vnd); // Tiền hàng dự kiến
-  const cnyDiff = num(r.amount_cny) - num(r.cny_transferred); // Chênh lệch còn (CNY) = Số tệ - Số tiền chuyển
-  const depositDeductChecked = !!r.deposit_deduct;
-  const amountDueMore = num(r.total_due_on_arrival) - (depositDeductChecked ? num(r.deposit_vnd) : 0);
+  const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
+  const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
+  const amountDueMore = num(r.total_due_on_arrival) - num(r.deposit_vnd);
   const remainingDebt = amountDueMore - num(r.actual_collected);
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
-  return { amountVnd, cnyDiff, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount };
+  return { amountVnd, remainderAfterGoods, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount };
 };
 
 // Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
 // muốn sửa phải quay lại Đề Nghị Thanh Toán.
 const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'customer_paid_total',
-  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'cny_transferred',
-  'note', 'payment_request_no'];
-// Các cột (ngoài seller/customer, đã xử lý riêng) sẽ hiện gọn "″" khi trùng với dòng ngay trước cùng 1 đề nghị TT
-const MERGEABLE_KEYS = DNTT_FIELDS.filter(k => k !== 'seller_id' && k !== 'customer_id');
+  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no'];
+// Chỉ gộp ô thật (rowSpan) với các cột chắc chắn giống nhau cho CẢ đề nghị thanh toán —
+// không gộp Mô tả/Tiền cọc/Tổng KH đã chuyển/Tỷ giá/Số tệ vì mỗi dòng chứng từ có thể khác nhau.
+const MERGEABLE_KEYS = ['seller_id', 'customer_id', 'customer_paid_date', 'bank_account', 'bank_name', 'payment_request_no'];
 
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
 const COLS = [
@@ -36,26 +35,23 @@ const COLS = [
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 240, fromDntt: true },
   { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170 },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 140, fromDntt: true },
-  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 170, fromDntt: true },
+  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 170, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 160, fromDntt: true },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 180, fromDntt: true },
   { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 260, fromDntt: true },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 160 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
-  { key: 'cny_transferred', label: 'Số tiền chuyển (CNY)', type: 'number', w: 160, fromDntt: true },
-  { key: 'cnyDiff', label: 'Chênh lệch còn (CNY)', type: 'computed', w: 150 },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 200 },
   { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 190 },
-  { key: 'deposit_deduct', label: 'Trừ tiền cọc', type: 'checkbox', w: 100 },
   { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170 },
-  { key: 'actual_collected', label: 'Số tiền đã thu thực tế (VNĐ)', type: 'number', w: 170 },
+  { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 170 },
   { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 190 },
-  { key: 'remainingDebt', label: 'Công nợ còn lại (VNĐ)', type: 'computed', w: 170 },
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180 },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 160 },
   { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140 },
   { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 220, fromDntt: true },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
@@ -264,12 +260,20 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
-  const renderRow = (row, isNew, prevRow) => {
+  // Nhóm các dòng liên tiếp cùng Số đề nghị TT để gộp ô thật (rowSpan) như Excel
+  const filteredWithMeta = useMemo(() => filtered.map((row, i) => {
+    const isFirstInGroup = i === 0 || row.payment_request_no == null || filtered[i - 1].payment_request_no !== row.payment_request_no;
+    let groupSize = 1;
+    if (isFirstInGroup && row.payment_request_no != null) {
+      let j = i + 1;
+      while (j < filtered.length && filtered[j].payment_request_no === row.payment_request_no) { groupSize++; j++; }
+    }
+    return { row, isFirstInGroup, groupSize };
+  }), [filtered]);
+
+  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1) => {
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
-    // Cùng 1 Số đề nghị TT với dòng ngay trước & cùng giá trị → coi là lặp, hiện gọn lại (giống ô đã gộp)
-    const sameGroup = !isNew && prevRow && row.payment_request_no != null && prevRow.payment_request_no === row.payment_request_no;
-    const isRepeated = (key) => sameGroup && prevRow[key] === row[key] && row[key] !== null && row[key] !== undefined && row[key] !== '';
     return (
       <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
         {!isNew && (
@@ -281,11 +285,14 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         {COLS.map(col => {
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
+            const merging = disabled && MERGEABLE_KEYS.includes(col.key);
+            if (merging && !isFirstInGroup) return null; // đã được gộp vào ô của dòng đầu nhóm
+            const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
             if (disabled) {
               const label = sellers[row.seller_id] ? (sellers[row.seller_id].shortName ? `[${sellers[row.seller_id].shortName}] ${sellers[row.seller_id].companyName}` : sellers[row.seller_id].companyName) : '';
               return (
-                <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug">
-                  {isRepeated('seller_id') ? <span className="text-gray-300">″</span> : label}
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                  {label}
                 </td>
               );
             }
@@ -303,10 +310,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           }
           if (col.type === 'customer') {
             const disabled = col.fromDntt && !isNew;
+            const merging = disabled && MERGEABLE_KEYS.includes(col.key);
+            if (merging && !isFirstInGroup) return null;
+            const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
             if (disabled) {
               return (
-                <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug">
-                  {isRepeated('customer_id') ? <span className="text-gray-300">″</span> : (row.customer_id || '')}
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                  {customerLabel(row.customer_id)}
                 </td>
               );
             }
@@ -345,14 +355,23 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           }
           if (col.type === 'computed') {
-            const map = { amountVnd: computed.amountVnd, cnyDiff: computed.cnyDiff,
+            const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
               totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={map[col.key]} /></td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
-          if (disabled && MERGEABLE_KEYS.includes(col.key) && isRepeated(col.key)) {
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-300 text-center">″</td>;
+          const merging = disabled && MERGEABLE_KEYS.includes(col.key);
+          if (merging && !isFirstInGroup) return null; // đã được gộp vào ô của dòng đầu nhóm
+          const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
+          if (rowSpan) {
+            let display = row[col.key] ?? '';
+            if (col.type === 'number' && display !== '') display = fmtNum(display);
+            return (
+              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
+                {display}
+              </td>
+            );
           }
           return (
             <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
@@ -418,7 +437,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row, idx) => renderRow(row, false, filtered[idx - 1]))}
+            {filteredWithMeta.map(({ row, isFirstInGroup, groupSize }) => renderRow(row, false, isFirstInGroup, groupSize))}
             {renderRow(newRow, true)}
           </tbody>
         </table>
