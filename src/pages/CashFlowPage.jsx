@@ -8,18 +8,16 @@ const num = (v) => Number(v) || 0;
 
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
 export const deriveComputed = (r) => {
-  const cnyConverted = r.exchange_rate ? num(r.amount_vnd) / num(r.exchange_rate) : 0;
-  const cnyDiff = cnyConverted - num(r.cny_transferred);
-  const totalDueOnArrival = num(r.service_fee) + num(r.vat_amount);
-  const depositDeduct = r.deposit_deduct !== undefined && r.deposit_deduct !== null && r.deposit_deduct !== ''
-    ? num(r.deposit_deduct) : num(r.deposit_vnd);
-  const amountDueMore = totalDueOnArrival - depositDeduct;
+  const amountVnd = num(r.customer_paid_total) - num(r.deposit_vnd); // Tiền hàng dự kiến
+  const cnyDiff = num(r.amount_cny) - num(r.cny_transferred); // Chênh lệch còn (CNY) = Số tệ - Số tiền chuyển
+  const depositDeductChecked = !!r.deposit_deduct;
+  const amountDueMore = num(r.total_due_on_arrival) - (depositDeductChecked ? num(r.deposit_vnd) : 0);
   const remainingDebt = amountDueMore - num(r.actual_collected);
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
   const isOverdue = r.payment_due_date && new Date(r.payment_due_date) < new Date() && remainingDebt > 0;
   const overdueDays = isOverdue ? Math.floor((new Date() - new Date(r.payment_due_date)) / 86400000) : 0;
-  return { cnyConverted, cnyDiff, totalDueOnArrival, depositDeduct, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount, isOverdue, overdueDays };
+  return { amountVnd, cnyDiff, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount, isOverdue, overdueDays };
 };
 
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
@@ -27,28 +25,21 @@ const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 110 },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200 },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220 },
-  { key: 'order_date', label: 'Ngày đặt hàng', type: 'date', w: 130 },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 220 },
-  { key: 'amount_vnd', label: 'Tiền hàng (VNĐ)', type: 'number', w: 130 },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 150 },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 120 },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 150 },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 140 },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 140 },
   { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 160 },
-  { key: 'customer_paid_status', label: 'Trạng thái chuyển tiền KH', type: 'text', w: 150 },
-  { key: 'paid_to_factory', label: 'Đã chuyển cho xưởng (VNĐ)', type: 'number', w: 150, adminOnly: true },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 140, adminOnly: true },
-  { key: 'factory_paid_status', label: 'Trạng thái TT xưởng', type: 'text', w: 140 },
+  { key: 'paid_to_factory', label: 'Đã chuyển cho xưởng (VNĐ)', type: 'number', w: 150 },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 140 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 90 },
-  { key: 'amount_cny', label: 'Tiền hàng tệ', type: 'number', w: 110 },
-  { key: 'cnyConverted', label: 'Tiền quy đổi (CNY)', type: 'computed', w: 130 },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 140 },
   { key: 'cny_transferred', label: 'Số tiền chuyển (CNY)', type: 'number', w: 140 },
   { key: 'cnyDiff', label: 'Chênh lệch còn (CNY)', type: 'computed', w: 140 },
-  { key: 'vat_percent', label: '% VAT áp dụng', type: 'number', w: 110 },
-  { key: 'service_fee', label: 'Phí dịch vụ (VNĐ)', type: 'number', w: 130 },
-  { key: 'vat_amount', label: 'Tiền thuế VAT (VNĐ)', type: 'number', w: 130 },
-  { key: 'totalDueOnArrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'computed', w: 170 },
-  { key: 'deposit_deduct', label: 'Trừ tiền cọc (VNĐ)', type: 'number', w: 130 },
+  { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 170 },
+  { key: 'deposit_deduct', label: 'Trừ tiền cọc', type: 'checkbox', w: 90 },
   { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 150 },
   { key: 'arrival_date', label: 'Ngày hàng về', type: 'date', w: 120 },
   { key: 'payment_due_date', label: 'Ngày hạn thanh toán', type: 'date', w: 140 },
@@ -65,6 +56,7 @@ const COLS = [
 
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
+const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
@@ -72,6 +64,13 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   if (col.type === 'computed') {
     const isMoney = typeof value === 'number';
     return <div className="px-2 py-1.5 text-right text-gray-500 bg-gray-50 whitespace-nowrap">{isMoney ? fmtNum(value) : (value || '')}</div>;
+  }
+  if (col.type === 'checkbox') {
+    return (
+      <div className="flex justify-center py-1.5">
+        <input type="checkbox" checked={!!value} disabled={disabled} onChange={e => { onChange(e.target.checked); onBlur?.(); }} />
+      </div>
+    );
   }
   const common = "w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-400";
   if (col.type === 'date') {
@@ -113,12 +112,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     COLS.forEach(c => {
       if (c.type === 'computed') return;
       const v = row[c.key];
-      if (NUMBER_KEYS.includes(c.key)) payload[c.key] = (v === '' || v === undefined || v === null) ? null : Number(v);
+      if (CHECKBOX_KEYS.includes(c.key)) payload[c.key] = v ? 1 : 0;
+      else if (NUMBER_KEYS.includes(c.key)) payload[c.key] = (v === '' || v === undefined || v === null) ? null : Number(v);
       else if (DATE_KEYS.includes(c.key)) payload[c.key] = v || null;
       else payload[c.key] = v ?? null;
     });
+    // Tự lấy Ngày KH chuyển tiền làm Ngày đặt hàng (không còn ô nhập riêng)
+    payload.order_date = row.customer_paid_date || null;
     // Lưu kèm các cột tổng hợp quan trọng để tiện xuất báo cáo/đối chiếu về sau
-    payload.total_due_on_arrival = computed.totalDueOnArrival;
+    payload.amount_vnd = computed.amountVnd;
     payload.amount_due_more = computed.amountDueMore;
     payload.remaining_debt = computed.remainingDebt;
     payload.total_customer_transferred = computed.totalCustomerTransferred;
@@ -220,7 +222,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           }
           if (col.type === 'computed') {
-            const map = { cnyConverted: computed.cnyConverted, cnyDiff: computed.cnyDiff, totalDueOnArrival: computed.totalDueOnArrival,
+            const map = { amountVnd: computed.amountVnd, cnyDiff: computed.cnyDiff,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt, totalCustomerTransferred: computed.totalCustomerTransferred,
               diffAmount: computed.diffAmount, overdue: computed.isOverdue ? computed.remainingDebt : 0 };
             return <td key={col.key} style={{ minWidth: col.w }} className={`border-r border-gray-100 ${computed.isOverdue && col.key === 'overdue' ? 'text-red-600 font-medium' : ''}`}><Cell col={col} value={map[col.key]} /></td>;
