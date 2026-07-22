@@ -1,8 +1,9 @@
 // File: src/pages/CashFlowPage.jsx
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { fmtNum } from '../helpers';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
+import { api } from '../lib/api';
 
 const num = (v) => Number(v) || 0;
 
@@ -50,7 +51,7 @@ const COLS = [
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 160 },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 140 },
   { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 120 },
-  { key: 'invoice_no', label: 'Số hóa đơn', type: 'text', w: 120 },
+  { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 200 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 200 },
 ];
 
@@ -59,6 +60,66 @@ const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
+
+// Ô "Số hóa đơn" — gõ để tìm trong "Hàng hóa theo hóa đơn", chọn xong tự điền Giá trị xuất hóa đơn
+const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
+  const [query, setQuery] = useState(value || '');
+  const [open, setOpen] = useState(false);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const boxRef = useRef(null);
+  const timerRef = useRef(null);
+
+  useEffect(() => { setQuery(value || ''); }, [value]);
+
+  useEffect(() => {
+    const onClickOutside = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const doSearch = (q) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      if (!q.trim()) { setResults([]); return; }
+      setLoading(true);
+      try {
+        const { rows } = await api.listInvoiceGoodsPaged({ search: q.trim(), limit: 10 });
+        setResults(rows);
+      } catch { setResults([]); }
+      setLoading(false);
+    }, 300);
+  };
+
+  return (
+    <div ref={boxRef} className="relative">
+      <input
+        type="text" value={query} disabled={disabled}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); onChange?.(e.target.value); doSearch(e.target.value); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => onBlur?.(), 150)}
+        placeholder="Gõ để tìm số hóa đơn..."
+        className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm bg-white disabled:bg-gray-100"
+      />
+      {open && query.trim() && (
+        <div className="absolute z-30 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {loading ? (
+            <div className="px-3 py-2 text-xs text-gray-400">Đang tìm...</div>
+          ) : results.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-gray-400">Không tìm thấy hóa đơn phù hợp</div>
+          ) : results.map((inv) => (
+            <button key={inv.id} type="button"
+              onClick={() => { setQuery(inv.invoice_no); setOpen(false); onPick(inv); }}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b border-gray-50 last:border-0">
+              <div className="font-mono font-medium text-blue-600">{inv.invoice_no}</div>
+              <div className="text-gray-500">{inv.customer_name} — {fmtNum(inv.total)} đ</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   if (col.type === 'computed') {
@@ -218,6 +279,28 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   <option value="">-- Chọn khách hàng --</option>
                   {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+              </td>
+            );
+          }
+          if (col.type === 'invoice') {
+            const pickInvoice = (inv) => {
+              const applyField = (key, val) => isNew ? editNew(key, val) : editExisting(row, key, val);
+              applyField('invoice_no', inv.invoice_no);
+              applyField('invoice_amount', inv.total ?? '');
+              // Áp dụng xong thì lưu ngay (giống các ô khác khi rời khỏi ô)
+              setTimeout(() => {
+                if (isNew) { if (row.customer_id) commitRow(null, { ...row, invoice_no: inv.invoice_no, invoice_amount: inv.total }); }
+                else commitRow(row.id, { ...row, invoice_no: inv.invoice_no, invoice_amount: inv.total });
+              }, 0);
+            };
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+                <InvoiceLinkCell
+                  value={row.invoice_no}
+                  onChange={(v) => isNew ? editNew('invoice_no', v) : editExisting(row, 'invoice_no', v)}
+                  onPick={pickInvoice}
+                  onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }}
+                />
               </td>
             );
           }
