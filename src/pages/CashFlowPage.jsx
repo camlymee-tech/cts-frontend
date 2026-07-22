@@ -24,6 +24,8 @@ export const deriveComputed = (r) => {
 const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'customer_paid_total',
   'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'cny_transferred',
   'note', 'payment_request_no'];
+// Các cột (ngoài seller/customer, đã xử lý riêng) sẽ hiện gọn "″" khi trùng với dòng ngay trước cùng 1 đề nghị TT
+const MERGEABLE_KEYS = DNTT_FIELDS.filter(k => k !== 'seller_id' && k !== 'customer_id');
 
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
 const COLS = [
@@ -251,6 +253,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         customerId={firstCustomer}
         customer={customers[firstCustomer]}
         batches={selectedBatches}
+        customers={customers}
+        sellers={sellers}
+        onSave={onSave}
         onClose={() => setView('batches')}
       />
     );
@@ -259,9 +264,12 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
-  const renderRow = (row, isNew) => {
+  const renderRow = (row, isNew, prevRow) => {
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
+    // Cùng 1 Số đề nghị TT với dòng ngay trước & cùng giá trị → coi là lặp, hiện gọn lại (giống ô đã gộp)
+    const sameGroup = !isNew && prevRow && row.payment_request_no != null && prevRow.payment_request_no === row.payment_request_no;
+    const isRepeated = (key) => sameGroup && prevRow[key] === row[key] && row[key] !== null && row[key] !== undefined && row[key] !== '';
     return (
       <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
         {!isNew && (
@@ -273,12 +281,20 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         {COLS.map(col => {
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
+            if (disabled) {
+              const label = sellers[row.seller_id] ? (sellers[row.seller_id].shortName ? `[${sellers[row.seller_id].shortName}] ${sellers[row.seller_id].companyName}` : sellers[row.seller_id].companyName) : '';
+              return (
+                <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug">
+                  {isRepeated('seller_id') ? <span className="text-gray-300">″</span> : label}
+                </td>
+              );
+            }
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={row.seller_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
                   onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
-                  className={`w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`}>
+                  className="w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
                   <option value="">-- Chọn --</option>
                   {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -287,12 +303,19 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           }
           if (col.type === 'customer') {
             const disabled = col.fromDntt && !isNew;
+            if (disabled) {
+              return (
+                <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug">
+                  {isRepeated('customer_id') ? <span className="text-gray-300">″</span> : (row.customer_id || '')}
+                </td>
+              );
+            }
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={row.customer_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
                   onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
-                  className={`w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`}>
+                  className="w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
                   <option value="">-- Chọn khách hàng --</option>
                   {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -328,6 +351,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={map[col.key]} /></td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
+          if (disabled && MERGEABLE_KEYS.includes(col.key) && isRepeated(col.key)) {
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-300 text-center">″</td>;
+          }
           return (
             <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
               <Cell col={col} value={row[col.key]} disabled={disabled}
@@ -348,8 +374,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <div className="-mx-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-6">
         <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
@@ -362,9 +388,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mb-3">Nhập trực tiếp vào bảng như Excel — mỗi ô tự lưu khi bấm ra ngoài (Tab/click chỗ khác). Kéo ngang để xem hết các cột. Dòng cuối màu xanh nhạt để thêm lô mới.</p>
+      <p className="text-xs text-gray-400 mb-3 px-6">Nhập trực tiếp vào bảng như Excel — mỗi ô tự lưu khi bấm ra ngoài (Tab/click chỗ khác). Kéo ngang để xem hết các cột. Dòng cuối màu xanh nhạt để thêm lô mới.</p>
 
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="flex items-center gap-3 mb-4 flex-wrap px-6">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
           className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         <select value={customerFilter} onChange={e => setCustomerFilter(e.target.value)}
@@ -374,11 +400,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </select>
       </div>
 
-      <div className="flex items-center gap-4 mb-3 text-xs">
+      <div className="flex items-center gap-4 mb-3 text-xs px-6">
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
+      <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
         <table className="text-sm border-collapse" style={{ minWidth: 3600 }}>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -392,7 +418,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </tr>
           </thead>
           <tbody>
-            {filtered.map(row => renderRow(row, false))}
+            {filtered.map((row, idx) => renderRow(row, false, filtered[idx - 1]))}
             {renderRow(newRow, true)}
           </tbody>
         </table>
