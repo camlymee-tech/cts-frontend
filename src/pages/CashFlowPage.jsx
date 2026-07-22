@@ -36,8 +36,8 @@ const COLS = [
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 140, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 170, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 160, fromDntt: true },
-  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 180, fromDntt: true },
+  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 180, fromDntt: true },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 260, fromDntt: true },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 160 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
@@ -70,6 +70,7 @@ const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
   const [loading, setLoading] = useState(false);
   const boxRef = useRef(null);
   const timerRef = useRef(null);
+  const justPickedRef = useRef(false); // tránh lưu đè bằng dữ liệu cũ khi vừa chọn 1 gợi ý (blur bắn ra ngay sau đó)
 
   useEffect(() => { setQuery(value || ''); }, [value]);
 
@@ -98,7 +99,7 @@ const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
         type="text" value={query} disabled={disabled}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); onChange?.(e.target.value); doSearch(e.target.value); }}
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => onBlur?.(), 150)}
+        onBlur={() => setTimeout(() => { if (justPickedRef.current) { justPickedRef.current = false; return; } onBlur?.(); }, 150)}
         placeholder="Gõ để tìm số hóa đơn..."
         className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm bg-white disabled:bg-gray-100"
       />
@@ -110,7 +111,7 @@ const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
             <div className="px-3 py-2 text-xs text-gray-400">Không tìm thấy hóa đơn phù hợp</div>
           ) : results.map((inv) => (
             <button key={inv.id} type="button"
-              onClick={() => { setQuery(inv.invoice_no); setOpen(false); onPick(inv); }}
+              onClick={() => { justPickedRef.current = true; setQuery(inv.invoice_no); setOpen(false); onPick(inv); }}
               className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b border-gray-50 last:border-0">
               <div className="font-mono font-medium text-blue-600">{inv.invoice_no}</div>
               <div className="text-gray-500">{inv.customer_name} — {fmtNum(inv.total)} đ</div>
@@ -125,7 +126,7 @@ const InvoiceLinkCell = ({ value, onChange, onPick, onBlur, disabled }) => {
 const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   if (col.type === 'computed') {
     const isMoney = typeof value === 'number';
-    return <div className="px-2 py-1.5 text-right text-gray-500 bg-gray-50 whitespace-nowrap">{isMoney ? fmtNum(value) : (value || '')}</div>;
+    return <div className="px-2 py-1.5 text-right text-blue-900 bg-blue-50/70 whitespace-nowrap font-medium">{isMoney ? fmtNum(value) : (value || '')}</div>;
   }
   if (col.type === 'checkbox') {
     return (
@@ -147,6 +148,10 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
         onBlur={onBlur} className={common + ' text-right'}
       />
     );
+  }
+  // Ô chữ đã khóa (lấy từ ĐNTT): hiện dạng chữ xuống dòng đầy đủ, không cắt bớt như ô input 1 dòng
+  if (col.type === 'text' && disabled) {
+    return <div className={`px-2 py-1.5 text-sm text-gray-600 bg-amber-50/60 whitespace-normal break-words leading-snug`}>{value || ''}</div>;
   }
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
