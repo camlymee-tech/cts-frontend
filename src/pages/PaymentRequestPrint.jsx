@@ -98,13 +98,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const handleSaveToSystem = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
     const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim());
-    if (rowsToSave.length === 0) return alert('Chưa có dòng chứng từ nào để lưu.');
+    const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
+    if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
     setSaving(true);
-    // 1 đề nghị thanh toán có thể có nhiều dòng ngoại tệ — gộp lại thành 1 tổng dùng chung cho mọi lô tạo ra lần này
-    // (Số tệ = tổng Số tệ các dòng; Tỷ giá lấy dòng đầu tiên có dữ liệu vì tỷ giá không cộng dồn được)
+    // Mỗi dòng "Thanh toán ngoại tệ" tách thành 1 dòng riêng trong bảng theo dõi (không gộp vào các lô Chứng từ),
+    // để khớp đúng cấu trúc từng dòng như trên Đề Nghị Thanh Toán.
     const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
-    const combinedSoTe = fxWithData.reduce((s, r) => s + num(r.soTe), 0);
-    const combinedTyGia = fxWithData.length ? num(fxWithData[0].tyGia) : null;
     try {
       for (let i = 0; i < rowsToSave.length; i++) {
         const r = rowsToSave[i];
@@ -117,15 +116,29 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
-          exchange_rate: combinedTyGia,
-          amount_cny: fxWithData.length ? combinedSoTe : null,
-          cny_transferred: fxWithData.length ? combinedSoTe : null,
           payment_request_no: nextRequestNo,
           order_date: requestDate,
           note: note || null,
         });
       }
-      alert(`Đã lưu ${rowsToSave.length} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này.`);
+      // Mỗi dòng ngoại tệ → 1 lô riêng, chỉ điền các cột liên quan CNY, không đụng tới Tiền cọc/Đã thu khách
+      for (const fx of fxWithData) {
+        await onSave(null, {
+          customer_id: customerId,
+          seller_id: sellerId || null,
+          goods_desc: fx.noiDung || null,
+          bank_account: receiveAccount || null,
+          bank_name: bankName || null,
+          exchange_rate: num(fx.tyGia) || null,
+          amount_cny: num(fx.soTe) || null,
+          cny_transferred: num(fx.soTe) || null,
+          payment_request_no: nextRequestNo,
+          order_date: requestDate,
+          customer_paid_date: requestDate,
+          note: note || null,
+        });
+      }
+      alert(`Đã lưu ${rowsToSave.length + fxWithData.length} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này (${rowsToSave.length} dòng chứng từ + ${fxWithData.length} dòng ngoại tệ).`);
       // Sau khi lưu xong, reset về trống để làm tiếp đề nghị thanh toán mới
       if (onSelectCustomer) { setCustomerId(''); onSelectCustomer(''); }
       setSellerId('');
