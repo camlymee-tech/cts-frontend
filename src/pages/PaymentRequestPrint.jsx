@@ -66,6 +66,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const num = (v) => Number(v) || 0;
 
+  // Số đề nghị thanh toán tự nhảy — lấy số lớn nhất đang có + 1, dùng chung cho tất cả dòng lưu trong 1 lần bấm Lưu
+  const nextRequestNo = (Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1;
+
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
   const chenhLech = totalPhaiThu - totalThuKhach;
@@ -115,6 +118,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           exchange_rate: fx ? num(fx.tyGia) : null,
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
+          payment_request_no: nextRequestNo,
           order_date: requestDate,
           note: note || null,
         });
@@ -160,7 +164,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-3">
           {onClose && <button onClick={onClose} className="text-gray-500 hover:text-gray-700">← Quay lại</button>}
-          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán{customer ? ` — ${customer.companyName}` : ''}</h1>
+          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId ? `#${nextRequestNo}` : ''}{customer ? ` — ${customer.companyName}` : ''}</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSaveToSystem} disabled={saving || !customerId}
@@ -274,6 +278,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
         <table className="no-border"><tbody>
           <tr className="no-border">
+            <td className="no-border">Số đề nghị: <b>{nextRequestNo}</b></td>
             <td className="no-border">Ngày đề nghị: <b>{fmtDateVN(requestDate)}</b></td>
           </tr>
           <tr className="no-border">

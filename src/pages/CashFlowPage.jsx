@@ -23,6 +23,7 @@ export const deriveComputed = (r) => {
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
 const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 110 },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 110 },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200 },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220 },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 220 },
