@@ -19,7 +19,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         byCustomer[id] = {
           customerId: id, sellerIds: new Set(), batchCount: 0,
           totalAmountVnd: 0, totalDeposit: 0, totalDueMore: 0, totalCollected: 0,
-          totalRemainingDebt: 0, batchesInDebt: 0, maxOverdueDays: 0,
+          totalRemainingDebt: 0, batchesInDebt: 0,
         };
       }
       const r = byCustomer[id];
@@ -31,7 +31,6 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
       r.totalCollected += Number(b.actual_collected) || 0;
       r.totalRemainingDebt += c.remainingDebt || 0;
       if (c.remainingDebt > 0) r.batchesInDebt += 1;
-      if (c.isOverdue) r.maxOverdueDays = Math.max(r.maxOverdueDays, c.overdueDays);
     });
     return Object.values(byCustomer);
   }, [batches]);
@@ -107,7 +106,6 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
               <th className="text-right px-4 py-3">Còn phải thu</th>
               <th className="text-right px-4 py-3">Tiền đã thu</th>
               <th className="text-right px-4 py-3">Công nợ còn lại</th>
-              <th className="text-right px-4 py-3">Số ngày nợ quá hạn</th>
               <th className="text-right px-4 py-3">Số lô còn nợ</th>
               <th className="px-4 py-3"></th>
             </tr></thead>
@@ -123,7 +121,6 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                   <td className="px-4 py-3 text-right">{fmtNum(r.totalDueMore)}</td>
                   <td className="px-4 py-3 text-right">{fmtNum(r.totalCollected)}</td>
                   <td className={`px-4 py-3 text-right font-semibold ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
-                  <td className="px-4 py-3 text-right">{r.maxOverdueDays || '—'}</td>
                   <td className="px-4 py-3 text-right">{r.batchesInDebt}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800 mr-3">🔍 Chi tiết</button>

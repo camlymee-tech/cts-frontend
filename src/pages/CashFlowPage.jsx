@@ -16,43 +16,44 @@ export const deriveComputed = (r) => {
   const remainingDebt = amountDueMore - num(r.actual_collected);
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
-  const isOverdue = r.payment_due_date && new Date(r.payment_due_date) < new Date() && remainingDebt > 0;
-  const overdueDays = isOverdue ? Math.floor((new Date() - new Date(r.payment_due_date)) / 86400000) : 0;
-  return { amountVnd, cnyDiff, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount, isOverdue, overdueDays };
+  return { amountVnd, cnyDiff, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount };
 };
+
+// Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
+// muốn sửa phải quay lại Đề Nghị Thanh Toán.
+const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'customer_paid_total',
+  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'cny_transferred',
+  'note', 'payment_request_no'];
 
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
 const COLS = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 110 },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 110 },
-  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200 },
-  { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220 },
-  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 220 },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 150 },
-  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 120 },
-  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 150 },
-  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 140 },
-  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 140 },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 160 },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 140 },
-  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 90 },
-  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 140 },
-  { key: 'cny_transferred', label: 'Số tiền chuyển (CNY)', type: 'number', w: 140 },
-  { key: 'cnyDiff', label: 'Chênh lệch còn (CNY)', type: 'computed', w: 140 },
-  { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 170 },
-  { key: 'deposit_deduct', label: 'Trừ tiền cọc', type: 'checkbox', w: 90 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 150 },
-  { key: 'arrival_date', label: 'Ngày hàng về', type: 'date', w: 120 },
-  { key: 'payment_due_date', label: 'Ngày hạn thanh toán', type: 'date', w: 140 },
-  { key: 'actual_collected', label: 'Số tiền đã thu thực tế (VNĐ)', type: 'number', w: 150 },
-  { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 170 },
-  { key: 'remainingDebt', label: 'Công nợ còn lại (VNĐ)', type: 'computed', w: 150 },
-  { key: 'overdue', label: 'Công nợ quá hạn', type: 'computed', w: 130 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 160 },
-  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 140 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 120 },
-  { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 200 },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 200 },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 120 },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 130, fromDntt: true },
+  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
+  { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 240, fromDntt: true },
+  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 240, fromDntt: true },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170 },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 140, fromDntt: true },
+  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển (VNĐ)', type: 'number', w: 170, fromDntt: true },
+  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 160, fromDntt: true },
+  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 180, fromDntt: true },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 160 },
+  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
+  { key: 'cny_transferred', label: 'Số tiền chuyển (CNY)', type: 'number', w: 160, fromDntt: true },
+  { key: 'cnyDiff', label: 'Chênh lệch còn (CNY)', type: 'computed', w: 150 },
+  { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 190 },
+  { key: 'deposit_deduct', label: 'Trừ tiền cọc', type: 'checkbox', w: 100 },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170 },
+  { key: 'actual_collected', label: 'Số tiền đã thu thực tế (VNĐ)', type: 'number', w: 170 },
+  { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 190 },
+  { key: 'remainingDebt', label: 'Công nợ còn lại (VNĐ)', type: 'computed', w: 170 },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180 },
+  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 160 },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140 },
+  { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 220, fromDntt: true },
 ];
 
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
@@ -128,17 +129,24 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   }
   if (col.type === 'checkbox') {
     return (
-      <div className="flex justify-center py-1.5">
+      <div className={`flex justify-center py-1.5 ${disabled ? 'bg-amber-50/60' : ''}`}>
         <input type="checkbox" checked={!!value} disabled={disabled} onChange={e => { onChange(e.target.checked); onBlur?.(); }} />
       </div>
     );
   }
-  const common = "w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-400";
+  const common = `w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`;
   if (col.type === 'date') {
     return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
   }
   if (col.type === 'number') {
-    return <input type="number" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
+    const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
+    return (
+      <input
+        type="text" inputMode="decimal" value={display} disabled={disabled}
+        onChange={e => { const raw = e.target.value.replace(/[^\d]/g, ''); onChange(raw === '' ? '' : raw); }}
+        onBlur={onBlur} className={common + ' text-right'}
+      />
+    );
   }
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
@@ -259,11 +267,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
         {COLS.map(col => {
           if (col.type === 'seller') {
+            const disabled = col.fromDntt && !isNew;
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <select value={row.seller_id || ''} onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
+                <select value={row.seller_id || ''} disabled={disabled}
+                  onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
                   onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
-                  className="w-full border-0 bg-white text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  className={`w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`}>
                   <option value="">-- Chọn --</option>
                   {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -271,11 +281,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           }
           if (col.type === 'customer') {
+            const disabled = col.fromDntt && !isNew;
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <select value={row.customer_id || ''} onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
+                <select value={row.customer_id || ''} disabled={disabled}
+                  onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
                   onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
-                  className="w-full border-0 bg-white text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  className={`w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`}>
                   <option value="">-- Chọn khách hàng --</option>
                   {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -306,11 +318,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           }
           if (col.type === 'computed') {
             const map = { amountVnd: computed.amountVnd, cnyDiff: computed.cnyDiff,
-              amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt, totalCustomerTransferred: computed.totalCustomerTransferred,
-              diffAmount: computed.diffAmount, overdue: computed.isOverdue ? computed.remainingDebt : 0 };
-            return <td key={col.key} style={{ minWidth: col.w }} className={`border-r border-gray-100 ${computed.isOverdue && col.key === 'overdue' ? 'text-red-600 font-medium' : ''}`}><Cell col={col} value={map[col.key]} /></td>;
+              amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
+              totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={map[col.key]} /></td>;
           }
-          const disabled = col.adminOnly && disabledAdminOnly;
+          const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
           return (
             <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
               <Cell col={col} value={row[col.key]} disabled={disabled}
@@ -357,14 +369,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </select>
       </div>
 
+      <div className="flex items-center gap-4 mb-3 text-xs">
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
-        <table className="text-sm border-collapse" style={{ minWidth: 3200 }}>
+        <table className="text-sm border-collapse" style={{ minWidth: 3600 }}>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="sticky left-0 bg-gray-50 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
               {COLS.map(col => (
-                <th key={col.key} style={{ minWidth: col.w }} className={`text-left px-2 py-2 border-r border-gray-100 font-medium ${col.adminOnly ? 'text-amber-600' : ''}`}>
-                  {col.label}{col.adminOnly && <span title="Chỉ admin sửa được"> 🔒</span>}
+                <th key={col.key} style={{ minWidth: col.w }} className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''}`}>
+                  {col.label}
                 </th>
               ))}
               <th className="sticky right-0 bg-gray-50 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
