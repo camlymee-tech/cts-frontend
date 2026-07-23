@@ -396,6 +396,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     }
   };
 
+  // Áp dụng 1 giá trị chung (không phải tiền, VD ngày) cho cả nhóm: lưu vào dòng ĐẦU TIÊN, xoá ở các dòng con còn lại.
+  const setGroupField = async (rows, key, value) => {
+    const [first, ...rest] = rows;
+    await commitRow(first.id, { ...first, [key]: value });
+    for (const r of rest) {
+      if (r[key]) await commitRow(r.id, { ...r, [key]: null });
+    }
+  };
+
   const setGroupTotal = async (rows, key, value) => {
     const val = value === '' ? 0 : Number(value) || 0;
     const [first, ...rest] = rows;
@@ -476,6 +485,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 onChange={(v) => setGroupInvoice(rows, v, undefined)}
                 onPick={pickInvoiceForGroup}
                 onBlur={() => {}}
+              />
+            );
+          } else if (col.key === 'customer_final_payment_date') {
+            const same = commonValue('customer_final_payment_date');
+            content = (
+              <input
+                type="date" defaultValue={same || ''} key={`${groupKey}-cfpd-${same}`}
+                onBlur={(e) => setGroupField(rows, 'customer_final_payment_date', e.target.value || null)}
+                className="w-full border border-gray-200 rounded px-1.5 py-1 text-sm text-right bg-white"
               />
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
@@ -628,8 +646,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
-          if (isChild && col.key === 'invoice_no') {
-            // Số hóa đơn chỉ cần lấy/hiện ở dòng gốc (đi cùng Giá trị xuất hóa đơn) — dòng con để trống.
+          if (isChild && (col.key === 'invoice_no' || col.key === 'customer_final_payment_date')) {
+            // Số hóa đơn / Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
