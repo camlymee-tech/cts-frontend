@@ -18,7 +18,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
       if (!byCustomer[id]) {
         byCustomer[id] = {
           customerId: id, batchCount: 0,
-          totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0,
+          totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalTransferredToCompany: 0,
           totalRemainingDebt: 0, batchesInDebt: 0,
         };
       }
@@ -27,6 +27,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
       r.totalInvoiceAmount += Number(b.invoice_amount) || 0;
       r.totalAmountVnd += Number(b.amount_vnd) || 0;
       r.totalDueOnArrival += Number(b.total_due_on_arrival) || 0;
+      r.totalTransferredToCompany += c.totalCustomerTransferred || 0;
       r.totalRemainingDebt += c.remainingDebt || 0;
       if (c.remainingDebt > 0) r.batchesInDebt += 1;
     });
@@ -45,8 +46,9 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
     totalInvoiceAmount: acc.totalInvoiceAmount + r.totalInvoiceAmount,
     totalAmountVnd: acc.totalAmountVnd + r.totalAmountVnd,
     totalDueOnArrival: acc.totalDueOnArrival + r.totalDueOnArrival,
+    totalTransferredToCompany: acc.totalTransferredToCompany + r.totalTransferredToCompany,
     totalRemainingDebt: acc.totalRemainingDebt + r.totalRemainingDebt,
-  }), { batchCount: 0, totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalRemainingDebt: 0 });
+  }), { batchCount: 0, totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalTransferredToCompany: 0, totalRemainingDebt: 0 });
 
   if (detailCustomerId !== undefined) {
     return (
@@ -92,11 +94,12 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         {filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-400">Chưa có dữ liệu lô hàng nào để tổng hợp.</div>
         ) : (
-          <table className="w-full text-sm min-w-[900px]">
+          <table className="w-full text-sm min-w-[950px]">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="text-left px-4 py-3">Mã KH</th>
               <th className="text-right px-4 py-3">Số lô</th>
               <th className="text-right px-4 py-3">Tổng tiền xuất hóa đơn</th>
+              <th className="text-right px-4 py-3">Tổng tiền KH chuyển vào Cty</th>
               <th className="text-right px-4 py-3">Tiền hàng</th>
               <th className="text-right px-4 py-3">Tổng phải thu khi hàng về (VNĐ)</th>
               <th className="text-right px-4 py-3">Công nợ còn lại</th>
@@ -109,13 +112,13 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                   <td className="px-4 py-3 font-mono font-medium text-blue-600">{r.customerId}</td>
                   <td className="px-4 py-3 text-right">{r.batchCount}</td>
                   <td className="px-4 py-3 text-right">{fmtNum(r.totalInvoiceAmount)}</td>
+                  <td className="px-4 py-3 text-right">{fmtNum(r.totalTransferredToCompany)}</td>
                   <td className="px-4 py-3 text-right">{fmtNum(r.totalAmountVnd)}</td>
                   <td className="px-4 py-3 text-right">{fmtNum(r.totalDueOnArrival)}</td>
                   <td className={`px-4 py-3 text-right font-semibold ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
                   <td className="px-4 py-3 text-right">{r.batchesInDebt}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800 mr-3">🔍 Chi tiết</button>
-                    <button onClick={() => setPrintCustomerId(r.customerId)} className="text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">🖨️ In DNTT</button>
+                    <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800">🔍 Chi tiết</button>
                   </td>
                 </tr>
               ))}
@@ -125,6 +128,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                 <td className="px-4 py-3">TỔNG CỘNG</td>
                 <td className="px-4 py-3 text-right">{grandTotal.batchCount}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalInvoiceAmount)}</td>
+                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalTransferredToCompany)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalAmountVnd)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalDueOnArrival)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalRemainingDebt)}</td>
