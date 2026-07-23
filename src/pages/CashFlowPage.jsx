@@ -66,7 +66,6 @@ const COLS = [
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
   { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
-  { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 
@@ -384,17 +383,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   // Nhập TỔNG trực tiếp ở dòng gốc cho các cột tiền nhập tay (Phải trả cho CTS, Khách chuyển tiền lần 2,
   // Giá trị xuất hóa đơn): lưu toàn bộ số vừa nhập vào dòng ĐẦU TIÊN của nhóm, các dòng con còn lại đặt về 0 —
   // để tổng cộng dồn hiển thị ở dòng gốc luôn đúng bằng đúng số chị vừa gõ, không cần nhập riêng từng dòng con.
-  // Chọn/gõ Số hóa đơn ở dòng gốc: áp dụng cho dòng ĐẦU TIÊN của nhóm (kèm Giá trị xuất hóa đơn nếu có),
-  // các dòng con còn lại xoá Số hóa đơn + Giá trị xuất hóa đơn — vì thông tin này giờ chỉ lấy ở dòng gốc.
-  const setGroupInvoice = async (rows, invoiceNo, invoiceAmount) => {
-    const [first, ...rest] = rows;
-    const firstPatch = { invoice_no: invoiceNo };
-    if (invoiceAmount !== undefined) firstPatch.invoice_amount = invoiceAmount === '' ? 0 : Number(invoiceAmount) || 0;
-    await commitRow(first.id, { ...first, ...firstPatch });
-    for (const r of rest) {
-      if (r.invoice_no || num(r.invoice_amount) !== 0) await commitRow(r.id, { ...r, invoice_no: null, invoice_amount: 0 });
-    }
-  };
 
   // Áp dụng 1 giá trị chung (không phải tiền, VD ngày) cho cả nhóm: lưu vào dòng ĐẦU TIÊN, xoá ở các dòng con còn lại.
   const setGroupField = async (rows, key, value) => {
@@ -473,19 +461,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   Bỏ gộp
                 </button>
               </span>
-            );
-          } else if (col.key === 'invoice_no') {
-            const same = commonValue('invoice_no');
-            const pickInvoiceForGroup = (inv) => {
-              setGroupInvoice(rows, inv.invoice_no, inv.total ?? '');
-            };
-            content = (
-              <InvoiceLinkCell
-                value={same || ''}
-                onChange={(v) => setGroupInvoice(rows, v, undefined)}
-                onPick={pickInvoiceForGroup}
-                onBlur={() => {}}
-              />
             );
           } else if (col.key === 'customer_final_payment_date') {
             const same = commonValue('customer_final_payment_date');
@@ -614,28 +589,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               </td>
             );
           }
-          if (col.type === 'invoice') {
-            const pickInvoice = (inv) => {
-              const applyField = (key, val) => isNew ? editNew(key, val) : editExisting(row, key, val);
-              applyField('invoice_no', inv.invoice_no);
-              applyField('invoice_amount', inv.total ?? '');
-              // Áp dụng xong thì lưu ngay (giống các ô khác khi rời khỏi ô)
-              setTimeout(() => {
-                if (isNew) { if (row.customer_id) commitRow(null, { ...row, invoice_no: inv.invoice_no, invoice_amount: inv.total }); }
-                else commitRow(row.id, { ...row, invoice_no: inv.invoice_no, invoice_amount: inv.total });
-              }, 0);
-            };
-            return (
-              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <InvoiceLinkCell
-                  value={row.invoice_no}
-                  onChange={(v) => isNew ? editNew('invoice_no', v) : editExisting(row, 'invoice_no', v)}
-                  onPick={pickInvoice}
-                  onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }}
-                />
-              </td>
-            );
-          }
           if (col.type === 'computed') {
             const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
@@ -646,8 +599,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
-          if (isChild && (col.key === 'invoice_no' || col.key === 'customer_final_payment_date')) {
-            // Số hóa đơn / Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
+          if (isChild && col.key === 'customer_final_payment_date') {
+            // Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
