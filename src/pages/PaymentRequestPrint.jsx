@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { fmtNum, numberToWords } from '../helpers';
 import { SearchableSelect } from '../components/SearchableSelect';
+import { api } from '../lib/api';
 
 const PRINT_STYLE = `
   @page { size: A4 portrait; margin: 15mm; }
@@ -107,6 +108,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
     setSaving(true);
+    // Nếu là đề nghị MỚI (không phải đang sửa), lấy số thật từ server ngay lúc lưu — đảm bảo không bao giờ trùng,
+    // không phụ thuộc vào dữ liệu đã tải sẵn ở trình duyệt (có thể chưa cập nhật kịp).
+    let savedRequestNo = nextRequestNo;
+    if (!isEditMode) {
+      try { savedRequestNo = await api.getNextPaymentRequestNo(); }
+      catch (e) { setSaving(false); return alert('Không lấy được số đề nghị mới: ' + e.message); }
+    }
     // Ghép mỗi dòng "Chứng từ" (VNĐ) với đúng 1 dòng "Ngoại tệ" tương ứng theo thứ tự vào CHUNG 1 lô —
     // 1 ô tiền Việt luôn đi cùng 1 ô tiền tệ quy đổi, không tách rời, không gộp thành 1 tổng.
     const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
@@ -128,7 +136,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           exchange_rate: fx ? num(fx.tyGia) : null,
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
-          payment_request_no: nextRequestNo,
+          payment_request_no: savedRequestNo,
           order_date: requestDate,
           note: note || null,
         });

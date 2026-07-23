@@ -251,6 +251,14 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // Lấy số đề nghị thanh toán kế tiếp — do Supabase cấp phát (sequence), đảm bảo luôn tăng dần
+  // và không bao giờ trùng, không phụ thuộc vào dữ liệu đã tải sẵn ở trình duyệt.
+  async getNextPaymentRequestNo() {
+    const { data, error } = await supabase.rpc('get_next_payment_request_no');
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
   async deleteInvoiceGoodsMany(ids) {
     const { error } = await supabase.from('invoice_goods').delete().in('id', ids);
     if (error) throw new Error(error.message);
