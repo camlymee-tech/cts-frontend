@@ -25,7 +25,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
     const s = search.toLowerCase();
     const matchSearch = !search || c.companyName?.toLowerCase().includes(s) || id.toLowerCase().includes(s)
       || (c.taxCode || '').toLowerCase().includes(s)
-      || (c.branches || []).some(b => (b.taxCode || '').toLowerCase().includes(s) || (b.name || '').toLowerCase().includes(s));
+      || (c.branches || []).some(b => (b.taxCode || '').toLowerCase().includes(s) || (b.companyName || b.name || '').toLowerCase().includes(s));
     const sf = saleFilter.trim().toLowerCase();
     const matchSale = !sf || (c.assignedSale?.code || '').toLowerCase().includes(sf) || (c.assignedSale?.name || '').toLowerCase().includes(sf);
     const matchDept = !deptFilter || c.departmentId === deptFilter;
@@ -161,7 +161,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
                           <div>
                             <span className="text-gray-400">Mã nhánh: </span>
                             {c.branches.map((b, i) => (
-                              <span key={i}>{i > 0 ? ', ' : ''}{b.taxCode}{b.name ? ` (${b.name})` : ''}</span>
+                              <span key={i}>{i > 0 ? ', ' : ''}{id} — {b.companyName || b.name || b.taxCode}</span>
                             ))}
                           </div>
                         )}
