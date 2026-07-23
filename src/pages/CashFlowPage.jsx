@@ -299,6 +299,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         customers={customers}
         sellers={sellers}
         onSave={onSave}
+        onDelete={onDelete}
         onClose={() => setView('batches')}
       />
     );

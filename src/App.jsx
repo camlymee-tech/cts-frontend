@@ -430,7 +430,7 @@ export default function App() {
       case 'payment_request': return <PaymentRequestPrint
           customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
           batches={cashFlowBatches} customers={customers} sellers={sellers}
-          onSave={saveCashFlowBatch} onSelectCustomer={setPaymentRequestCustomerId}
+          onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;

@@ -21,7 +21,7 @@ const fmtDateVN = (d) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 
-const blankVoucherRow = () => ({ dienGiai: '', ctsPhaiThu: '', daThuKhach: '', maThanhToan: '' });
+const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '', maThanhToan: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
 // Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ
@@ -36,7 +36,7 @@ const MoneyInput = ({ value, onChange, className }) => {
   );
 };
 
-export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onSelectCustomer, onClose }) => {
+export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   // Cố định NGAY LÚC MỞ: có phải đang mở để SỬA 1 đề nghị có sẵn không (đến từ "Số đề nghị TT" / "In DNTT")?
   // Nếu không (mở trống, tự chọn khách hàng sau) thì dù khách đó có lịch sử cũ cũng luôn coi là đề nghị MỚI.
@@ -58,8 +58,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   useEffect(() => {
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
-        dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
+        id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
         maThanhToan: b.payment_code ?? '',
+      })));
+      setFxRows(batchesOfCustomer.map(b => ({
+        noiDung: '', tyGia: b.exchange_rate ?? '', soTe: b.amount_cny ?? '',
       })));
       const firstBank = batchesOfCustomer.find(b => b.bank_account);
       if (firstBank) { setReceiveAccount(firstBank.bank_account || ''); setBankName(firstBank.bank_name || ''); }
@@ -104,9 +107,15 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const chenhLechConLai = totalTienChuyen + chenhLech;
   const soTienBangChu = numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
+  const [removedIds, setRemovedIds] = useState([]); // các id lô đã có sẵn nhưng bị bấm ✕ — sẽ xoá thật khi bấm Lưu
+
   const setVoucherField = (idx, key, val) => setVoucherRows(rows => rows.map((r, i) => i === idx ? { ...r, [key]: val } : r));
   const addVoucherRow = () => setVoucherRows(rows => [...rows, blankVoucherRow()]);
-  const removeVoucherRow = (idx) => setVoucherRows(rows => rows.filter((_, i) => i !== idx));
+  const removeVoucherRow = (idx) => setVoucherRows(rows => {
+    const target = rows[idx];
+    if (target?.id) setRemovedIds(ids => [...ids, target.id]);
+    return rows.filter((_, i) => i !== idx);
+  });
 
   const setFxField = (idx, key, val) => setFxRows(rows => rows.map((r, i) => i === idx ? { ...r, [key]: val } : r));
   const addFxRow = () => setFxRows(rows => [...rows, blankFxRow()]);
@@ -117,10 +126,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (sellers[id]) { setReceiveAccount(sellers[id].bankAccount || ''); setBankName(sellers[id].bankName || ''); }
   };
 
-  // Lưu ngược từng dòng chứng từ thành 1 lô hàng mới trong bảng theo dõi của khách hàng này
+  // Lưu lại bảng chứng từ: dòng nào đã có sẵn (mở ra để sửa) thì CẬP NHẬT đúng lô đó, giữ nguyên —
+  // không tạo thêm lô mới trùng lặp. Chỉ những dòng mới thêm (bấm "+ Thêm dòng") mới tạo lô mới.
   const handleSaveToSystem = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
-    const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim());
+    const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim() || r.id);
     const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
     setSaving(true);
@@ -140,12 +150,14 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         const r = rowsToSave[i];
         const fx = fxWithData[i];
         if (!r && !fx) continue;
-        // Mỗi dòng chứng từ luôn được cấp 1 mã thanh toán riêng, tự tăng, không bao giờ trùng —
-        // lấy trực tiếp từ Supabase (sequence) ngay lúc lưu, giống cách cấp Số đề nghị TT.
-        let paymentCode;
-        try { paymentCode = await api.getNextPaymentCode(); }
-        catch (e) { setSaving(false); return alert('Không lấy được mã thanh toán mới: ' + e.message); }
-        await onSave(null, {
+        const existingId = r?.id || null;
+        // Dòng đã có sẵn (đang sửa) giữ nguyên mã thanh toán cũ; chỉ dòng MỚI mới xin mã mới từ Supabase.
+        let paymentCode = r?.maThanhToan || null;
+        if (!existingId) {
+          try { paymentCode = await api.getNextPaymentCode(); }
+          catch (e) { setSaving(false); return alert('Không lấy được mã thanh toán mới: ' + e.message); }
+        }
+        await onSave(existingId, {
           customer_id: customerId,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
@@ -163,13 +175,18 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           note: note || null,
         });
       }
-      alert(`Đã lưu ${rowCount} lô hàng mới vào bảng theo dõi dòng tiền của khách hàng này.`);
+      // Xoá thật các lô đã bị bấm ✕ khỏi bảng chứng từ trong lần sửa này
+      if (removedIds.length > 0 && onDelete) {
+        for (const id of removedIds) { await onDelete(id); }
+      }
+      alert(`Đã lưu ${rowCount} dòng vào bảng theo dõi dòng tiền của khách hàng này.`);
       // Sau khi lưu xong, reset về trống để làm tiếp đề nghị thanh toán mới
       if (onSelectCustomer) { setCustomerId(''); onSelectCustomer(''); }
       setSellerId('');
       setReceiveAccount('');
       setBankName('');
       setNote('');
+      setRemovedIds([]);
       setVoucherRows([blankVoucherRow()]);
       setFxRows([blankFxRow()]);
       setRequestDate(todayISO());
