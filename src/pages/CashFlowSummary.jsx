@@ -4,7 +4,7 @@ import { fmtNum } from '../helpers';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { CashFlowPage, deriveComputed } from './CashFlowPage';
 
-export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete }) => {
+export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, onOpenPaymentRequest }) => {
   const [search, setSearch] = useState('');
   const [printCustomerId, setPrintCustomerId] = useState(null);
   const [detailCustomerId, setDetailCustomerId] = useState(undefined); // undefined = không xem chi tiết; '' = xem tất cả; 'KHxxx' = 1 khách
@@ -59,6 +59,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         onSave={onSave} onDelete={onDelete}
         initialCustomerFilter={detailCustomerId}
         onBack={() => setDetailCustomerId(undefined)}
+        onOpenPaymentRequest={onOpenPaymentRequest}
       />
     );
   }

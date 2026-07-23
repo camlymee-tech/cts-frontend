@@ -59,7 +59,7 @@ const COLS = [
   { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 190 },
   { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 170 },
-  { key: 'customer_final_payment_date', label: 'Ngày KH thanh toán phần còn lại', type: 'date', w: 190 },
+  { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 190 },
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 160 },
   { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140, formula: 'U-T' },
@@ -167,7 +167,7 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
 
-export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack }) => {
+export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack, onOpenPaymentRequest }) => {
   const [view, setView] = useState('batches'); // 'batches' | 'print'
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState(initialCustomerFilter);
@@ -377,6 +377,16 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           const merging = disabled && MERGEABLE_KEYS.includes(col.key);
           if (merging && !isFirstInGroup) return null; // đã được gộp vào ô của dòng đầu nhóm
           const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
+          if (col.key === 'payment_request_no' && !isNew && row.payment_request_no != null) {
+            return (
+              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-right">
+                <button type="button" onClick={() => onOpenPaymentRequest?.(row.customer_id)}
+                  className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
+                  {row.payment_request_no}
+                </button>
+              </td>
+            );
+          }
           if (rowSpan) {
             let display = row[col.key] ?? '';
             if (col.type === 'number' && display !== '') display = fmtNum(display);
@@ -420,7 +430,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mb-3 px-6">Nhập trực tiếp vào bảng như Excel — mỗi ô tự lưu khi bấm ra ngoài (Tab/click chỗ khác). Kéo ngang để xem hết các cột. Dòng cuối màu xanh nhạt để thêm lô mới.</p>
+      <p className="text-xs text-gray-400 mb-3 px-6">Bảng chỉ để theo dõi/bổ sung thêm thông tin cho các lô đã có từ Đề Nghị Thanh Toán — không tạo lô mới trực tiếp ở đây. Nhấn số ở cột "Số đề nghị TT" để quay lại sửa ở Đề Nghị Thanh Toán. Kéo ngang để xem hết các cột.</p>
 
       <div className="flex items-center gap-3 mb-4 flex-wrap px-6">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
@@ -444,8 +454,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               {COLS.map((col, i) => (
                 <th key={col.key} style={{ minWidth: col.w }}
                   className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''} ${col.type === 'computed' ? 'text-emerald-700 bg-emerald-50' : ''}`}>
-                  <div className="text-[10px] font-mono text-gray-400 mb-0.5">{excelColLetter(i)}{col.formula ? ` = ${col.formula}` : ''}</div>
-                  {col.label}
+                  <div>{col.label}</div>
+                  <div className="normal-case font-mono opacity-70">{excelColLetter(i)}{col.formula ? ` = ${col.formula}` : ''}</div>
                 </th>
               ))}
               <th className="sticky right-0 bg-gray-50 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
@@ -453,7 +463,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           </thead>
           <tbody>
             {filteredWithMeta.map(({ row, isFirstInGroup, groupSize }) => renderRow(row, false, isFirstInGroup, groupSize))}
-            {renderRow(newRow, true)}
           </tbody>
         </table>
       </div>
