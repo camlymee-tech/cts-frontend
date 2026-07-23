@@ -38,7 +38,7 @@ const MoneyInput = ({ value, onChange, className }) => {
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const customer = customers[customerId] || initialCustomer;
-  const batchesOfCustomer = initialBatches ? initialBatches.filter(b => !customerId || b.customer_id === customerId) : [];
+  const batchesOfCustomer = (initialBatches && customerId) ? initialBatches.filter(b => b.customer_id === customerId) : [];
 
   const [requestDate, setRequestDate] = useState(todayISO());
 
