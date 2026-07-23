@@ -3,6 +3,7 @@ const CATEGORY_STYLE = {
   mua_ban: 'border-pink-400',
   van_chuyen: 'border-sky-400',
   uy_thac: 'border-amber-400',
+  thanh_toan: 'border-emerald-400',
 };
 
 const NavBtn = ({ item, page, setPage, indent }) => {
@@ -28,12 +29,17 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
     { id: 'invoice_goods', icon: '📦', label: 'Hàng hóa theo hóa đơn' },
-    { id: 'cash_flow', icon: '💰', label: 'Theo dõi dòng tiền' },
-    { id: 'payment_request', icon: '🧾', label: 'Đề Nghị Thanh Toán' },
     { id: 'my-profile', icon: '👤', label: 'Hồ sơ của tôi' },
   ];
 
   const groups = [
+    {
+      key: 'thanh_toan', header: '💰 Thanh toán',
+      items: [
+        { id: 'cash_flow', icon: '💰', label: 'Theo dõi dòng tiền' },
+        { id: 'payment_request', icon: '🧾', label: 'Đề Nghị Thanh Toán' },
+      ],
+    },
     {
       key: 'mua_ban', header: '🛍️ Hợp đồng mua bán',
       items: [
