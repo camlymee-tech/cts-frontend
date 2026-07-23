@@ -316,47 +316,28 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     row, isFirstInGroup: true, groupSize: 1, groupIds: [row.id],
   })), [filtered]);
 
-  // Gộp gốc/con theo 2 tầng:
-  // 1) Mã lô (do người dùng tự gán qua "Gộp thành lô") — ưu tiên trước.
-  // 2) Với các dòng còn lại (chưa nằm trong 1 Mã lô), TỰ ĐỘNG gộp tiếp theo Số đề nghị TT —
-  //    1 Số đề nghị TT có nhiều dòng chứng từ sẽ tự thành 1 nhóm gốc/con, không cần thao tác gì thêm.
+  // Chỉ gộp gốc/con theo Mã lô (do người dùng tự gán qua "Gộp thành lô") — Số đề nghị TT luôn hiện riêng
+  // từng dòng, không tự động gộp nữa (dễ gây nhầm lẫn khi nhiều dòng chỉ tình cờ trùng số).
   const displayItems = useMemo(() => {
     const byCode = {};
     filteredWithMeta.forEach(it => { if (it.row.batch_code) (byCode[it.row.batch_code] ||= []).push(it); });
     const consumedByBatch = new Set();
-    const stage1 = [];
+    const result = [];
     filteredWithMeta.forEach(it => {
       if (consumedByBatch.has(it.row.id)) return;
       const code = it.row.batch_code;
       const group = code ? byCode[code] : null;
       if (group && group.length > 1) {
         group.forEach(g => consumedByBatch.add(g.row.id));
-        stage1.push({ kind: 'group', groupKey: `batch-${code}`, keyField: 'batch_code', label: code, items: group });
+        result.push({ kind: 'group', groupKey: `batch-${code}`, keyField: 'batch_code', label: code, items: group });
       } else {
-        stage1.push({ kind: 'single', item: it });
-      }
-    });
-
-    const byReq = {};
-    stage1.forEach(s => { if (s.kind === 'single' && s.item.row.payment_request_no != null) (byReq[s.item.row.payment_request_no] ||= []).push(s.item); });
-    const consumedByReq = new Set();
-    const result = [];
-    stage1.forEach(s => {
-      if (s.kind === 'group') { result.push(s); return; }
-      if (consumedByReq.has(s.item.row.id)) return;
-      const reqNo = s.item.row.payment_request_no;
-      const group = reqNo != null ? byReq[reqNo] : null;
-      if (group && group.length > 1) {
-        group.forEach(g => consumedByReq.add(g.row.id));
-        result.push({ kind: 'group', groupKey: `req-${reqNo}`, keyField: 'payment_request_no', label: reqNo, items: group });
-      } else {
-        result.push(s);
+        result.push({ kind: 'single', item: it });
       }
     });
     return result;
   }, [filteredWithMeta]);
 
-  // Dòng "gốc" của 1 nhóm (theo Mã lô hoặc theo Số đề nghị TT): tổng cộng dồn các cột tiền
+  // Dòng "gốc" của 1 nhóm Mã lô: tổng cộng dồn các cột tiền
   // (SUM_KEYS + các cột tự tính), các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
   // Nhập TỔNG trực tiếp ở dòng gốc cho các cột tiền nhập tay (Phải trả cho CTS, Khách chuyển tiền lần 2,
   // Giá trị xuất hóa đơn): lưu toàn bộ số vừa nhập vào dòng ĐẦU TIÊN của nhóm, các dòng con còn lại đặt về 0 —
@@ -374,9 +355,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   // những cột này chỉ cần hiện 1 lần ở dòng gốc, dòng con sẽ để trống.
   const getCommonKeys = (items, keyField) => {
     const rows = items.map(it => it.row);
-    const keys = new Set([keyField]); // cột định danh nhóm (Mã lô / Số đề nghị TT) luôn giống nhau cả nhóm — ẩn ở dòng con
+    const keys = new Set([keyField]); // cột định danh nhóm (Mã lô) luôn giống nhau cả nhóm — ẩn ở dòng con
+    // Cty thu tiền (bên bán) và Khách hàng luôn hiện đầy đủ ở MỌI dòng, kể cả khi giống nhau cả nhóm.
+    const ALWAYS_SHOW_KEYS = ['seller_id', 'customer_id'];
     COLS.forEach(col => {
-      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key)) return;
+      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key) || ALWAYS_SHOW_KEYS.includes(col.key)) return;
       const vals = new Set(rows.map(r => r[col.key] ?? ''));
       if (vals.size === 1 && rows[0][col.key] !== null && rows[0][col.key] !== '' && rows[0][col.key] !== undefined) keys.add(col.key);
     });
