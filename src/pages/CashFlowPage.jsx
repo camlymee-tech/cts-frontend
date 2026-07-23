@@ -538,14 +538,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
           }
-          if (col.key === 'batch_code' && !isNew) {
-            // Mã lô chỉ gán được qua nút "Gộp thành lô" (hiện ở dòng gốc) — không gõ tay trực tiếp vào ô của từng dòng nữa.
-            return (
-              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-400">
-                {row.batch_code || '—'}
-              </td>
-            );
-          }
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
             const merging = disabled && MERGEABLE_KEYS.includes(col.key);
