@@ -153,7 +153,7 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
       </div>
     );
   }
-  const common = `w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60' : 'bg-white'}`;
+  const common = `w-full border focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60 border-transparent' : 'bg-white border-gray-200 hover:border-gray-300'}`;
   if (col.type === 'date') {
     return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
   }
@@ -443,8 +443,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       diffAmount: (c) => c.diffAmount,
     };
     return (
-      <tr key={`group-${groupKey}`} className="bg-gray-50/70 border-b border-gray-200">
-        <td className="sticky left-0 bg-gray-50/70 px-2 border-r border-gray-200 align-top">
+      <tr key={`group-${groupKey}`} className="hover:bg-gray-50 border-b border-gray-200">
+        <td className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
           <input type="checkbox" checked={groupIds.every(id => selectedIds.has(id))} onChange={() => toggleSelectGroup(groupIds)} />
         </td>
         {COLS.map(col => {
@@ -513,7 +513,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </td>
           );
         })}
-        <td className="sticky right-0 bg-gray-50/70 px-2 border-l border-gray-200"></td>
+        <td className="sticky right-0 bg-white px-2 border-l border-gray-200"></td>
       </tr>
     );
   };
@@ -530,7 +530,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
     return (
-      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
+      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : (isChild ? 'bg-slate-50/70 hover:bg-slate-100/60' : 'hover:bg-gray-50')}>
         {!isNew && isFirstInGroup && (
           isChild
             ? <td className="sticky left-0 bg-gray-100 px-2 border-r border-gray-200 text-center text-gray-300 text-xs" title="Đã gộp — chọn ở dòng gốc phía trên">🔒</td>
@@ -564,7 +564,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 <select value={row.seller_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
                   onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
-                  className="w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+                  className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Chọn --</option>
                   {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -588,7 +588,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 <select value={row.customer_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
                   onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
-                  className="w-full border-0 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+                  className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Chọn khách hàng --</option>
                   {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -645,7 +645,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           );
         })}
         {!isNew && (
-          <td className="sticky right-0 bg-white px-2 border-l border-gray-200 whitespace-nowrap">
+          <td className={`sticky right-0 px-2 border-l border-gray-200 whitespace-nowrap ${isChild ? 'bg-slate-50/70' : 'bg-white'}`}>
             {saving === row.id && <span className="text-xs text-blue-500 mr-2">Đang lưu...</span>}
             <button onClick={() => onDelete(row.id)} className="text-red-500 hover:text-red-700 text-xs">Xóa</button>
           </td>
@@ -690,7 +690,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
       <div className="flex items-center gap-4 mb-3 text-xs px-6 flex-wrap">
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Dòng gốc của 1 Mã lô đã gộp — tổng cộng dồn từ các dòng con bên dưới, bấm mũi tên để thu gọn/mở ra</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-white border border-gray-300 inline-block"></span> Dòng gốc / dòng chưa gộp — nền trắng như nhau, dòng gốc có mũi tên để thu gọn/mở ra</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-slate-100 border border-slate-300 inline-block"></span> Dòng con (đã gộp vào 1 nhóm) — tô nền riêng để phân biệt</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-200 inline-flex items-center justify-center text-[8px]">🔒</span> Đã gộp — khoá ở dòng con, xem/sửa ở dòng gốc phía trên</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-50 border-2 border-blue-300 inline-block"></span> Gõ được ở dòng gốc — áp dụng cho cả nhóm</span>
       </div>
