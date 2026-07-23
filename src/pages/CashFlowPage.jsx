@@ -12,9 +12,9 @@ export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
   const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
   const amountDueMore = num(r.total_due_on_arrival) - remainderAfterGoods; // Còn phải thanh toán = Tổng phải thu khi hàng về - Phần dư sau khi thanh toán tiền hàng
-  const remainingDebt = amountDueMore - num(r.actual_collected);
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
-  const diffAmount = num(r.invoice_amount) - totalCustomerTransferred;
+  const diffAmount = num(r.invoice_amount) - totalCustomerTransferred; // Chênh lệch (cột V)
+  const remainingDebt = diffAmount; // Công nợ còn lại = Chênh lệch (cột V)
   return { amountVnd, remainderAfterGoods, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount };
 };
 
