@@ -74,6 +74,9 @@ const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
 const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'total_due_on_arrival', 'actual_collected', 'invoice_amount'];
+// Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
+// chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
+const EDITABLE_SUM_KEYS = ['total_due_on_arrival', 'actual_collected', 'invoice_amount'];
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
@@ -354,6 +357,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
   // Dòng "gốc" của 1 nhóm (theo Mã lô hoặc theo Số đề nghị TT): tổng cộng dồn các cột tiền
   // (SUM_KEYS + các cột tự tính), các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
+  // Nhập TỔNG trực tiếp ở dòng gốc cho các cột tiền nhập tay (Phải trả cho CTS, Khách chuyển tiền lần 2,
+  // Giá trị xuất hóa đơn): lưu toàn bộ số vừa nhập vào dòng ĐẦU TIÊN của nhóm, các dòng con còn lại đặt về 0 —
+  // để tổng cộng dồn hiển thị ở dòng gốc luôn đúng bằng đúng số chị vừa gõ, không cần nhập riêng từng dòng con.
+  const setGroupTotal = async (rows, key, value) => {
+    const val = value === '' ? 0 : Number(value) || 0;
+    const [first, ...rest] = rows;
+    await commitRow(first.id, { ...first, [key]: val });
+    for (const r of rest) {
+      if (num(r[key]) !== 0) await commitRow(r.id, { ...r, [key]: 0 });
+    }
+  };
+
   const renderGroupRoot = (groupKey, keyField, label, items) => {
     const rows = items.map(it => it.row);
     const groupIds = rows.map(r => r.id);
@@ -392,6 +407,16 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   <span className="text-blue-600 font-medium">{label}</span>
                 )}
               </span>
+            );
+          } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
+            content = (
+              <input
+                type="text" inputMode="numeric"
+                defaultValue={sumField(col.key) ? fmtNum(sumField(col.key)) : ''}
+                key={`${groupKey}-${col.key}-${sumField(col.key)}`}
+                onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); setGroupTotal(rows, col.key, raw); }}
+                className="w-full border border-gray-200 rounded px-1.5 py-1 text-sm text-right bg-white"
+              />
             );
           } else if (SUM_KEYS.includes(col.key)) {
             content = <span className="block text-right">{fmtNum(sumField(col.key))}</span>;
@@ -510,6 +535,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
             // Dòng con (đã gộp vào 1 Mã lô) không tự điền số ở đây nữa — số tổng đã điền ở dòng gốc phía trên.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={isChild ? '' : map[col.key]} /></td>;
+          }
+          if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
+            // Đã gộp nhóm — số tổng nhập ở dòng gốc phía trên, dòng con không nhập riêng nữa.
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
           const merging = disabled && MERGEABLE_KEYS.includes(col.key);

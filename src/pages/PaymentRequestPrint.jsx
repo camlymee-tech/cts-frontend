@@ -38,9 +38,6 @@ const MoneyInput = ({ value, onChange, className }) => {
 
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
-  // Cố định NGAY LÚC MỞ: có phải đang mở để SỬA 1 đề nghị có sẵn không (đến từ "Số đề nghị TT" / "In DNTT")?
-  // Nếu không (mở trống, tự chọn khách hàng sau) thì dù khách đó có lịch sử cũ cũng luôn coi là đề nghị MỚI.
-  const [isEditMode] = useState(!!initialCustomerId);
   const customer = customers[customerId] || initialCustomer;
   const batchesOfCustomer = (initialBatches && customerId) ? initialBatches.filter(b => b.customer_id === customerId) : [];
 
@@ -54,6 +51,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const [fxRows, setFxRows] = useState([blankFxRow()]);
   const [saving, setSaving] = useState(false);
 
+  // Số đề nghị thanh toán giờ NHẬP TAY hoàn toàn — không tự sinh/tự nhảy nữa.
+  // Nếu mở lại 1 đề nghị có sẵn, ô này được điền sẵn đúng số cũ (vẫn có thể sửa lại nếu cần).
+  const [requestNoInput, setRequestNoInput] = useState('');
+
   // Nếu mở kèm sẵn danh sách lô của khách (đến từ nút "In DNTT") — tự điền bảng chứng từ từ đó
   useEffect(() => {
     if (batchesOfCustomer.length > 0) {
@@ -66,18 +67,14 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       const firstBank = batchesOfCustomer.find(b => b.bank_account);
       if (firstBank) { setReceiveAccount(firstBank.bank_account || ''); setBankName(firstBank.bank_name || ''); }
       if (batchesOfCustomer[0]?.seller_id) setSellerId(batchesOfCustomer[0].seller_id);
+      const existingReqNo = batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no;
+      if (existingReqNo != null) setRequestNoInput(String(existingReqNo));
     }
     // chỉ chạy 1 lần khi mở kèm sẵn dữ liệu, không tự chạy lại khi người dùng đang gõ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const num = (v) => Number(v) || 0;
-
-  // Số đề nghị thanh toán tự nhảy — lấy số lớn nhất đang có + 1, dùng chung cho tất cả dòng lưu trong 1 lần bấm Lưu
-  // Nếu đang mở để sửa lại các lô có sẵn (bấm "Số đề nghị TT" hoặc "In DNTT" từ 1 khách cụ thể),
-  // giữ nguyên đúng số đề nghị cũ của các lô đó — chỉ tính số MỚI khi thực sự chưa có lô nào (đề nghị hoàn toàn mới).
-  const existingRequestNo = isEditMode ? batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no : undefined;
-  const nextRequestNo = existingRequestNo ?? ((Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1);
 
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
@@ -114,17 +111,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // không tạo thêm lô mới trùng lặp. Chỉ những dòng mới thêm (bấm "+ Thêm dòng") mới tạo lô mới.
   const handleSaveToSystem = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
+    if (!requestNoInput.trim() || isNaN(Number(requestNoInput))) return alert('Vui lòng nhập Số đề nghị TT (dạng số) trước khi lưu.');
     const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim() || r.id);
     const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
     setSaving(true);
-    // Nếu là đề nghị MỚI (không phải đang sửa), lấy số thật từ server ngay lúc lưu — đảm bảo không bao giờ trùng,
-    // không phụ thuộc vào dữ liệu đã tải sẵn ở trình duyệt (có thể chưa cập nhật kịp).
-    let savedRequestNo = nextRequestNo;
-    if (!isEditMode) {
-      try { savedRequestNo = await api.getNextPaymentRequestNo(); }
-      catch (e) { setSaving(false); return alert('Không lấy được số đề nghị mới: ' + e.message); }
-    }
+    const savedRequestNo = Number(requestNoInput);
     // Ghép mỗi dòng "Chứng từ" (VNĐ) với đúng 1 dòng "Ngoại tệ" tương ứng theo thứ tự vào CHUNG 1 lô —
     // 1 ô tiền Việt luôn đi cùng 1 ô tiền tệ quy đổi, không tách rời, không gộp thành 1 tổng.
     const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
@@ -164,6 +156,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       setBankName('');
       setNote('');
       setRemovedIds([]);
+      setRequestNoInput('');
       setVoucherRows([blankVoucherRow()]);
       setFxRows([blankFxRow()]);
       setRequestDate(todayISO());
@@ -198,7 +191,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-3">
           {onClose && <button onClick={onClose} className="text-gray-500 hover:text-gray-700">← Quay lại</button>}
-          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId ? `#${nextRequestNo}` : ''}{customer ? ` — ${customer.companyName}` : ''}</h1>
+          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${customer.companyName}` : ''}</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSaveToSystem} disabled={saving || !customerId}
@@ -219,7 +212,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
+              <input type="text" inputMode="numeric" value={requestNoInput}
+                onChange={e => setRequestNoInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="Nhập số" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>
               <input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
@@ -312,7 +311,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
         <table className="no-border"><tbody>
           <tr className="no-border">
-            <td className="no-border">Số đề nghị: <b>{nextRequestNo}</b></td>
+            <td className="no-border">Số đề nghị: <b>{requestNoInput}</b></td>
             <td className="no-border">Ngày đề nghị: <b>{fmtDateVN(requestDate)}</b></td>
           </tr>
           <tr className="no-border">
