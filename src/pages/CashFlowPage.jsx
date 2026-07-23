@@ -1,6 +1,6 @@
 // File: src/pages/CashFlowPage.jsx
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { fmtNum } from '../helpers';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
@@ -24,8 +24,9 @@ const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'c
   'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no', 'payment_code'];
 // Chỉ gộp ô thật (rowSpan) với các cột chắc chắn giống nhau cho CẢ đề nghị thanh toán —
 // không gộp Mô tả/Tiền cọc/Tổng KH đã chuyển/Tỷ giá/Số tệ vì mỗi dòng chứng từ có thể khác nhau.
-// Số đề nghị TT / Cty thu tiền (bên bán) / Khách hàng không gộp nữa — tách riêng theo Mã thanh toán (mỗi dòng 1 mã riêng).
-const MERGEABLE_KEYS = ['customer_paid_date', 'bank_account', 'bank_name'];
+// Đã bỏ gộp hoàn toàn (Số đề nghị TT / Cty thu tiền / Khách hàng / Ngày KH chuyển tiền / Số tài khoản / Ngân hàng) —
+// mỗi dòng hiện riêng; việc gộp nhóm dòng nay chuyển sang cơ chế "Mã lô" (xem phần renderRow/batch grouping).
+const MERGEABLE_KEYS = [];
 
 // Đổi vị trí cột (0,1,2...) thành chữ cái kiểu Excel (A, B, ..., Z, AA, AB...)
 const excelColLetter = (n) => {
@@ -72,6 +73,8 @@ const COLS = [
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
+// Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
+const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'total_due_on_arrival', 'actual_collected', 'invoice_amount'];
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
@@ -178,6 +181,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const [newRow, setNewRow] = useState(BLANK_ROW);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [saving, setSaving] = useState(null);
+  const [collapsedBatches, setCollapsedBatches] = useState(new Set()); // các Mã lô đang thu gọn (ẩn dòng con)
+  const [grouping, setGrouping] = useState(false); // đang gán Mã lô chung cho các dòng đã chọn
 
   const customerLabel = (id) => customers[id] ? `${customers[id].companyName} (${id})` : (id || '—');
   const sellerLabel = (id) => sellers[id] ? sellers[id].companyName : (id || '—');
@@ -215,6 +220,31 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     payload.total_customer_transferred = computed.totalCustomerTransferred;
     payload.diff_amount = computed.diffAmount;
     return payload;
+  };
+
+  const toggleCollapseBatch = (code) => setCollapsedBatches(s => {
+    const next = new Set(s);
+    next.has(code) ? next.delete(code) : next.add(code);
+    return next;
+  });
+
+  // Gộp các dòng đã chọn (checkbox) thành 1 lô: gán chung 1 Mã lô — Mã lô này sẽ hiện thành dòng "gốc"
+  // (tổng cộng dồn các cột tiền), các dòng đã chọn trở thành dòng "con" hiện bên dưới, có thể thu gọn/mở ra.
+  const handleGroupSelected = async () => {
+    if (selectedIds.size < 2) return;
+    const code = window.prompt('Nhập Mã lô chung cho các dòng đã chọn (dòng gốc sẽ hiện mã lô này):');
+    if (!code || !code.trim()) return;
+    setGrouping(true);
+    try {
+      for (const id of selectedIds) {
+        await onSave(id, { batch_code: code.trim() });
+      }
+      setSelectedIds(new Set());
+    } catch (e) {
+      alert('Có lỗi khi gộp lô: ' + e.message);
+    } finally {
+      setGrouping(false);
+    }
   };
 
   const commitRow = async (id, row) => {
@@ -288,6 +318,80 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     }
     return { row, isFirstInGroup, groupSize, groupIds };
   }), [filtered]);
+
+  // Gom các dòng có CHUNG Mã lô (do người dùng tự gán qua "Gộp thành lô") lại thành 1 nhóm hiển thị:
+  // dòng đầu tiên gặp của mỗi Mã lô sẽ kéo theo các dòng còn lại trong nhóm đi liền kề nhau.
+  const displayItems = useMemo(() => {
+    const byCode = {};
+    filteredWithMeta.forEach(it => { if (it.row.batch_code) (byCode[it.row.batch_code] ||= []).push(it); });
+    const consumed = new Set();
+    const result = [];
+    filteredWithMeta.forEach(it => {
+      if (consumed.has(it.row.id)) return;
+      const code = it.row.batch_code;
+      const group = code ? byCode[code] : null;
+      if (group && group.length > 1) {
+        group.forEach(g => consumed.add(g.row.id));
+        result.push({ kind: 'group', batchCode: code, items: group });
+      } else {
+        result.push({ kind: 'single', item: it });
+      }
+    });
+    return result;
+  }, [filteredWithMeta]);
+
+  // Dòng "gốc" của 1 nhóm Mã lô: tổng cộng dồn các cột tiền (SUM_KEYS + các cột tự tính),
+  // các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
+  const renderGroupRoot = (batchCode, items) => {
+    const rows = items.map(it => it.row);
+    const groupIds = rows.map(r => r.id);
+    const collapsed = collapsedBatches.has(batchCode);
+    const sumField = (key) => rows.reduce((s, r) => s + num(r[key]), 0);
+    const sumComputed = (fn) => rows.reduce((s, r) => s + fn(deriveComputed(r)), 0);
+    const commonValue = (key) => {
+      const vals = new Set(rows.map(r => r[key] ?? ''));
+      return vals.size === 1 ? rows[0][key] : null;
+    };
+    const computedFns = {
+      amountVnd: (c) => c.amountVnd,
+      cnyDiff: (c) => c.remainderAfterGoods,
+      amountDueMore: (c) => c.amountDueMore,
+      totalCustomerTransferred: (c) => c.totalCustomerTransferred,
+      diffAmount: (c) => c.diffAmount,
+    };
+    return (
+      <tr key={`group-${batchCode}`} className="bg-blue-50/70 font-medium border-y-2 border-blue-200">
+        <td className="sticky left-0 bg-blue-50/70 px-2 border-r border-gray-200 align-top">
+          <input type="checkbox" checked={groupIds.every(id => selectedIds.has(id))} onChange={() => toggleSelectGroup(groupIds)} />
+        </td>
+        {COLS.map(col => {
+          let content;
+          if (col.key === 'batch_code') {
+            content = (
+              <button type="button" onClick={() => toggleCollapseBatch(batchCode)} className="text-blue-700 hover:underline flex items-center gap-1">
+                <span>{collapsed ? '▸' : '▾'}</span> {batchCode}
+                <span className="text-xs text-gray-400 font-normal">({rows.length} dòng)</span>
+              </button>
+            );
+          } else if (SUM_KEYS.includes(col.key)) {
+            content = <span className="block text-right">{fmtNum(sumField(col.key))}</span>;
+          } else if (col.type === 'computed' && computedFns[col.key]) {
+            content = <span className="block text-right text-emerald-800">{fmtNum(sumComputed(computedFns[col.key]))}</span>;
+          } else {
+            const same = commonValue(col.key);
+            if (same === null || same === '' || same === undefined) content = <span className="text-gray-400">—</span>;
+            else content = <span className={col.type === 'number' ? 'block text-right' : ''}>{col.type === 'number' ? fmtNum(same) : same}</span>;
+          }
+          return (
+            <td key={col.key} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm align-top">
+              {content}
+            </td>
+          );
+        })}
+        <td className="sticky right-0 bg-blue-50/70 px-2 border-l border-gray-200"></td>
+      </tr>
+    );
+  };
 
   // Cùng 1 đề nghị thanh toán thì chọn/bỏ chọn tất cả các dòng trong nhóm cùng lúc
   const toggleSelectGroup = (ids) => setSelectedIds(s => {
@@ -435,11 +539,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <button onClick={onBack} className="text-gray-500 hover:text-gray-700">📊 ← Quay lại tổng hợp</button>
           <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         </div>
-        {selectedIds.size > 0 && (
-          <button onClick={() => setView('print')} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">
-            🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {selectedIds.size >= 2 && (
+            <button onClick={handleGroupSelected} disabled={grouping} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium shadow disabled:opacity-50">
+              {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành lô (${selectedIds.size})`}
+            </button>
+          )}
+          {selectedIds.size > 0 && (
+            <button onClick={() => setView('print')} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">
+              🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-xs text-gray-400 mb-3 px-6">Bảng chỉ để theo dõi/bổ sung thêm thông tin cho các lô đã có từ Đề Nghị Thanh Toán — không tạo lô mới trực tiếp ở đây. Nhấn số ở cột "Số đề nghị TT" để quay lại sửa ở Đề Nghị Thanh Toán. Kéo ngang để xem hết các cột.</p>
@@ -454,8 +565,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </select>
       </div>
 
-      <div className="flex items-center gap-4 mb-3 text-xs px-6">
+      <div className="flex items-center gap-4 mb-3 text-xs px-6 flex-wrap">
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300 inline-block"></span> Dòng gốc của 1 Mã lô đã gộp — tổng cộng dồn từ các dòng con bên dưới, bấm mã để thu gọn/mở ra</span>
       </div>
 
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
@@ -474,7 +586,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </tr>
           </thead>
           <tbody>
-            {filteredWithMeta.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds))}
+            {displayItems.map(d => d.kind === 'group'
+              ? (
+                <Fragment key={`group-${d.batchCode}`}>
+                  {renderGroupRoot(d.batchCode, d.items)}
+                  {!collapsedBatches.has(d.batchCode) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds))}
+                </Fragment>
+              )
+              : renderRow(d.item.row, false, d.item.isFirstInGroup, d.item.groupSize, d.item.groupIds)
+            )}
           </tbody>
         </table>
       </div>
