@@ -259,14 +259,6 @@ export const api = {
     return data;
   },
 
-  // Lấy mã thanh toán kế tiếp cho TỪNG dòng chứng từ — do Supabase cấp phát (sequence riêng),
-  // luôn tăng dần và không bao giờ trùng, độc lập với Số đề nghị TT (vốn dùng chung cho cả đề nghị).
-  async getNextPaymentCode() {
-    const { data, error } = await supabase.rpc('get_next_payment_code');
-    if (error) throw new Error(error.message);
-    return data;
-  },
-
   async deleteInvoiceGoodsMany(ids) {
     const { error } = await supabase.from('invoice_goods').delete().in('id', ids);
     if (error) throw new Error(error.message);

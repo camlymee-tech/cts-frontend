@@ -21,7 +21,7 @@ export const deriveComputed = (r) => {
 // Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
 // muốn sửa phải quay lại Đề Nghị Thanh Toán.
 const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'customer_paid_total',
-  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no', 'payment_code'];
+  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no'];
 // Chỉ gộp ô thật (rowSpan) với các cột chắc chắn giống nhau cho CẢ đề nghị thanh toán —
 // không gộp Mô tả/Tiền cọc/Tổng KH đã chuyển/Tỷ giá/Số tệ vì mỗi dòng chứng từ có thể khác nhau.
 // Đã bỏ gộp hoàn toàn (Số đề nghị TT / Cty thu tiền / Khách hàng / Ngày KH chuyển tiền / Số tài khoản / Ngân hàng) —
@@ -47,9 +47,8 @@ const COLS = [
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
-  { key: 'payment_code', label: 'Mã thanh toán', type: 'number', w: 130, fromDntt: true },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'N×O' },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'M×N' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
@@ -58,14 +57,14 @@ const COLS = [
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'H-F' },
   { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 170 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'Q-P' },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+S' },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'V-U' },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
   { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
@@ -308,46 +307,57 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
-  // Mỗi Mã thanh toán ứng với 1 ô tích riêng — gộp ô thật (rowSpan) theo Mã thanh toán thay vì Số đề nghị TT
-  // (vì 1 Số đề nghị TT có thể gồm nhiều Mã thanh toán khác nhau, mỗi Mã thanh toán là 1 dòng/lô độc lập).
-  const filteredWithMeta = useMemo(() => filtered.map((row, i) => {
-    const isFirstInGroup = i === 0 || row.payment_code == null || filtered[i - 1].payment_code !== row.payment_code;
-    let groupSize = 1;
-    let groupIds = [row.id];
-    if (isFirstInGroup && row.payment_code != null) {
-      let j = i + 1;
-      while (j < filtered.length && filtered[j].payment_code === row.payment_code) { groupSize++; groupIds.push(filtered[j].id); j++; }
-    }
-    return { row, isFirstInGroup, groupSize, groupIds };
-  }), [filtered]);
+  // Mỗi dòng có 1 ô tích riêng — việc gộp nhóm hiển thị (root/con) nay xử lý riêng ở displayItems bên dưới.
+  const filteredWithMeta = useMemo(() => filtered.map((row) => ({
+    row, isFirstInGroup: true, groupSize: 1, groupIds: [row.id],
+  })), [filtered]);
 
-  // Gom các dòng có CHUNG Mã lô (do người dùng tự gán qua "Gộp thành lô") lại thành 1 nhóm hiển thị:
-  // dòng đầu tiên gặp của mỗi Mã lô sẽ kéo theo các dòng còn lại trong nhóm đi liền kề nhau.
+  // Gộp gốc/con theo 2 tầng:
+  // 1) Mã lô (do người dùng tự gán qua "Gộp thành lô") — ưu tiên trước.
+  // 2) Với các dòng còn lại (chưa nằm trong 1 Mã lô), TỰ ĐỘNG gộp tiếp theo Số đề nghị TT —
+  //    1 Số đề nghị TT có nhiều dòng chứng từ sẽ tự thành 1 nhóm gốc/con, không cần thao tác gì thêm.
   const displayItems = useMemo(() => {
     const byCode = {};
     filteredWithMeta.forEach(it => { if (it.row.batch_code) (byCode[it.row.batch_code] ||= []).push(it); });
-    const consumed = new Set();
-    const result = [];
+    const consumedByBatch = new Set();
+    const stage1 = [];
     filteredWithMeta.forEach(it => {
-      if (consumed.has(it.row.id)) return;
+      if (consumedByBatch.has(it.row.id)) return;
       const code = it.row.batch_code;
       const group = code ? byCode[code] : null;
       if (group && group.length > 1) {
-        group.forEach(g => consumed.add(g.row.id));
-        result.push({ kind: 'group', batchCode: code, items: group });
+        group.forEach(g => consumedByBatch.add(g.row.id));
+        stage1.push({ kind: 'group', groupKey: `batch-${code}`, keyField: 'batch_code', label: code, items: group });
       } else {
-        result.push({ kind: 'single', item: it });
+        stage1.push({ kind: 'single', item: it });
+      }
+    });
+
+    const byReq = {};
+    stage1.forEach(s => { if (s.kind === 'single' && s.item.row.payment_request_no != null) (byReq[s.item.row.payment_request_no] ||= []).push(s.item); });
+    const consumedByReq = new Set();
+    const result = [];
+    stage1.forEach(s => {
+      if (s.kind === 'group') { result.push(s); return; }
+      if (consumedByReq.has(s.item.row.id)) return;
+      const reqNo = s.item.row.payment_request_no;
+      const group = reqNo != null ? byReq[reqNo] : null;
+      if (group && group.length > 1) {
+        group.forEach(g => consumedByReq.add(g.row.id));
+        result.push({ kind: 'group', groupKey: `req-${reqNo}`, keyField: 'payment_request_no', label: reqNo, items: group });
+      } else {
+        result.push(s);
       }
     });
     return result;
   }, [filteredWithMeta]);
 
-  // Dòng "gốc" của 1 nhóm Mã lô: tổng cộng dồn các cột tiền (SUM_KEYS + các cột tự tính),
-  // các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
-  const renderGroupRoot = (batchCode, items) => {
+  // Dòng "gốc" của 1 nhóm (theo Mã lô hoặc theo Số đề nghị TT): tổng cộng dồn các cột tiền
+  // (SUM_KEYS + các cột tự tính), các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
+  const renderGroupRoot = (groupKey, keyField, label, items) => {
     const rows = items.map(it => it.row);
     const groupIds = rows.map(r => r.id);
-    const collapsed = collapsedBatches.has(batchCode);
+    const collapsed = collapsedBatches.has(groupKey);
     const sumField = (key) => rows.reduce((s, r) => s + num(r[key]), 0);
     const sumComputed = (fn) => rows.reduce((s, r) => s + fn(deriveComputed(r)), 0);
     const commonValue = (key) => {
@@ -362,18 +372,26 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       diffAmount: (c) => c.diffAmount,
     };
     return (
-      <tr key={`group-${batchCode}`} className="bg-blue-50/70 font-medium border-y-2 border-blue-200">
-        <td className="sticky left-0 bg-blue-50/70 px-2 border-r border-gray-200 align-top">
+      <tr key={`group-${groupKey}`} className="bg-gray-50/70 border-b border-gray-200">
+        <td className="sticky left-0 bg-gray-50/70 px-2 border-r border-gray-200 align-top">
           <input type="checkbox" checked={groupIds.every(id => selectedIds.has(id))} onChange={() => toggleSelectGroup(groupIds)} />
         </td>
         {COLS.map(col => {
           let content;
-          if (col.key === 'batch_code') {
+          if (col.key === keyField) {
             content = (
-              <button type="button" onClick={() => toggleCollapseBatch(batchCode)} className="text-blue-700 hover:underline flex items-center gap-1">
-                <span>{collapsed ? '▸' : '▾'}</span> {batchCode}
-                <span className="text-xs text-gray-400 font-normal">({rows.length} dòng)</span>
-              </button>
+              <span className="flex items-center gap-1.5">
+                <button type="button" onClick={() => toggleCollapseBatch(groupKey)} className="text-gray-400 hover:text-blue-700">
+                  {collapsed ? '⌄' : '︿'}
+                </button>
+                {keyField === 'payment_request_no' ? (
+                  <button type="button" onClick={() => onOpenPaymentRequest?.(rows[0].customer_id)} className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
+                    {label}
+                  </button>
+                ) : (
+                  <span className="text-blue-600 font-medium">{label}</span>
+                )}
+              </span>
             );
           } else if (SUM_KEYS.includes(col.key)) {
             content = <span className="block text-right">{fmtNum(sumField(col.key))}</span>;
@@ -390,7 +408,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </td>
           );
         })}
-        <td className="sticky right-0 bg-blue-50/70 px-2 border-l border-gray-200"></td>
+        <td className="sticky right-0 bg-gray-50/70 px-2 border-l border-gray-200"></td>
       </tr>
     );
   };
@@ -407,7 +425,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
     return (
-      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : (isChild ? 'bg-slate-50/60 hover:bg-slate-100/60' : 'hover:bg-gray-50')}>
+      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
         {!isNew && isFirstInGroup && (
           <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
             <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
@@ -516,18 +534,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               </td>
             );
           }
-          if (col.key === 'batch_code' && isChild) {
-            return (
-              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <div className="flex items-center pl-4 text-gray-400 text-sm">
-                  <span className="mr-1">↳</span>
-                  <Cell col={col} value={row[col.key]} disabled={disabled}
-                    onChange={(v) => isNew ? editNew(col.key, v) : editExisting(row, col.key, v)}
-                    onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }} />
-                </div>
-              </td>
-            );
-          }
           return (
             <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
               <Cell col={col} value={row[col.key]} disabled={disabled}
@@ -582,7 +588,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
       <div className="flex items-center gap-4 mb-3 text-xs px-6 flex-wrap">
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300 inline-block"></span> Dòng gốc của 1 Mã lô đã gộp — tổng cộng dồn từ các dòng con bên dưới, bấm mã để thu gọn/mở ra</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Dòng gốc (của 1 Mã lô đã gộp, hoặc tự động theo Số đề nghị TT) — tổng cộng dồn từ các dòng con bên dưới, bấm mũi tên để thu gọn/mở ra</span>
       </div>
 
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
@@ -603,9 +609,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <tbody>
             {displayItems.map(d => d.kind === 'group'
               ? (
-                <Fragment key={`group-${d.batchCode}`}>
-                  {renderGroupRoot(d.batchCode, d.items)}
-                  {!collapsedBatches.has(d.batchCode) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds, true))}
+                <Fragment key={`group-${d.groupKey}`}>
+                  {renderGroupRoot(d.groupKey, d.keyField, d.label, d.items)}
+                  {!collapsedBatches.has(d.groupKey) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds, true))}
                 </Fragment>
               )
               : renderRow(d.item.row, false, d.item.isFirstInGroup, d.item.groupSize, d.item.groupIds)

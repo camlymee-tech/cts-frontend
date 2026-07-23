@@ -1,6 +1,6 @@
 // File: src/pages/PaymentRequestPrint.jsx
 // Giấy Đề Nghị Thanh Toán — vừa là màn nhập liệu thật (lưu ngược vào bảng lô hàng), vừa in ra giấy.
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { fmtNum, numberToWords } from '../helpers';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
@@ -21,7 +21,7 @@ const fmtDateVN = (d) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 
-const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '', maThanhToan: '' });
+const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
 // Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ
@@ -59,7 +59,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
         id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
-        maThanhToan: b.payment_code ?? '',
       })));
       setFxRows(batchesOfCustomer.map(b => ({
         noiDung: '', tyGia: b.exchange_rate ?? '', soTe: b.amount_cny ?? '',
@@ -79,21 +78,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // giữ nguyên đúng số đề nghị cũ của các lô đó — chỉ tính số MỚI khi thực sự chưa có lô nào (đề nghị hoàn toàn mới).
   const existingRequestNo = isEditMode ? batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no : undefined;
   const nextRequestNo = existingRequestNo ?? ((Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1);
-
-  // Mã thanh toán cũng tự nhảy y như Số đề nghị TT — lấy mã lớn nhất đang có + 1 làm mốc, rồi mỗi dòng
-  // CHƯA có mã thật (chưa từng lưu) sẽ được xem trước 1 mã tăng dần kể từ mốc đó. Đây chỉ là số xem trước
-  // để chị hình dung — mã thật sự vẫn do Supabase cấp (chống trùng) ngay lúc bấm "Lưu vào hệ thống".
-  const nextPaymentCodeBase = (Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_code) || 0)) || 0) + 1;
-  const previewPaymentCodes = useMemo(() => {
-    let counter = 0;
-    return voucherRows.map(r => {
-      if (r.maThanhToan) return r.maThanhToan;
-      const code = nextPaymentCodeBase + counter;
-      counter += 1;
-      return code;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voucherRows, nextPaymentCodeBase]);
 
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
@@ -151,12 +135,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         const fx = fxWithData[i];
         if (!r && !fx) continue;
         const existingId = r?.id || null;
-        // Dòng đã có sẵn (đang sửa) giữ nguyên mã thanh toán cũ; chỉ dòng MỚI mới xin mã mới từ Supabase.
-        let paymentCode = r?.maThanhToan || null;
-        if (!existingId) {
-          try { paymentCode = await api.getNextPaymentCode(); }
-          catch (e) { setSaving(false); return alert('Không lấy được mã thanh toán mới: ' + e.message); }
-        }
         await onSave(existingId, {
           customer_id: customerId,
           seller_id: sellerId || null,
@@ -170,7 +148,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
           payment_request_no: savedRequestNo,
-          payment_code: paymentCode,
           order_date: requestDate,
           note: note || null,
         });
@@ -296,8 +273,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <button onClick={addFxRow} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm dòng</button>
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
-            <label className="col-span-5 text-xs text-gray-500">Nội dung / tài khoản nhận</label>
-            <label className="col-span-1 text-xs text-gray-500">Mã TT</label>
+            <label className="col-span-6 text-xs text-gray-500">Nội dung / tài khoản nhận</label>
             <label className="col-span-2 text-xs text-gray-500">Tỷ giá</label>
             <label className="col-span-2 text-xs text-gray-500">Số tệ</label>
             <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>
@@ -305,8 +281,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className="space-y-2">
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-5 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <div className={`col-span-1 text-xs text-center ${voucherRows[i]?.maThanhToan ? 'text-gray-600 font-medium' : 'text-gray-400 italic'}`} title={voucherRows[i]?.maThanhToan ? 'Mã thanh toán đã lưu' : 'Mã dự kiến — chốt thật khi bấm Lưu'}>{previewPaymentCodes[i] ?? ''}</div>
+                <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
@@ -385,7 +360,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         <p style={{ fontWeight: 'bold', marginTop: 12, marginBottom: 4 }}>THANH TOÁN NGOẠI TỆ CHO KHÁCH</p>
         <table style={{ marginBottom: 4 }}>
           <thead><tr>
-            <th style={{ width: 60 }}>Mã TT</th>
             <th>Nội dung</th>
             <th style={{ width: 80 }}>Tỷ giá</th>
             <th style={{ width: 100 }}>Số tệ</th>
@@ -394,7 +368,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tbody>
             {fxRows.map((r, i) => (
               <tr key={i}>
-                <td style={{ textAlign: 'center' }}>{previewPaymentCodes[i] ?? ''}</td>
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
                 <td style={{ textAlign: 'right' }}>{r.soTe ? fmtNum(r.soTe) : ''}</td>
@@ -402,11 +375,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               </tr>
             ))}
             <tr>
-              <td colSpan={4} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng tiền chuyển</td>
+              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng tiền chuyển</td>
               <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalTienChuyen)}</td>
             </tr>
             <tr>
-              <td colSpan={4} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
+              <td colSpan={3} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
               <td style={{ textAlign: 'right' }}>{fmtNum(chenhLechConLai)}</td>
             </tr>
           </tbody>
