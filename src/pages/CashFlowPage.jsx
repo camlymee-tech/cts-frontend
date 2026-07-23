@@ -41,28 +41,28 @@ const excelColLetter = (n) => {
 // Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 120 },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 130, fromDntt: true },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
-  { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 240, fromDntt: true },
-  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 240, fromDntt: true },
+  { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
+  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
   { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'M×N' },
-  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 140, fromDntt: true },
-  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 170, fromDntt: true },
-  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 160, fromDntt: true },
-  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 180, fromDntt: true },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 260, fromDntt: true },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 160 },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
+  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
+  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
+  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 220, fromDntt: true },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
-  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 200, formula: 'H-F' },
-  { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 190 },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'H-F' },
+  { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 170 },
   { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
-  { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 170 },
-  { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 190 },
+  { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
+  { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
-  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 160 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 140, formula: 'U-T' },
+  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
   { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
@@ -171,6 +171,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const [view, setView] = useState('batches'); // 'batches' | 'print'
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState(initialCustomerFilter);
+  const [sellerFilter, setSellerFilter] = useState('');
   const [drafts, setDrafts] = useState({}); // { [rowId]: { field: value } } — chỉnh sửa tạm trước khi lưu
   const [newRow, setNewRow] = useState(BLANK_ROW);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -188,7 +189,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       || customerLabel(b.customer_id).toLowerCase().includes(s)
       || (b.invoice_no || '').toLowerCase().includes(s);
     const matchCustomer = !customerFilter || b.customer_id === customerFilter;
-    return matchSearch && matchCustomer;
+    const matchSeller = !sellerFilter || b.seller_id === sellerFilter;
+    return matchSearch && matchCustomer && matchSeller;
   });
 
   const buildPayload = (row) => {
@@ -418,16 +420,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   return (
     <div className="-mx-6">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-6">
-        <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <button onClick={() => setView('print')} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">
-              🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
-            </button>
-          )}
-          <button onClick={onBack}
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">📊 ← Quay lại tổng hợp</button>
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-gray-500 hover:text-gray-700">📊 ← Quay lại tổng hợp</button>
+          <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         </div>
+        {selectedIds.size > 0 && (
+          <button onClick={() => setView('print')} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">
+            🖨️ In Đề Nghị Thanh Toán ({selectedIds.size})
+          </button>
+        )}
       </div>
 
       <p className="text-xs text-gray-400 mb-3 px-6">Bảng chỉ để theo dõi/bổ sung thêm thông tin cho các lô đã có từ Đề Nghị Thanh Toán — không tạo lô mới trực tiếp ở đây. Nhấn số ở cột "Số đề nghị TT" để quay lại sửa ở Đề Nghị Thanh Toán. Kéo ngang để xem hết các cột.</p>
@@ -439,6 +440,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
           <option value="">Tất cả khách hàng</option>
           {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">Tất cả công ty bán</option>
+          {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 

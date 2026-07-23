@@ -81,7 +81,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền — 📊 Tổng hợp công nợ</h1>
+          <h1 className="text-2xl font-bold text-gray-800">📊 Tổng hợp công nợ</h1>
         </div>
         <button onClick={() => setDetailCustomerId('')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">+ Nhập / xem lô hàng</button>
