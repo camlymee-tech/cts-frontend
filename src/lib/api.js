@@ -246,6 +246,11 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  async updateInvoiceGoodsNote(id, note) {
+    const { error } = await supabase.from('invoice_goods').update({ note }).eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
   async deleteInvoiceGoodsMany(ids) {
     const { error } = await supabase.from('invoice_goods').delete().in('id', ids);
     if (error) throw new Error(error.message);

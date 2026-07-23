@@ -11,7 +11,7 @@ const PAGE_SIZE = 50;
 // Bảng invoice_goods đã lên tới hàng chục nghìn dòng — không còn tải hết về client để lọc/phân trang
 // nữa (từng khiến supabase-js tự lặp request 1000 dòng/lần để lấy hết, rất chậm). Giờ dùng RPC
 // list_invoice_goods_paged để lọc + phân trang ngay ở DB, chỉ tải đúng số dòng cần hiển thị.
-export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany }) => {
+export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin = false }) => {
   const [search, setSearch] = useState('');
   const [sellerFilter, setSellerFilter] = useState('');
   const [saleFilter, setSaleFilter] = useState('');
@@ -153,6 +153,17 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany }) => {
   const clearFilters = () => { setSearch(''); setSellerFilter(''); setSaleFilter(''); setDateFrom(''); setDateTo(''); };
   const hasActiveFilters = search || sellerFilter || saleFilter || dateFrom || dateTo;
 
+  const [noteDrafts, setNoteDrafts] = useState({}); // { [id]: text đang gõ } — chỉ admin sửa được
+  const saveNote = async (id, note) => {
+    setRows(prev => prev.map(r => r.id === id ? { ...r, note } : r)); // cập nhật ngay trên giao diện
+    setNoteDrafts(prev => { const next = { ...prev }; delete next[id]; return next; });
+    try {
+      await api.updateInvoiceGoodsNote(id, note || null);
+    } catch (e) {
+      alert('Không lưu được ghi chú: ' + e.message);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -251,6 +262,7 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany }) => {
               <th className="text-left px-5 py-3">Sale</th>
               <th className="text-left px-5 py-3">Số mặt hàng</th>
               <th className="text-right px-5 py-3">Tổng tiền</th>
+              <th className="text-left px-5 py-3">Ghi chú</th>
               <th className="px-5 py-3"></th>
             </tr></thead>
             <tbody>
@@ -281,6 +293,19 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany }) => {
                   <td className="px-5 py-3 text-gray-600">{inv.sale_name || <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.goods?.length || 0}</td>
                   <td className="px-5 py-3 text-right font-medium">{fmtNum(inv.total || 0)}</td>
+                  <td className="px-5 py-3 text-gray-600 min-w-[180px]">
+                    {isAdmin ? (
+                      <input
+                        value={noteDrafts[inv.id] ?? inv.note ?? ''}
+                        onChange={e => setNoteDrafts(prev => ({ ...prev, [inv.id]: e.target.value }))}
+                        onBlur={e => { if (e.target.value !== (inv.note || '')) saveNote(inv.id, e.target.value); }}
+                        placeholder="Ghi chú..."
+                        className="w-full border border-transparent hover:border-gray-300 focus:border-blue-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+                    ) : (
+                      inv.note || <span className="text-gray-300">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-right"><button onClick={() => handleDeleteOne(inv.id)} className="text-red-500 hover:text-red-700">Xóa</button></td>
                 </tr>
               ))}
