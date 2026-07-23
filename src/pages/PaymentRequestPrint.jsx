@@ -67,7 +67,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const num = (v) => Number(v) || 0;
 
   // Số đề nghị thanh toán tự nhảy — lấy số lớn nhất đang có + 1, dùng chung cho tất cả dòng lưu trong 1 lần bấm Lưu
-  const nextRequestNo = (Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1;
+  // Nếu đang mở để sửa lại các lô có sẵn (bấm "Số đề nghị TT" hoặc "In DNTT" từ 1 khách cụ thể),
+  // giữ nguyên đúng số đề nghị cũ của các lô đó — chỉ tính số MỚI khi thực sự chưa có lô nào (đề nghị hoàn toàn mới).
+  const existingRequestNo = batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no;
+  const nextRequestNo = existingRequestNo ?? ((Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1);
 
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
