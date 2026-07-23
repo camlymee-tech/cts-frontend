@@ -18,6 +18,7 @@ const HEADER_ALIASES = {
   vatRate: ['thuesuat', 'thuesuatgtgt'],
   sellerName: ['tencongty'],
   sellerTaxCode: ['masothue'],
+  note: ['ghichu'],
 };
 
 function buildFieldMap(headerRow) {
@@ -119,6 +120,7 @@ export async function parseInvoiceGoodsFile(file) {
         customerName,
         sellerName: String(obj.sellerName || '').trim(),
         sellerTaxCode: String(obj.sellerTaxCode || '').trim(),
+        note: String(obj.note || '').trim(),
         goods: [],
       };
     }

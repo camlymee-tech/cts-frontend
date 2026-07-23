@@ -180,6 +180,7 @@ export default function App() {
         customer_name: inv.customerName || null,
         seller_name: inv.sellerName || null,
         seller_tax_code: inv.sellerTaxCode || null,
+        ...(inv.note ? { note: inv.note } : {}),
         goods: inv.goods,
         total: inv.total || 0,
       }));
