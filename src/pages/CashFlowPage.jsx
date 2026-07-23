@@ -277,12 +277,20 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     }
   };
 
-  // Bỏ gộp 1 nhóm Mã lô: xoá Mã lô khỏi tất cả các dòng trong nhóm, trả về hiện riêng từng dòng như cũ.
+  // Bỏ gộp 1 nhóm Mã lô: xoá Mã lô khỏi tất cả các dòng, ĐỒNG THỜI tách hẳn thành các Đề Nghị Thanh Toán
+  // độc lập — dòng đầu tiên giữ nguyên Số đề nghị TT cũ, các dòng còn lại được đổi sang số riêng (thêm hậu tố
+  // -2, -3...) để không còn dính chung 1 đề nghị nữa, tránh sửa 1 dòng lại kéo theo dòng kia.
   const handleUngroup = async (items) => {
     setGrouping(true);
     try {
-      for (const it of items) {
-        await onSave(it.row.id, { batch_code: null });
+      const [first, ...rest] = items;
+      if (first) await onSave(first.row.id, { batch_code: null });
+      for (let idx = 0; idx < rest.length; idx++) {
+        const it = rest[idx];
+        const patch = { batch_code: null };
+        const origReq = (it.row.payment_request_no ?? '').toString().trim();
+        if (origReq) patch.payment_request_no = `${origReq}-${idx + 2}`;
+        await onSave(it.row.id, patch);
       }
     } catch (e) {
       alert('Có lỗi khi bỏ gộp: ' + e.message);
