@@ -407,8 +407,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const getCommonKeys = (items, keyField) => {
     const rows = items.map(it => it.row);
     const keys = new Set([keyField]); // cột định danh nhóm (Mã lô) luôn giống nhau cả nhóm — ẩn ở dòng con
+    // Số đề nghị TT luôn hiện đầy đủ ở MỌI dòng (kể cả dòng con) để bấm vào xem/sửa lại đề nghị đó.
+    const NEVER_BLANK_KEYS = ['payment_request_no'];
     COLS.forEach(col => {
-      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key)) return;
+      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key) || NEVER_BLANK_KEYS.includes(col.key)) return;
       const vals = new Set(rows.map(r => r[col.key] ?? ''));
       if (vals.size === 1 && rows[0][col.key] !== null && rows[0][col.key] !== '' && rows[0][col.key] !== undefined) keys.add(col.key);
     });
@@ -522,9 +524,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     return (
       <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
         {!isNew && isFirstInGroup && (
-          <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
-            <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
-          </td>
+          isChild
+            ? <td className="sticky left-0 bg-gray-50/40 px-2 border-r border-gray-200"></td>
+            : (
+              <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
+                <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
+              </td>
+            )
         )}
         {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
         {COLS.map(col => {
