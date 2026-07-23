@@ -308,14 +308,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
-  // Nhóm các dòng liên tiếp cùng Số đề nghị TT để gộp ô thật (rowSpan) như Excel
+  // Mỗi Mã thanh toán ứng với 1 ô tích riêng — gộp ô thật (rowSpan) theo Mã thanh toán thay vì Số đề nghị TT
+  // (vì 1 Số đề nghị TT có thể gồm nhiều Mã thanh toán khác nhau, mỗi Mã thanh toán là 1 dòng/lô độc lập).
   const filteredWithMeta = useMemo(() => filtered.map((row, i) => {
-    const isFirstInGroup = i === 0 || row.payment_request_no == null || filtered[i - 1].payment_request_no !== row.payment_request_no;
+    const isFirstInGroup = i === 0 || row.payment_code == null || filtered[i - 1].payment_code !== row.payment_code;
     let groupSize = 1;
     let groupIds = [row.id];
-    if (isFirstInGroup && row.payment_request_no != null) {
+    if (isFirstInGroup && row.payment_code != null) {
       let j = i + 1;
-      while (j < filtered.length && filtered[j].payment_request_no === row.payment_request_no) { groupSize++; groupIds.push(filtered[j].id); j++; }
+      while (j < filtered.length && filtered[j].payment_code === row.payment_code) { groupSize++; groupIds.push(filtered[j].id); j++; }
     }
     return { row, isFirstInGroup, groupSize, groupIds };
   }), [filtered]);
