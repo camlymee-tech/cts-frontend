@@ -21,7 +21,7 @@ const fmtDateVN = (d) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 
-const blankVoucherRow = () => ({ dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
+const blankVoucherRow = () => ({ dienGiai: '', ctsPhaiThu: '', daThuKhach: '', maThanhToan: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
 // Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ
@@ -59,6 +59,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
         dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
+        maThanhToan: b.payment_code ?? '',
       })));
       const firstBank = batchesOfCustomer.find(b => b.bank_account);
       if (firstBank) { setReceiveAccount(firstBank.bank_account || ''); setBankName(firstBank.bank_name || ''); }
@@ -124,6 +125,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         const r = rowsToSave[i];
         const fx = fxWithData[i];
         if (!r && !fx) continue;
+        // Mỗi dòng chứng từ luôn được cấp 1 mã thanh toán riêng, tự tăng, không bao giờ trùng —
+        // lấy trực tiếp từ Supabase (sequence) ngay lúc lưu, giống cách cấp Số đề nghị TT.
+        let paymentCode;
+        try { paymentCode = await api.getNextPaymentCode(); }
+        catch (e) { setSaving(false); return alert('Không lấy được mã thanh toán mới: ' + e.message); }
         await onSave(null, {
           customer_id: customerId,
           seller_id: sellerId || null,
@@ -137,6 +143,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
           payment_request_no: savedRequestNo,
+          payment_code: paymentCode,
           order_date: requestDate,
           note: note || null,
         });
@@ -230,14 +237,16 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <button onClick={addVoucherRow} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm dòng</button>
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
-            <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
+            <label className="col-span-5 text-xs text-gray-500">Diễn giải</label>
+            <label className="col-span-1 text-xs text-gray-500">Mã TT</label>
             <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc)</label>
             <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển)</label>
           </div>
           <div className="space-y-2">
             {voucherRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-5 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                <div className="col-span-1 text-xs text-gray-400 text-center" title="Mã thanh toán tự động cấp khi lưu">{r.maThanhToan || '—'}</div>
                 <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <button onClick={() => removeVoucherRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
@@ -315,6 +324,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         <table style={{ marginBottom: 8 }}>
           <thead>
             <tr>
+              <th style={{ width: 70 }}>Mã TT</th>
               <th>Diễn giải</th>
               <th style={{ width: 120 }}>CTS Phải thu</th>
               <th style={{ width: 120 }}>Đã thu khách</th>
@@ -324,6 +334,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tbody>
             {voucherRows.map((r, i) => (
               <tr key={i}>
+                <td style={{ textAlign: 'center' }}>{r.maThanhToan || ''}</td>
                 <td>{r.dienGiai}</td>
                 <td style={{ textAlign: 'right' }}>{r.ctsPhaiThu ? fmtNum(r.ctsPhaiThu) : ''}</td>
                 <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>

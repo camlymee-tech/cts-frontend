@@ -21,10 +21,11 @@ export const deriveComputed = (r) => {
 // Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
 // muốn sửa phải quay lại Đề Nghị Thanh Toán.
 const DNTT_FIELDS = ['seller_id', 'customer_id', 'goods_desc', 'deposit_vnd', 'customer_paid_total',
-  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no'];
+  'customer_paid_date', 'bank_account', 'bank_name', 'exchange_rate', 'amount_cny', 'payment_request_no', 'payment_code'];
 // Chỉ gộp ô thật (rowSpan) với các cột chắc chắn giống nhau cho CẢ đề nghị thanh toán —
 // không gộp Mô tả/Tiền cọc/Tổng KH đã chuyển/Tỷ giá/Số tệ vì mỗi dòng chứng từ có thể khác nhau.
-const MERGEABLE_KEYS = ['seller_id', 'customer_id', 'customer_paid_date', 'bank_account', 'bank_name', 'payment_request_no'];
+// Số đề nghị TT / Cty thu tiền (bên bán) / Khách hàng không gộp nữa — tách riêng theo Mã thanh toán (mỗi dòng 1 mã riêng).
+const MERGEABLE_KEYS = ['customer_paid_date', 'bank_account', 'bank_name'];
 
 // Đổi vị trí cột (0,1,2...) thành chữ cái kiểu Excel (A, B, ..., Z, AA, AB...)
 const excelColLetter = (n) => {
@@ -45,8 +46,9 @@ const COLS = [
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
+  { key: 'payment_code', label: 'Mã thanh toán', type: 'number', w: 130, fromDntt: true },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'M×N' },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'N×O' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
@@ -55,14 +57,14 @@ const COLS = [
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'H-F' },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
   { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 170 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'Q-P' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+S' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'V-U' },
   { key: 'invoice_no', label: 'Số hóa đơn', type: 'invoice', w: 220 },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
@@ -279,21 +281,30 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const filteredWithMeta = useMemo(() => filtered.map((row, i) => {
     const isFirstInGroup = i === 0 || row.payment_request_no == null || filtered[i - 1].payment_request_no !== row.payment_request_no;
     let groupSize = 1;
+    let groupIds = [row.id];
     if (isFirstInGroup && row.payment_request_no != null) {
       let j = i + 1;
-      while (j < filtered.length && filtered[j].payment_request_no === row.payment_request_no) { groupSize++; j++; }
+      while (j < filtered.length && filtered[j].payment_request_no === row.payment_request_no) { groupSize++; groupIds.push(filtered[j].id); j++; }
     }
-    return { row, isFirstInGroup, groupSize };
+    return { row, isFirstInGroup, groupSize, groupIds };
   }), [filtered]);
 
-  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1) => {
+  // Cùng 1 đề nghị thanh toán thì chọn/bỏ chọn tất cả các dòng trong nhóm cùng lúc
+  const toggleSelectGroup = (ids) => setSelectedIds(s => {
+    const next = new Set(s);
+    const allSelected = ids.every(id => next.has(id));
+    ids.forEach(id => allSelected ? next.delete(id) : next.add(id));
+    return next;
+  });
+
+  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1, groupIds = [row.id]) => {
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
     return (
       <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
-        {!isNew && (
-          <td className="sticky left-0 bg-white px-2 border-r border-gray-200">
-            <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelect(row.id)} />
+        {!isNew && isFirstInGroup && (
+          <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
+            <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
           </td>
         )}
         {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
@@ -463,7 +474,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </tr>
           </thead>
           <tbody>
-            {filteredWithMeta.map(({ row, isFirstInGroup, groupSize }) => renderRow(row, false, isFirstInGroup, groupSize))}
+            {filteredWithMeta.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds))}
           </tbody>
         </table>
       </div>
