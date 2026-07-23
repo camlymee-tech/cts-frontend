@@ -470,7 +470,7 @@ export default function App() {
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
-      <Sidebar page={page} setPage={(p) => { if (p === 'payment_request') setPaymentRequestCustomerId(''); setPage(p); }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
+      <Sidebar page={page} setPage={(p) => { if (p === 'payment_request') { setPaymentRequestCustomerId(''); setPaymentRequestReqNo(null); } setPage(p); }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
       <main className="flex-1 p-6 overflow-auto bg-gray-50" style={{ minHeight: '100vh' }}>
         {noSellers && page !== 'settings' && (
           <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">
