@@ -547,6 +547,23 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-100 text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
+          if (col.key === 'batch_code' && !isChild) {
+            // Dòng đơn lẻ/chưa gộp — ô Mã lô style giống hệt ô "gõ được ở dòng gốc" (viền xanh) để nhất quán,
+            // gõ trùng mã ở 2 dòng sẽ tự gộp lại thành nhóm.
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-1">
+                <input
+                  type="text" defaultValue={row.batch_code || ''} key={`${row.id || 'new'}-batch-${row.batch_code || ''}`}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (isNew) { editNew('batch_code', v); if (row.customer_id) commitRow(null, { ...row, batch_code: v }); }
+                    else commitRow(row.id, { ...row, batch_code: v });
+                  }}
+                  className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
+                />
+              </td>
+            );
+          }
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
             const merging = disabled && MERGEABLE_KEYS.includes(col.key);
