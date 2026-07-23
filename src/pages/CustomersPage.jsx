@@ -22,7 +22,10 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
   const deptName = (cid) => departments[cid]?.name || '';
 
   const filtered = Object.entries(customers).filter(([id, c]) => {
-    const matchSearch = !search || c.companyName?.toLowerCase().includes(search.toLowerCase()) || id.toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    const matchSearch = !search || c.companyName?.toLowerCase().includes(s) || id.toLowerCase().includes(s)
+      || (c.taxCode || '').toLowerCase().includes(s)
+      || (c.branches || []).some(b => (b.taxCode || '').toLowerCase().includes(s) || (b.name || '').toLowerCase().includes(s));
     const sf = saleFilter.trim().toLowerCase();
     const matchSale = !sf || (c.assignedSale?.code || '').toLowerCase().includes(sf) || (c.assignedSale?.name || '').toLowerCase().includes(sf);
     const matchDept = !deptFilter || c.departmentId === deptFilter;
@@ -97,7 +100,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo tên hoặc mã KH..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo tên, mã KH, mã số thuế hoặc mã nhánh..."
           className="flex-1 min-w-48 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         <input value={saleFilter} onChange={e => setSaleFilter(e.target.value)} placeholder="Lọc theo Mã / Tên Sale..."
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -115,7 +118,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
           <h2 className="font-semibold text-gray-700 mb-4">Thêm khách hàng mới</h2>
           <div className="mb-3">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Mã khách hàng <span className="text-red-500 ml-0.5">*</span></label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Mã khách hàng (gốc) <span className="text-red-500 ml-0.5">*</span></label>
             <input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="VD: KH001, ABC, HKD-Nam..."
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             <p className="text-xs text-gray-400 mt-1">Tự nhập theo ý muốn, không được trùng mã đã có.</p>
@@ -131,7 +134,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
           <table className="w-full text-sm min-w-[760px]">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="text-left px-5 py-3 w-14">STT</th>
-              <th className="text-left px-5 py-3">Mã KH</th>
+              <th className="text-left px-5 py-3">Mã KH (gốc)</th>
               <th className="text-left px-5 py-3">Tên công ty / HKD</th>
               <th className="text-left px-5 py-3">Người đại diện</th>
               <th className="text-left px-5 py-3">Mã Sale</th>
@@ -153,7 +156,15 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
                     <td className="px-5 py-3 font-medium text-gray-800 relative group cursor-default">
                       {c.companyName}
                       <div className="hidden group-hover:block absolute z-30 left-0 top-full mt-1 w-80 bg-gray-800 text-white text-xs rounded-lg shadow-xl p-3 space-y-1.5 pointer-events-none">
-                        <div><span className="text-gray-400">Mã số thuế: </span>{c.taxCode || '—'}</div>
+                        <div><span className="text-gray-400">Mã số thuế (gốc): </span>{c.taxCode || '—'}</div>
+                        {(c.branches || []).length > 0 && (
+                          <div>
+                            <span className="text-gray-400">Mã nhánh: </span>
+                            {c.branches.map((b, i) => (
+                              <span key={i}>{i > 0 ? ', ' : ''}{b.taxCode}{b.name ? ` (${b.name})` : ''}</span>
+                            ))}
+                          </div>
+                        )}
                         <div><span className="text-gray-400">Địa chỉ: </span>{c.address || '—'}</div>
                         <div><span className="text-gray-400">Người đại diện: </span>{c.representative || '—'}{c.position ? ` (${c.position})` : ''}</div>
                       </div>

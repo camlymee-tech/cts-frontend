@@ -23,11 +23,12 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
   const blank = {
     companyName: '', address: '', taxCode: '', phone: '', email: '',
     bankAccount: '', bankName: '', representative: '', position: '',
+    branches: [], // Mã nhánh (mã số thuế) khác — 1 khách hàng gốc có thể có nhiều mã nhánh bên trong
     ...(withShortName ? { shortName: '' } : {}),
     ...(withAssignment ? { assignedSale: autoSaleAssign || { code: '', name: '', accountId: '' }, departmentId: '' } : {}),
   };
   const initialForm = init
-    ? { ...init, ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
+    ? { ...blank, ...init, ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
     : blank;
   const [form, setForm] = useState(initialForm);
   const upd = (f) => (v) => setForm(p => ({ ...p, [f]: v }));
@@ -37,6 +38,12 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     setForm(prev => ({ ...prev, assignedSale: { code: p.ma_sale || '', name: p.name || '', accountId: p.uuid } }));
   };
 
+  const addBranch = () => setForm(p => ({ ...p, branches: [...(p.branches || []), { taxCode: '', name: '' }] }));
+  const updBranch = (idx, field, v) => setForm(p => ({
+    ...p, branches: p.branches.map((b, i) => i === idx ? { ...b, [field]: v } : b),
+  }));
+  const removeBranch = (idx) => setForm(p => ({ ...p, branches: p.branches.filter((_, i) => i !== idx) }));
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-3">
@@ -45,13 +52,34 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
           <Field label="Ngày ký / Ngày hiệu lực" value={form.shortName} onChange={upd('shortName')} type="date" />
         )}
         <Field label="Địa chỉ" value={form.address} onChange={upd('address')} cols={2} />
-        <Field label="Mã số thuế" value={form.taxCode} onChange={upd('taxCode')} />
+        <Field label="Mã số thuế (gốc)" value={form.taxCode} onChange={upd('taxCode')} />
         <Field label="Số điện thoại" value={form.phone} onChange={upd('phone')} />
         <Field label="Email" value={form.email} onChange={upd('email')} type="email" />
         <Field label="Số tài khoản" value={form.bankAccount} onChange={upd('bankAccount')} />
         <Field label="Ngân hàng" value={form.bankName} onChange={upd('bankName')} cols={2} />
         <Field label="Người đại diện" value={form.representative} onChange={upd('representative')} />
         <Field label="Chức vụ" value={form.position} onChange={upd('position')} />
+        <div className="col-span-2 border-t border-gray-100 pt-3 mt-1">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-gray-500 uppercase">Mã nhánh (các mã số thuế khác của cùng khách hàng này)</label>
+            <button type="button" onClick={addBranch} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm mã nhánh</button>
+          </div>
+          {(form.branches || []).length === 0 ? (
+            <p className="text-xs text-gray-400">Chưa có mã nhánh nào — khách hàng này chỉ dùng 1 mã số thuế gốc ở trên.</p>
+          ) : (
+            <div className="space-y-2">
+              {form.branches.map((b, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                  <input value={b.taxCode} onChange={e => updBranch(i, 'taxCode', e.target.value)} placeholder="Mã số thuế nhánh"
+                    className="col-span-5 border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+                  <input value={b.name} onChange={e => updBranch(i, 'name', e.target.value)} placeholder="Tên chi nhánh / ghi chú (không bắt buộc)"
+                    className="col-span-6 border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+                  <button type="button" onClick={() => removeBranch(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {withAssignment && (
           <>
             <div className="col-span-2 border-t border-gray-100 pt-2 mt-1 text-xs font-semibold text-gray-500 uppercase">Sale phụ trách &amp; Phòng ban</div>
