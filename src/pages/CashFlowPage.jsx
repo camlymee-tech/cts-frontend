@@ -48,8 +48,9 @@ const COLS = [
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
+  { key: 'branch_tax_code', label: 'Mã nhánh', type: 'branch', w: 180 },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'M×N' },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'N×O' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
@@ -58,14 +59,14 @@ const COLS = [
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'H-F' },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
   { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 170 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'Q-P' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H+R' },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+S' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'V-U' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 
@@ -591,6 +592,25 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Chọn khách hàng --</option>
                   {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </td>
+            );
+          }
+          if (col.type === 'branch') {
+            const branches = customers[row.customer_id]?.branches || [];
+            const currentVal = row.branch_tax_code || '';
+            // Nếu giá trị đang lưu không khớp mã nhánh nào hiện có (VD khách hàng đổi danh sách nhánh sau),
+            // vẫn hiện thêm 1 lựa chọn riêng để không bị mất dữ liệu cũ.
+            const hasCurrentInList = !currentVal || branches.some(b => b.taxCode === currentVal);
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+                <select value={currentVal}
+                  onChange={e => isNew ? editNew('branch_tax_code', e.target.value) : editExisting(row, 'branch_tax_code', e.target.value)}
+                  onBlur={async () => { if (isNew) { if (row.customer_id) await commitRow(null, row); } else if (drafts[row.id]) await commitRow(row.id, row); }}
+                  className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
+                  <option value="">-- Mã gốc (không chọn nhánh) --</option>
+                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{b.taxCode}{b.name ? ` — ${b.name}` : ''}</option>)}
+                  {!hasCurrentInList && <option value={currentVal}>{currentVal} (không còn trong danh sách)</option>}
                 </select>
               </td>
             );
