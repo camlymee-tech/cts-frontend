@@ -101,7 +101,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
               <th className="text-right px-4 py-3">Tổng tiền xuất hóa đơn</th>
               <th className="text-right px-4 py-3">Tổng tiền KH chuyển vào Cty</th>
               <th className="text-right px-4 py-3">Tiền hàng</th>
-              <th className="text-right px-4 py-3">Tổng phải thu khi hàng về (VNĐ)</th>
+              <th className="text-right px-4 py-3">Phải trả cho CTS (VNĐ)</th>
               <th className="text-right px-4 py-3">Công nợ còn lại</th>
               <th className="text-right px-4 py-3">Số lô còn nợ</th>
               <th className="px-4 py-3"></th>

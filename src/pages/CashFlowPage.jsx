@@ -56,7 +56,7 @@ const COLS = [
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 150, fromDntt: true },
   { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 200, formula: 'H-F' },
-  { key: 'total_due_on_arrival', label: 'Tổng phải thu khi hàng về (VNĐ)', type: 'number', w: 190 },
+  { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 190 },
   { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'P-O' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 170 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 190 },
