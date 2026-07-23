@@ -96,27 +96,27 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         ) : (
           <table className="w-full text-sm min-w-[950px]">
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <th className="text-left px-4 py-3">Mã KH</th>
-              <th className="text-right px-4 py-3">Số lô</th>
-              <th className="text-right px-4 py-3">Tổng tiền xuất hóa đơn</th>
-              <th className="text-right px-4 py-3">Tổng tiền KH chuyển vào Cty</th>
-              <th className="text-right px-4 py-3">Tiền hàng</th>
-              <th className="text-right px-4 py-3">Phải trả cho CTS (VNĐ)</th>
-              <th className="text-right px-4 py-3">Công nợ còn lại</th>
-              <th className="text-right px-4 py-3">Số lô còn nợ</th>
-              <th className="px-4 py-3"></th>
+              <th className="text-left px-4 py-3 font-semibold">Mã KH</th>
+              <th className="text-center px-4 py-3 font-semibold">Số lô</th>
+              <th className="text-right px-4 py-3 font-semibold">Tổng tiền xuất hóa đơn</th>
+              <th className="text-right px-4 py-3 font-semibold">Tổng tiền KH chuyển vào Cty</th>
+              <th className="text-right px-4 py-3 font-semibold">Tiền hàng</th>
+              <th className="text-right px-4 py-3 font-semibold">Phải trả cho CTS (VNĐ)</th>
+              <th className="text-right px-4 py-3 font-semibold text-rose-700 bg-rose-50">Công nợ còn lại</th>
+              <th className="text-center px-4 py-3 font-semibold text-rose-700 bg-rose-50">Số lô còn nợ</th>
+              <th className="px-4 py-3 w-24"></th>
             </tr></thead>
             <tbody>
-              {filtered.map(r => (
-                <tr key={r.customerId} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono font-medium text-blue-600">{r.customerId}</td>
-                  <td className="px-4 py-3 text-right">{r.batchCount}</td>
-                  <td className="px-4 py-3 text-right">{fmtNum(r.totalInvoiceAmount)}</td>
-                  <td className="px-4 py-3 text-right">{fmtNum(r.totalTransferredToCompany)}</td>
-                  <td className="px-4 py-3 text-right">{fmtNum(r.totalAmountVnd)}</td>
-                  <td className="px-4 py-3 text-right">{fmtNum(r.totalDueOnArrival)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
-                  <td className="px-4 py-3 text-right">{r.batchesInDebt}</td>
+              {filtered.map((r, i) => (
+                <tr key={r.customerId} className={`border-t border-gray-100 hover:bg-blue-50/40 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                  <td className="px-4 py-3 font-mono font-semibold text-blue-600">{r.customerId}</td>
+                  <td className="px-4 py-3 text-center text-gray-600">{r.batchCount}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalInvoiceAmount)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalTransferredToCompany)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalAmountVnd)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalDueOnArrival)}</td>
+                  <td className={`px-4 py-3 text-right font-semibold bg-rose-50/70 ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
+                  <td className="px-4 py-3 text-center font-medium bg-rose-50/70 text-gray-700">{r.batchesInDebt}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800">🔍 Chi tiết</button>
                   </td>
@@ -126,13 +126,13 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
             <tfoot>
               <tr className="border-t-2 border-gray-300 font-semibold bg-gray-50">
                 <td className="px-4 py-3">TỔNG CỘNG</td>
-                <td className="px-4 py-3 text-right">{grandTotal.batchCount}</td>
+                <td className="px-4 py-3 text-center">{grandTotal.batchCount}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalInvoiceAmount)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalTransferredToCompany)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalAmountVnd)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalDueOnArrival)}</td>
-                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalRemainingDebt)}</td>
-                <td className="px-4 py-3" colSpan={2}></td>
+                <td className="px-4 py-3 text-right bg-rose-100/70 text-rose-700">{fmtNum(grandTotal.totalRemainingDebt)}</td>
+                <td className="px-4 py-3 bg-rose-100/70" colSpan={2}></td>
               </tr>
             </tfoot>
           </table>
