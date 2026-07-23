@@ -464,7 +464,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                     type="text" defaultValue={label} key={`${groupKey}-code-${label}`}
                     onBlur={(e) => renameGroupCode(items, e.target.value)}
                     title="Gõ để đổi tên Mã lô cho cả nhóm"
-                    className="border border-gray-200 rounded px-1.5 py-0.5 text-sm text-blue-600 font-medium bg-white w-24"
+                    className="border-2 border-blue-300 rounded px-1.5 py-0.5 text-sm text-blue-600 font-medium bg-blue-50/40"
                   />
                 )}
                 <button type="button" onClick={() => handleUngroup(items)} className="text-xs text-red-400 hover:text-red-600 underline" title="Bỏ gộp — tách các dòng con ra hiện riêng lại">
@@ -478,7 +478,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               <input
                 type="date" defaultValue={same || ''} key={`${groupKey}-cfpd-${same}`}
                 onBlur={(e) => setGroupField(rows, 'customer_final_payment_date', e.target.value || null)}
-                className="w-full border border-gray-200 rounded px-1.5 py-1 text-sm text-right bg-white"
+                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
               />
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
@@ -488,7 +488,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 defaultValue={sumField(col.key) ? fmtNum(sumField(col.key)) : ''}
                 key={`${groupKey}-${col.key}-${sumField(col.key)}`}
                 onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); setGroupTotal(rows, col.key, raw); }}
-                className="w-full border border-gray-200 rounded px-1.5 py-1 text-sm text-right bg-white"
+                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
               />
             );
           } else if (SUM_KEYS.includes(col.key)) {
@@ -533,7 +533,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
         {!isNew && isFirstInGroup && (
           isChild
-            ? <td className="sticky left-0 bg-gray-50/40 px-2 border-r border-gray-200"></td>
+            ? <td className="sticky left-0 bg-gray-100 px-2 border-r border-gray-200 text-center text-gray-300 text-xs" title="Đã gộp — chọn ở dòng gốc phía trên">🔒</td>
             : (
               <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
                 <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
@@ -544,7 +544,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         {COLS.map(col => {
           if (isChild && commonKeys.has(col.key)) {
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-100 text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
@@ -607,11 +607,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           }
           if (isChild && col.key === 'customer_final_payment_date') {
             // Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-100 text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
             // Đã gộp nhóm — số tổng nhập ở dòng gốc phía trên, dòng con không nhập riêng nữa.
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-100 text-center text-gray-300 text-xs" title="Nhập ở dòng gốc phía trên">🔒</td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
           const merging = disabled && MERGEABLE_KEYS.includes(col.key);
@@ -690,7 +690,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
       <div className="flex items-center gap-4 mb-3 text-xs px-6 flex-wrap">
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300 inline-block"></span> Lấy từ Đề Nghị Thanh Toán — muốn sửa vào lại mục "Đề Nghị Thanh Toán"</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Dòng gốc (của 1 Mã lô đã gộp, hoặc tự động theo Số đề nghị TT) — tổng cộng dồn từ các dòng con bên dưới, bấm mũi tên để thu gọn/mở ra</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Dòng gốc của 1 Mã lô đã gộp — tổng cộng dồn từ các dòng con bên dưới, bấm mũi tên để thu gọn/mở ra</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-gray-200 inline-flex items-center justify-center text-[8px]">🔒</span> Đã gộp — khoá ở dòng con, xem/sửa ở dòng gốc phía trên</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-50 border-2 border-blue-300 inline-block"></span> Gõ được ở dòng gốc — áp dụng cho cả nhóm</span>
       </div>
 
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
