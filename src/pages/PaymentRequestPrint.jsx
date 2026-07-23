@@ -36,10 +36,14 @@ const MoneyInput = ({ value, onChange, className }) => {
   );
 };
 
-export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
+export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const customer = customers[customerId] || initialCustomer;
-  const batchesOfCustomer = (initialBatches && customerId) ? initialBatches.filter(b => b.customer_id === customerId) : [];
+  // Nếu mở từ 1 Số đề nghị TT cụ thể (bấm vào số ở bảng Theo dõi), CHỈ lấy đúng các lô cùng số đó —
+  // không lấy hết mọi lô của khách, tránh gộp nhầm và làm đổi số của các đề nghị khác khi lưu lại.
+  const batchesOfCustomer = (initialBatches && customerId)
+    ? initialBatches.filter(b => b.customer_id === customerId && (requestNo == null || String(b.payment_request_no ?? '') === String(requestNo)))
+    : [];
 
   const [requestDate, setRequestDate] = useState(todayISO());
 

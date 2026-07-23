@@ -55,6 +55,7 @@ export default function App() {
   const [viewContract, setViewContract] = useState(null);
   const [editContractData, setEditContractData] = useState(null);
   const [paymentRequestCustomerId, setPaymentRequestCustomerId] = useState('');
+  const [paymentRequestReqNo, setPaymentRequestReqNo] = useState(null);
   const [dataReady, setDataReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
@@ -426,9 +427,10 @@ export default function App() {
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} isAdmin={isAdmin} />;
       case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
-          onOpenPaymentRequest={(customerId) => { setPaymentRequestCustomerId(customerId); setPage('payment_request'); }} />;
+          onOpenPaymentRequest={(customerId, reqNo) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPage('payment_request'); }} />;
       case 'payment_request': return <PaymentRequestPrint
           customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
+          requestNo={paymentRequestReqNo}
           batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
