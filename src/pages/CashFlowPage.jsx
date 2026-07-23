@@ -6,6 +6,7 @@ import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
 
 const num = (v) => Number(v) || 0;
+const EMPTY_SET = new Set();
 
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
 export const deriveComputed = (r) => {
@@ -369,6 +370,19 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     }
   };
 
+  // Các cột có giá trị GIỐNG NHAU cho cả nhóm (trừ cột định danh nhóm và các cột tiền/tự tính đã xử lý riêng) —
+  // những cột này chỉ cần hiện 1 lần ở dòng gốc, dòng con sẽ để trống.
+  const getCommonKeys = (items, keyField) => {
+    const rows = items.map(it => it.row);
+    const keys = new Set([keyField]); // cột định danh nhóm (Mã lô / Số đề nghị TT) luôn giống nhau cả nhóm — ẩn ở dòng con
+    COLS.forEach(col => {
+      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key)) return;
+      const vals = new Set(rows.map(r => r[col.key] ?? ''));
+      if (vals.size === 1 && rows[0][col.key] !== null && rows[0][col.key] !== '' && rows[0][col.key] !== undefined) keys.add(col.key);
+    });
+    return keys;
+  };
+
   const renderGroupRoot = (groupKey, keyField, label, items) => {
     const rows = items.map(it => it.row);
     const groupIds = rows.map(r => r.id);
@@ -446,7 +460,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     return next;
   });
 
-  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1, groupIds = [row.id], isChild = false) => {
+  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1, groupIds = [row.id], isChild = false, commonKeys = EMPTY_SET) => {
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
     return (
@@ -458,6 +472,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         )}
         {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
         {COLS.map(col => {
+          if (isChild && commonKeys.has(col.key)) {
+            // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
+          }
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
             const merging = disabled && MERGEABLE_KEYS.includes(col.key);
@@ -640,7 +658,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               ? (
                 <Fragment key={`group-${d.groupKey}`}>
                   {renderGroupRoot(d.groupKey, d.keyField, d.label, d.items)}
-                  {!collapsedBatches.has(d.groupKey) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds, true))}
+                  {!collapsedBatches.has(d.groupKey) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds, true, getCommonKeys(d.items, d.keyField)))}
                 </Fragment>
               )
               : renderRow(d.item.row, false, d.item.isFirstInGroup, d.item.groupSize, d.item.groupIds)
