@@ -37,6 +37,9 @@ const MoneyInput = ({ value, onChange, className }) => {
 
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, customers = {}, sellers = {}, onSave, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
+  // Cố định NGAY LÚC MỞ: có phải đang mở để SỬA 1 đề nghị có sẵn không (đến từ "Số đề nghị TT" / "In DNTT")?
+  // Nếu không (mở trống, tự chọn khách hàng sau) thì dù khách đó có lịch sử cũ cũng luôn coi là đề nghị MỚI.
+  const [isEditMode] = useState(!!initialCustomerId);
   const customer = customers[customerId] || initialCustomer;
   const batchesOfCustomer = (initialBatches && customerId) ? initialBatches.filter(b => b.customer_id === customerId) : [];
 
@@ -69,7 +72,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // Số đề nghị thanh toán tự nhảy — lấy số lớn nhất đang có + 1, dùng chung cho tất cả dòng lưu trong 1 lần bấm Lưu
   // Nếu đang mở để sửa lại các lô có sẵn (bấm "Số đề nghị TT" hoặc "In DNTT" từ 1 khách cụ thể),
   // giữ nguyên đúng số đề nghị cũ của các lô đó — chỉ tính số MỚI khi thực sự chưa có lô nào (đề nghị hoàn toàn mới).
-  const existingRequestNo = batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no;
+  const existingRequestNo = isEditMode ? batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no : undefined;
   const nextRequestNo = existingRequestNo ?? ((Math.max(0, ...(initialBatches || []).map(b => Number(b.payment_request_no) || 0)) || 0) + 1);
 
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
