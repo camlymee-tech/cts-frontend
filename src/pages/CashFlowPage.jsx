@@ -403,11 +403,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     return next;
   });
 
-  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1, groupIds = [row.id]) => {
+  const renderRow = (row, isNew, isFirstInGroup = true, groupSize = 1, groupIds = [row.id], isChild = false) => {
     const computed = deriveComputed(row);
     const disabledAdminOnly = !isAdmin;
     return (
-      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : 'hover:bg-gray-50'}>
+      <tr key={isNew ? 'new' : row.id} className={isNew ? 'bg-blue-50/40' : (isChild ? 'bg-slate-50/60 hover:bg-slate-100/60' : 'hover:bg-gray-50')}>
         {!isNew && isFirstInGroup && (
           <td rowSpan={groupSize > 1 ? groupSize : undefined} className="sticky left-0 bg-white px-2 border-r border-gray-200 align-top">
             <input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleSelectGroup(groupIds)} />
@@ -490,7 +490,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
               totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={map[col.key]} /></td>;
+            // Dòng con (đã gộp vào 1 Mã lô) không tự điền số ở đây nữa — số tổng đã điền ở dòng gốc phía trên.
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={isChild ? '' : map[col.key]} /></td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
           const merging = disabled && MERGEABLE_KEYS.includes(col.key);
@@ -512,6 +513,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             return (
               <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
                 {display}
+              </td>
+            );
+          }
+          if (col.key === 'batch_code' && isChild) {
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
+                <div className="flex items-center pl-4 text-gray-400 text-sm">
+                  <span className="mr-1">↳</span>
+                  <Cell col={col} value={row[col.key]} disabled={disabled}
+                    onChange={(v) => isNew ? editNew(col.key, v) : editExisting(row, col.key, v)}
+                    onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }} />
+                </div>
               </td>
             );
           }
@@ -592,7 +605,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               ? (
                 <Fragment key={`group-${d.batchCode}`}>
                   {renderGroupRoot(d.batchCode, d.items)}
-                  {!collapsedBatches.has(d.batchCode) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds))}
+                  {!collapsedBatches.has(d.batchCode) && d.items.map(({ row, isFirstInGroup, groupSize, groupIds }) => renderRow(row, false, isFirstInGroup, groupSize, groupIds, true))}
                 </Fragment>
               )
               : renderRow(d.item.row, false, d.item.isFirstInGroup, d.item.groupSize, d.item.groupIds)
