@@ -233,8 +233,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
   // Gộp các dòng đã chọn (checkbox) thành 1 lô NGAY, không hỏi Mã lô — tự gán 1 mã tạm để liên kết
   // các dòng lại với nhau; chị có thể bấm vào ô Mã lô ở dòng gốc để tự gõ lại tên mình muốn bất cứ lúc nào.
+  // Chỉ cho gộp khi các dòng đã chọn có CÙNG 1 Số đề nghị TT — khác số thì để nguyên, không gộp nhầm.
   const handleGroupSelected = async () => {
     if (selectedIds.size < 2) return;
+    const selectedRows = merged.filter(r => selectedIds.has(r.id));
+    const reqNos = new Set(selectedRows.map(r => (r.payment_request_no ?? '').toString().trim()));
+    if (reqNos.size !== 1 || [...reqNos][0] === '') {
+      alert('Chỉ gộp được các dòng có CÙNG 1 Số đề nghị TT. Chị kiểm tra lại các dòng đã chọn nhé.');
+      return;
+    }
     const maxNo = merged.reduce((max, b) => {
       const m = /^LO(\d+)$/i.exec((b.batch_code || '').trim());
       return m ? Math.max(max, Number(m[1])) : max;
@@ -377,6 +384,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   // Nhập TỔNG trực tiếp ở dòng gốc cho các cột tiền nhập tay (Phải trả cho CTS, Khách chuyển tiền lần 2,
   // Giá trị xuất hóa đơn): lưu toàn bộ số vừa nhập vào dòng ĐẦU TIÊN của nhóm, các dòng con còn lại đặt về 0 —
   // để tổng cộng dồn hiển thị ở dòng gốc luôn đúng bằng đúng số chị vừa gõ, không cần nhập riêng từng dòng con.
+  // Chọn/gõ Số hóa đơn ở dòng gốc: áp dụng cho dòng ĐẦU TIÊN của nhóm (kèm Giá trị xuất hóa đơn nếu có),
+  // các dòng con còn lại xoá Số hóa đơn + Giá trị xuất hóa đơn — vì thông tin này giờ chỉ lấy ở dòng gốc.
+  const setGroupInvoice = async (rows, invoiceNo, invoiceAmount) => {
+    const [first, ...rest] = rows;
+    const firstPatch = { invoice_no: invoiceNo };
+    if (invoiceAmount !== undefined) firstPatch.invoice_amount = invoiceAmount === '' ? 0 : Number(invoiceAmount) || 0;
+    await commitRow(first.id, { ...first, ...firstPatch });
+    for (const r of rest) {
+      if (r.invoice_no || num(r.invoice_amount) !== 0) await commitRow(r.id, { ...r, invoice_no: null, invoice_amount: 0 });
+    }
+  };
+
   const setGroupTotal = async (rows, key, value) => {
     const val = value === '' ? 0 : Number(value) || 0;
     const [first, ...rest] = rows;
@@ -445,6 +464,19 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   Bỏ gộp
                 </button>
               </span>
+            );
+          } else if (col.key === 'invoice_no') {
+            const same = commonValue('invoice_no');
+            const pickInvoiceForGroup = (inv) => {
+              setGroupInvoice(rows, inv.invoice_no, inv.total ?? '');
+            };
+            content = (
+              <InvoiceLinkCell
+                value={same || ''}
+                onChange={(v) => setGroupInvoice(rows, v, undefined)}
+                onPick={pickInvoiceForGroup}
+                onBlur={() => {}}
+              />
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
             content = (
@@ -590,8 +622,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
               totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
-            // Dòng con (đã gộp vào 1 Mã lô) không tự điền số ở đây nữa — số tổng đã điền ở dòng gốc phía trên.
-            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={isChild ? '' : map[col.key]} /></td>;
+            // "Tiền hàng dự kiến" và "Phần dư sau khi thanh toán tiền hàng" vẫn hiện chi tiết từng dòng con —
+            // các cột tự tính còn lại chỉ hiện tổng ở dòng gốc như trước.
+            const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'cnyDiff'];
+            const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
+          }
+          if (isChild && col.key === 'invoice_no') {
+            // Số hóa đơn chỉ cần lấy/hiện ở dòng gốc (đi cùng Giá trị xuất hóa đơn) — dòng con để trống.
+            return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
             // Đã gộp nhóm — số tổng nhập ở dòng gốc phía trên, dòng con không nhập riêng nữa.
