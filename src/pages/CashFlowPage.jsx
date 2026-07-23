@@ -436,11 +436,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       <div className="flex items-center gap-3 mb-4 flex-wrap px-6">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
           className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-        <select value={customerFilter} onChange={e => setCustomerFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option value="">Tất cả khách hàng</option>
-          {customerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
         <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
           <option value="">Tất cả công ty bán</option>
