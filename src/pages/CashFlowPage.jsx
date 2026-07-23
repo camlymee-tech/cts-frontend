@@ -44,7 +44,7 @@ const excelColLetter = (n) => {
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'number', w: 140, fromDntt: true },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },

@@ -111,12 +111,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // không tạo thêm lô mới trùng lặp. Chỉ những dòng mới thêm (bấm "+ Thêm dòng") mới tạo lô mới.
   const handleSaveToSystem = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
-    if (!requestNoInput.trim() || isNaN(Number(requestNoInput))) return alert('Vui lòng nhập Số đề nghị TT (dạng số) trước khi lưu.');
+    if (!requestNoInput.trim()) return alert('Vui lòng nhập Số đề nghị TT trước khi lưu.');
     const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim() || r.id);
     const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
     setSaving(true);
-    const savedRequestNo = Number(requestNoInput);
+    const savedRequestNo = requestNoInput.trim();
     // Ghép mỗi dòng "Chứng từ" (VNĐ) với đúng 1 dòng "Ngoại tệ" tương ứng theo thứ tự vào CHUNG 1 lô —
     // 1 ô tiền Việt luôn đi cùng 1 ô tiền tệ quy đổi, không tách rời, không gộp thành 1 tổng.
     const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
@@ -215,9 +215,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className="grid grid-cols-5 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
-              <input type="text" inputMode="numeric" value={requestNoInput}
-                onChange={e => setRequestNoInput(e.target.value.replace(/\D/g, ''))}
-                placeholder="Nhập số" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              <input type="text" value={requestNoInput}
+                onChange={e => setRequestNoInput(e.target.value)}
+                placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>
