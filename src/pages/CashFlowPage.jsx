@@ -231,20 +231,55 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     return next;
   });
 
-  // Gộp các dòng đã chọn (checkbox) thành 1 lô: gán chung 1 Mã lô — Mã lô này sẽ hiện thành dòng "gốc"
-  // (tổng cộng dồn các cột tiền), các dòng đã chọn trở thành dòng "con" hiện bên dưới, có thể thu gọn/mở ra.
+  // Gộp các dòng đã chọn (checkbox) thành 1 lô NGAY, không hỏi Mã lô — tự gán 1 mã tạm để liên kết
+  // các dòng lại với nhau; chị có thể bấm vào ô Mã lô ở dòng gốc để tự gõ lại tên mình muốn bất cứ lúc nào.
   const handleGroupSelected = async () => {
     if (selectedIds.size < 2) return;
-    const code = window.prompt('Nhập Mã lô chung cho các dòng đã chọn (dòng gốc sẽ hiện mã lô này):');
-    if (!code || !code.trim()) return;
+    const maxNo = merged.reduce((max, b) => {
+      const m = /^LO(\d+)$/i.exec((b.batch_code || '').trim());
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 0);
+    const code = `LO${maxNo + 1}`;
     setGrouping(true);
     try {
       for (const id of selectedIds) {
-        await onSave(id, { batch_code: code.trim() });
+        await onSave(id, { batch_code: code });
       }
       setSelectedIds(new Set());
     } catch (e) {
       alert('Có lỗi khi gộp lô: ' + e.message);
+    } finally {
+      setGrouping(false);
+    }
+  };
+
+  // Đổi lại tên Mã lô cho cả nhóm — gõ trực tiếp ở dòng gốc, áp dụng cho tất cả các dòng con.
+  const renameGroupCode = async (items, newCode) => {
+    const code = newCode.trim();
+    if (!code) return;
+    const toUpdate = items.filter(it => it.row.batch_code !== code);
+    if (toUpdate.length === 0) return;
+    setGrouping(true);
+    try {
+      for (const it of toUpdate) {
+        await onSave(it.row.id, { batch_code: code });
+      }
+    } catch (e) {
+      alert('Có lỗi khi đổi Mã lô: ' + e.message);
+    } finally {
+      setGrouping(false);
+    }
+  };
+
+  // Bỏ gộp 1 nhóm Mã lô: xoá Mã lô khỏi tất cả các dòng trong nhóm, trả về hiện riêng từng dòng như cũ.
+  const handleUngroup = async (items) => {
+    setGrouping(true);
+    try {
+      for (const it of items) {
+        await onSave(it.row.id, { batch_code: null });
+      }
+    } catch (e) {
+      alert('Có lỗi khi bỏ gộp: ' + e.message);
     } finally {
       setGrouping(false);
     }
@@ -356,10 +391,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const getCommonKeys = (items, keyField) => {
     const rows = items.map(it => it.row);
     const keys = new Set([keyField]); // cột định danh nhóm (Mã lô) luôn giống nhau cả nhóm — ẩn ở dòng con
-    // Cty thu tiền (bên bán) và Khách hàng luôn hiện đầy đủ ở MỌI dòng, kể cả khi giống nhau cả nhóm.
-    const ALWAYS_SHOW_KEYS = ['seller_id', 'customer_id'];
     COLS.forEach(col => {
-      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key) || ALWAYS_SHOW_KEYS.includes(col.key)) return;
+      if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key)) return;
       const vals = new Set(rows.map(r => r[col.key] ?? ''));
       if (vals.size === 1 && rows[0][col.key] !== null && rows[0][col.key] !== '' && rows[0][col.key] !== undefined) keys.add(col.key);
     });
@@ -401,8 +434,16 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                     {label}
                   </button>
                 ) : (
-                  <span className="text-blue-600 font-medium">{label}</span>
+                  <input
+                    type="text" defaultValue={label} key={`${groupKey}-code-${label}`}
+                    onBlur={(e) => renameGroupCode(items, e.target.value)}
+                    title="Gõ để đổi tên Mã lô cho cả nhóm"
+                    className="border border-gray-200 rounded px-1.5 py-0.5 text-sm text-blue-600 font-medium bg-white w-24"
+                  />
                 )}
+                <button type="button" onClick={() => handleUngroup(items)} className="text-xs text-red-400 hover:text-red-600 underline" title="Bỏ gộp — tách các dòng con ra hiện riêng lại">
+                  Bỏ gộp
+                </button>
               </span>
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
@@ -419,6 +460,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             content = <span className="block text-right">{fmtNum(sumField(col.key))}</span>;
           } else if (col.type === 'computed' && computedFns[col.key]) {
             content = <span className="block text-right text-emerald-800">{fmtNum(sumComputed(computedFns[col.key]))}</span>;
+          } else if (col.key === 'seller_id') {
+            const same = commonValue('seller_id');
+            const label = same ? (sellers[same] ? (sellers[same].shortName ? `[${sellers[same].shortName}] ${sellers[same].companyName}` : sellers[same].companyName) : same) : null;
+            content = label ? <span className="whitespace-normal break-words leading-snug">{label}</span> : <span className="text-gray-400">—</span>;
+          } else if (col.key === 'customer_id') {
+            const same = commonValue('customer_id');
+            content = same ? <span className="whitespace-normal break-words leading-snug">{customerLabel(same)}</span> : <span className="text-gray-400">—</span>;
           } else {
             const same = commonValue(col.key);
             if (same === null || same === '' || same === undefined) content = <span className="text-gray-400">—</span>;
@@ -458,6 +506,14 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           if (isChild && commonKeys.has(col.key)) {
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-gray-50/40"></td>;
+          }
+          if (col.key === 'batch_code' && !isNew) {
+            // Mã lô chỉ gán được qua nút "Gộp thành lô" (hiện ở dòng gốc) — không gõ tay trực tiếp vào ô của từng dòng nữa.
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-400">
+                {row.batch_code || '—'}
+              </td>
+            );
           }
           if (col.type === 'seller') {
             const disabled = col.fromDntt && !isNew;
