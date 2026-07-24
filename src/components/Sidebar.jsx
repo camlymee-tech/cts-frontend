@@ -34,10 +34,15 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
 
   const groups = [
     {
-      key: 'thanh_toan', header: '💰 Thanh toán',
+      key: 'thanh_toan_ho', header: '💰 Thanh Toán Hộ',
       items: [
         { id: 'cash_flow', icon: '📊', label: 'Tổng hợp công nợ' },
         { id: 'payment_request', icon: '🧾', label: 'ĐNTT — Thanh Toán Hộ' },
+      ],
+    },
+    {
+      key: 'ngoai_thuong', header: '🏦 Hợp Đồng Ngoại Thương',
+      items: [
         { id: 'fx_contract', icon: '🏦', label: 'Hợp đồng ngoại thương' },
         { id: 'fx_contract_payment_request', icon: '🧾', label: 'ĐNTT — Hợp Đồng Ngoại Thương' },
       ],
