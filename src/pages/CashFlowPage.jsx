@@ -2,6 +2,7 @@
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { fmtNum } from '../helpers';
+import * as XLSX from 'xlsx';
 import { buildCustomerOptions, resolveCustomerId, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
@@ -252,7 +253,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       || (b.invoice_no || '').toLowerCase().includes(s);
     const matchCustomer = !customerFilter || b.customer_id === customerFilter;
     const matchSeller = !sellerFilter || b.seller_id === sellerFilter;
-    const matchDate = !dateFilter || b.order_date === dateFilter;
+    const matchDate = !dateFilter || b.customer_paid_date === dateFilter;
     return matchSearch && matchCustomer && matchSeller && matchDate;
   });
 
@@ -768,6 +769,36 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     );
   };
 
+  const exportExcel = () => {
+    const computedMapFor = (row) => {
+      const c = deriveComputed(row);
+      return { amountVnd: c.amountVnd, cnyDiff: c.remainderAfterGoods, amountDueMore: c.amountDueMore, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount };
+    };
+    const data = filtered.map(row => {
+      const computedMap = computedMapFor(row);
+      const obj = {};
+      cols.forEach(col => {
+        let val;
+        if (col.type === 'computed') val = computedMap[col.key];
+        else if (col.type === 'customerCode') val = row.customer_id;
+        else if (col.type === 'customer') val = customerDisplayLabel(row);
+        else if (col.type === 'seller') val = sellerLabel(row.seller_id);
+        else if (col.type === 'saleInfo') {
+          const info = saleInfoByUuid[row.created_by];
+          val = col.key === 'sale_code_display' ? info?.code : info?.name;
+        } else val = row[col.key];
+        obj[col.label] = val ?? '';
+      });
+      return obj;
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = cols.map(() => ({ wch: 20 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Theo doi dong tien');
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Theo_doi_dong_tien_CTS_${today}.xlsx`);
+  };
+
   return (
     <div className="-mx-6">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3 px-6">
@@ -776,6 +807,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={exportExcel} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium shadow">
+            📥 Xuất Excel
+          </button>
           {!isFxContract && selectedIds.size >= 2 && (
             <button onClick={handleGroupSelected} disabled={grouping} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium shadow disabled:opacity-50">
               {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành lô (${selectedIds.size})`}
