@@ -19,12 +19,16 @@ const resolveAssignedSale = (assignedSale, saleProfiles) => {
   return assignedSale; // không tìm thấy khớp, giữ nguyên dữ liệu cũ để không mất thông tin
 };
 
+const genBranchId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
 const blankBranch = () => ({
+  id: genBranchId(), // để nhận diện đúng nhánh, không dựa vào Mã số thuế (có thể để trống/trùng nhau)
   taxCode: '', companyName: '', address: '', phone: '', email: '',
   bankAccount: '', bankName: '', representative: '', position: '',
 });
-// Bản cũ chỉ lưu {taxCode, name} — chuyển "name" thành "companyName" để không mất dữ liệu đã nhập trước đó.
-const migrateBranch = (b) => ({ ...blankBranch(), ...b, companyName: b.companyName || b.name || '' });
+// Bản cũ chỉ lưu {taxCode, name} và chưa có "id" — chuyển "name" thành "companyName", tự cấp thêm "id" ổn định
+// cho các nhánh cũ chưa có, để không mất dữ liệu đã nhập trước đó.
+const migrateBranch = (b) => ({ ...blankBranch(), ...b, id: b.id || genBranchId(), companyName: b.companyName || b.name || '' });
 
 export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [], autoSaleAssign = null }) => {
   const blank = {

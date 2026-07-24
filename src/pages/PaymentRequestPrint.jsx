@@ -79,9 +79,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       const existingReqNo = batchesOfCustomer.find(b => b.payment_request_no != null)?.payment_request_no;
       if (existingReqNo != null) setRequestNoInput(String(existingReqNo));
       // Khôi phục lại đúng Mã nhánh đã dùng cho đề nghị này (nếu có), để không bị lẫn về khách hàng gốc
-      const existingBranchTaxCode = batchesOfCustomer.find(b => b.branch_tax_code)?.branch_tax_code;
-      if (existingBranchTaxCode) {
-        const idx = (customer?.branches || []).findIndex(b => b.taxCode === existingBranchTaxCode);
+      const existingBranchId = batchesOfCustomer.find(b => b.branch_tax_code)?.branch_tax_code;
+      if (existingBranchId) {
+        const idx = (customer?.branches || []).findIndex(b => b.id === existingBranchId);
         if (idx !== -1) setBranchIndex(idx);
       }
     }
@@ -144,7 +144,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         const existingId = r?.id || null;
         await onSave(existingId, {
           customer_id: customerId,
-          branch_tax_code: selectedBranch?.taxCode || null,
+          branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
           deposit_vnd: r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null,

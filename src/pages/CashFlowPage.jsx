@@ -196,7 +196,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const c = customers[id];
     if (!c) return id || '—';
     if (row.branch_tax_code) {
-      const branch = (c.branches || []).find(b => b.taxCode === row.branch_tax_code);
+      const branch = (c.branches || []).find(b => b.id === row.branch_tax_code);
       if (branch) return `${branch.companyName || branch.taxCode} (${id})`;
     }
     return customerLabel(id);
@@ -522,7 +522,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             let label = null;
             if (same) {
               const c = customers[same];
-              const branch = sameBranch && c ? (c.branches || []).find(b => b.taxCode === sameBranch) : null;
+              const branch = sameBranch && c ? (c.branches || []).find(b => b.id === sameBranch) : null;
               label = branch ? `${branch.companyName || branch.taxCode} (${same})` : customerLabel(same);
             }
             content = label ? <span className="whitespace-normal break-words leading-snug">{label}</span> : <span className="text-gray-400">—</span>;
@@ -634,12 +634,12 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={(() => {
-                    const idx = row.branch_tax_code ? (customers[row.customer_id]?.branches || []).findIndex(b => b.taxCode === row.branch_tax_code) : -1;
+                    const idx = row.branch_tax_code ? (customers[row.customer_id]?.branches || []).findIndex(b => b.id === row.branch_tax_code) : -1;
                     return encodeCustomerOptionValue(row.customer_id || '', idx >= 0 ? idx : null);
                   })()} disabled={disabled}
                   onChange={e => {
                     const { customerId: v, branchIndex } = parseCustomerOptionValue(e.target.value);
-                    const branchTaxCode = branchIndex != null ? (customers[v]?.branches?.[branchIndex]?.taxCode || null) : null;
+                    const branchTaxCode = branchIndex != null ? (customers[v]?.branches?.[branchIndex]?.id || null) : null;
                     if (isNew) { editNew('customer_id', v); editNew('branch_tax_code', branchTaxCode); }
                     else { editExisting(row, 'customer_id', v); editExisting(row, 'branch_tax_code', branchTaxCode); }
                   }}
