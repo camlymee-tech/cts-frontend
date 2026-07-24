@@ -23,3 +23,18 @@ export function resolveCustomerId(value) {
   const idx = value.indexOf(BRANCH_VALUE_SEP);
   return idx === -1 ? value : value.slice(0, idx);
 }
+
+// Dựng lại đúng giá trị option từ { customerId, branchIndex } — dùng để hiển thị đúng lựa chọn hiện tại
+// (root hay 1 nhánh cụ thể) trên nút đã đóng của SearchableSelect.
+export function encodeCustomerOptionValue(customerId, branchIndex) {
+  return branchIndex == null ? customerId : `${customerId}${BRANCH_VALUE_SEP}${branchIndex}`;
+}
+
+// Tách giá trị chọn được thành { customerId, branchIndex } — branchIndex là null nếu chọn Mã gốc,
+// dùng để lấy đúng thông tin (tên, địa chỉ...) của nhánh đã chọn thay vì luôn hiện thông tin gốc.
+export function parseCustomerOptionValue(value) {
+  if (!value) return { customerId: value, branchIndex: null };
+  const idx = value.indexOf(BRANCH_VALUE_SEP);
+  if (idx === -1) return { customerId: value, branchIndex: null };
+  return { customerId: value.slice(0, idx), branchIndex: Number(value.slice(idx + BRANCH_VALUE_SEP.length)) };
+}

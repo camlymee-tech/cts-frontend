@@ -2,7 +2,7 @@
 // Giấy Đề Nghị Thanh Toán — vừa là màn nhập liệu thật (lưu ngược vào bảng lô hàng), vừa in ra giấy.
 import { useState, useEffect } from 'react';
 import { fmtNum, numberToWords } from '../helpers';
-import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
+import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
 
@@ -39,7 +39,11 @@ const MoneyInput = ({ value, onChange, className }) => {
 
 export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
+  const [branchIndex, setBranchIndex] = useState(null); // null = đang dùng thông tin Mã gốc, không phải nhánh nào
   const customer = customers[customerId] || initialCustomer;
+  const selectedBranch = branchIndex != null ? customer?.branches?.[branchIndex] : null;
+  // Tên/thông tin hiển thị: nếu đã chọn 1 nhánh cụ thể thì dùng đúng tên của nhánh đó, không phải tên gốc.
+  const displayCustomerName = selectedBranch?.companyName || customer?.companyName || '';
   // Nếu mở từ 1 Số đề nghị TT cụ thể (bấm vào số ở bảng Theo dõi), CHỈ lấy đúng các lô cùng số đó —
   // không lấy hết mọi lô của khách, tránh gộp nhầm và làm đổi số của các đề nghị khác khi lưu lại.
   const batchesOfCustomer = (initialBatches && customerId)
@@ -196,7 +200,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-3">
           {onClose && <button onClick={onClose} className="text-gray-500 hover:text-gray-700">← Quay lại</button>}
-          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${customer.companyName}` : ''}</h1>
+          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${displayCustomerName}` : ''}</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSaveToSystem} disabled={saving || !customerId}
@@ -210,8 +214,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
         {!!onSelectCustomer && !customerId && (
           <div className="max-w-sm">
-            <SearchableSelect label="Khách hàng" required value={customerId}
-              onChange={(v) => { const id = resolveCustomerId(v); setCustomerId(id); onSelectCustomer?.(id); }}
+            <SearchableSelect label="Khách hàng" required value={encodeCustomerOptionValue(customerId, branchIndex)}
+              onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); onSelectCustomer?.(id); }}
               placeholder="-- Chọn khách hàng --" options={customerOptions} />
           </div>
         )}
@@ -321,7 +325,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </tr>
           <tr className="no-border">
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
-            <td className="no-border">Tên khách hàng: <b>{customer?.companyName || ''}</b></td>
+            <td className="no-border">Tên khách hàng: <b>{displayCustomerName}</b></td>
           </tr>
           <tr className="no-border">
             <td className="no-border" colSpan={2}>Công ty bên bán: <b>{sellers[sellerId]?.companyName || '—'}</b></td>
