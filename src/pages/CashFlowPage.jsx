@@ -86,7 +86,6 @@ const COLS_FX = [
   { key: 'deposit_vnd', label: 'CTS phải thu', type: 'number', w: 160, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
-  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 

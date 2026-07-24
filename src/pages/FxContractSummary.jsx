@@ -1,8 +1,8 @@
 // File: src/pages/FxContractSummary.jsx
-// Tổng hợp Hợp đồng ngoại thương — mô hình "ví tiền" theo từng khách hàng:
-// Số dư ví = cộng dồn "Đã thu khách hàng" (CNY) từ TẤT CẢ các Đề Nghị Thanh Toán của khách đó.
-// Đã thanh toán = cộng dồn "Số tệ" ở mục "Thanh toán ngoại tệ cho khách" (mỗi lần thanh toán trừ dần vào ví).
-// Còn lại = Số dư ví - Đã thanh toán.
+// Tổng hợp Hợp đồng ngoại thương — theo từng khách hàng:
+// Tổng khách chuyển = cộng dồn "Tiền vào" (CNY, customer_paid_total) từ TẤT CẢ lô hàng của khách đó.
+// Đã thanh toán = cộng dồn "Tiền ra" (amount_cny) + "CTS phải thu" (deposit_vnd) từ các lô đó.
+// Còn lại = Tổng khách chuyển - Đã thanh toán.
 import { useState, useMemo } from 'react';
 import { fmtNum } from '../helpers';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
@@ -23,8 +23,8 @@ export const FxContractSummary = ({ batches = [], customers = {}, sellers = {}, 
       }
       const r = byCustomer[id];
       r.batchCount += 1;
-      r.walletBalance += Number(b.customer_paid_total) || 0; // Đã thu khách hàng (CNY) — nạp vào ví
-      r.totalPaid += Number(b.amount_cny) || 0; // Số tệ ở "Thanh toán ngoại tệ cho khách" — trừ dần vào ví
+      r.walletBalance += Number(b.customer_paid_total) || 0; // Tổng khách chuyển (CNY)
+      r.totalPaid += (Number(b.amount_cny) || 0) + (Number(b.deposit_vnd) || 0); // Đã thanh toán = Tiền ra + CTS phải thu
     });
     return Object.values(byCustomer).map(r => ({ ...r, remaining: r.walletBalance - r.totalPaid }));
   }, [batches]);
@@ -94,7 +94,7 @@ export const FxContractSummary = ({ batches = [], customers = {}, sellers = {}, 
               <th className="text-left px-4 py-3 font-semibold">Mã KH</th>
               <th className="text-left px-4 py-3 font-semibold">Tên khách hàng</th>
               <th className="text-center px-4 py-3 font-semibold">Số lô</th>
-              <th className="text-right px-4 py-3 font-semibold">Số dư ví (CNY)</th>
+              <th className="text-right px-4 py-3 font-semibold">Tổng khách chuyển (CNY)</th>
               <th className="text-right px-4 py-3 font-semibold">Đã thanh toán (CNY)</th>
               <th className="text-right px-4 py-3 font-semibold text-rose-700 bg-rose-50">Còn lại (CNY)</th>
               <th className="px-4 py-3 w-24"></th>
