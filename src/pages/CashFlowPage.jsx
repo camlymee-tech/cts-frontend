@@ -189,6 +189,18 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const [grouping, setGrouping] = useState(false); // đang gán Mã lô chung cho các dòng đã chọn
 
   const customerLabel = (id) => customers[id] ? `${customers[id].companyName} (${id})` : (id || '—');
+  // Nếu dòng này được tạo từ 1 Mã nhánh cụ thể (qua Đề Nghị Thanh Toán), hiện đúng tên nhánh đó
+  // thay vì luôn hiện tên khách hàng gốc.
+  const customerDisplayLabel = (row) => {
+    const id = row.customer_id;
+    const c = customers[id];
+    if (!c) return id || '—';
+    if (row.branch_tax_code) {
+      const branch = (c.branches || []).find(b => b.taxCode === row.branch_tax_code);
+      if (branch) return `${branch.companyName || branch.taxCode} (${id})`;
+    }
+    return customerLabel(id);
+  };
   const sellerLabel = (id) => sellers[id] ? sellers[id].companyName : (id || '—');
 
   const merged = useMemo(() => batches.map(b => ({ ...b, ...(drafts[b.id] || {}) })), [batches, drafts]);
@@ -506,7 +518,14 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             content = same ? <span className="text-gray-500">{same}</span> : <span className="text-gray-400">—</span>;
           } else if (col.key === 'customer_id') {
             const same = commonValue('customer_id');
-            content = same ? <span className="whitespace-normal break-words leading-snug">{customerLabel(same)}</span> : <span className="text-gray-400">—</span>;
+            const sameBranch = commonValue('branch_tax_code');
+            let label = null;
+            if (same) {
+              const c = customers[same];
+              const branch = sameBranch && c ? (c.branches || []).find(b => b.taxCode === sameBranch) : null;
+              label = branch ? `${branch.companyName || branch.taxCode} (${same})` : customerLabel(same);
+            }
+            content = label ? <span className="whitespace-normal break-words leading-snug">{label}</span> : <span className="text-gray-400">—</span>;
           } else {
             const same = commonValue(col.key);
             if (same === null || same === '' || same === undefined) content = <span className="text-gray-400">—</span>;
@@ -608,7 +627,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             if (disabled) {
               return (
                 <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
-                  {customerLabel(row.customer_id)}
+                  {customerDisplayLabel(row)}
                 </td>
               );
             }
