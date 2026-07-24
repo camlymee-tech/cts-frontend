@@ -11,7 +11,7 @@ import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { DDHUTPreview } from '../previews/DDHUTPreview';
 import { buildContractId, calcUSDTotal, fmtNum } from '../helpers';
 import { api } from '../lib/api';
-import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
+import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
 export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -33,7 +33,11 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
   const seller = sellers[sellerId] || {};
-  const customer = customers[customerId] || {};
+  const [branchIndex, setBranchIndex] = useState(null); // null = dang dung Ma goc, khong phai nhanh nao
+  const rawCustomer = customers[customerId] || {};
+  const selectedBranch = branchIndex != null ? rawCustomer.branches?.[branchIndex] : null;
+  // Neu da chon 1 nhanh cu the, dung dung thong tin (ten, dia chi, MST...) cua nhanh do thay vi luon la thong tin goc.
+  const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = customer.assignedSale?.code || '';
 
   const matchingHDNTs = Object.values(contracts)
@@ -132,7 +136,7 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng (Bên Ủy Thác)" required
-            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
+            value={encodeCustomerOptionValue(customerId, branchIndex)} onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); }}
             placeholder="-- Chọn khách hàng --"
             options={buildCustomerOptions(customers)}
           />

@@ -13,7 +13,7 @@ import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
-import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
+import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
 export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
@@ -37,7 +37,11 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const fileRef = useRef();
   const seller = sellerOverride || sellers[sellerId] || {};
-  const customer = customers[customerId] || {};
+  const [branchIndex, setBranchIndex] = useState(null); // null = dang dung Ma goc, khong phai nhanh nao
+  const rawCustomer = customers[customerId] || {};
+  const selectedBranch = branchIndex != null ? rawCustomer.branches?.[branchIndex] : null;
+  // Neu da chon 1 nhanh cu the, dung dung thong tin (ten, dia chi, MST...) cua nhanh do thay vi luon la thong tin goc.
+  const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
   const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
@@ -244,7 +248,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng" required
-            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
+            value={encodeCustomerOptionValue(customerId, branchIndex)} onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); }}
             placeholder="-- Chọn khách hàng --"
             options={buildCustomerOptions(customers)}
           />

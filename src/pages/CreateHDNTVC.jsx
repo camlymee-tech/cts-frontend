@@ -8,7 +8,7 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { Alert } from '../components/Alert';
 import { HDNTVCPreview } from '../previews/HDNTVCPreview';
 import { buildContractId } from '../helpers';
-import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
+import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
 export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -21,7 +21,11 @@ export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, e
   // null = số hợp đồng tự sinh theo thông tin bên dưới; nếu khác null là người dùng đã tự sửa
   const [idOverride, setIdOverride] = useState(editData?.contractId ?? null);
   const seller = sellers[sellerId] || {};
-  const customer = customers[customerId] || {};
+  const [branchIndex, setBranchIndex] = useState(null); // null = dang dung Ma goc, khong phai nhanh nao
+  const rawCustomer = customers[customerId] || {};
+  const selectedBranch = branchIndex != null ? rawCustomer.branches?.[branchIndex] : null;
+  // Neu da chon 1 nhanh cu the, dung dung thong tin (ten, dia chi, MST...) cua nhanh do thay vi luon la thong tin goc.
+  const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = customer.assignedSale?.code || '';
 
   const autoContractId = buildContractId({ type: 'HDNT_VC', date, saleCode, stt, sellerName: seller.companyName, customerName: customer.companyName });
@@ -62,7 +66,7 @@ export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, e
             <div className="space-y-3">
               <SearchableSelect
                 label="Bên Thuê Dịch Vụ (Khách hàng)" required
-                value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
+                value={encodeCustomerOptionValue(customerId, branchIndex)} onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); }}
                 placeholder="-- Chọn khách hàng --"
                 options={buildCustomerOptions(customers)}
               />
