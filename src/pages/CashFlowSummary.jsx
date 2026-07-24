@@ -9,8 +9,8 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
   const [printCustomerId, setPrintCustomerId] = useState(null);
   const [detailCustomerId, setDetailCustomerId] = useState(undefined); // undefined = không xem chi tiết; '' = xem tất cả; 'KHxxx' = 1 khách
 
-  // Tra Mã Sale theo uuid người tạo lô (created_by) — chỉ admin mới thấy được cột này.
-  const saleCodeByUuid = useMemo(() => Object.fromEntries(saleProfiles.map(p => [p.uuid, p.ma_sale])), [saleProfiles]);
+  // Tra Mã Sale + Tên Sale theo uuid người tạo lô (created_by) — chỉ admin mới thấy được cột này.
+  const saleInfoByUuid = useMemo(() => Object.fromEntries(saleProfiles.map(p => [p.uuid, { code: p.ma_sale, name: p.name }])), [saleProfiles]);
 
   const rows = useMemo(() => {
     const byCustomer = {};
@@ -22,7 +22,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
         byCustomer[id] = {
           customerId: id, batchCount: 0,
           totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalTransferredToCompany: 0,
-          totalRemainingDebt: 0, batchesInDebt: 0, saleCode: saleCodeByUuid[b.created_by] || '',
+          totalRemainingDebt: 0, batchesInDebt: 0, saleCode: saleInfoByUuid[b.created_by]?.code || '', saleName: saleInfoByUuid[b.created_by]?.name || '',
         };
       }
       const r = byCustomer[id];
@@ -35,7 +35,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
       if (c.remainingDebt > 0) r.batchesInDebt += 1;
     });
     return Object.values(byCustomer);
-  }, [batches, saleCodeByUuid]);
+  }, [batches, saleInfoByUuid]);
 
   const customerLabel = (id) => customers[id]?.companyName || id;
 
@@ -101,6 +101,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
             <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="text-left px-4 py-3 font-semibold">Mã KH</th>
               {isAdmin && <th className="text-left px-4 py-3 font-semibold">Mã Sale</th>}
+              {isAdmin && <th className="text-left px-4 py-3 font-semibold">Tên Sale</th>}
               <th className="text-center px-4 py-3 font-semibold">Số lô</th>
               <th className="text-right px-4 py-3 font-semibold">Tổng tiền xuất hóa đơn</th>
               <th className="text-right px-4 py-3 font-semibold">Tổng tiền KH chuyển vào Cty</th>
@@ -115,6 +116,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                 <tr key={r.customerId} className={`border-t border-gray-100 hover:bg-blue-50/40 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-4 py-3 font-mono font-semibold text-blue-600">{r.customerId}</td>
                   {isAdmin && <td className="px-4 py-3 text-gray-600">{r.saleCode || '—'}</td>}
+                  {isAdmin && <td className="px-4 py-3 text-gray-600">{r.saleName || '—'}</td>}
                   <td className="px-4 py-3 text-center text-gray-600">{r.batchCount}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalInvoiceAmount)}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalTransferredToCompany)}</td>
@@ -131,6 +133,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
             <tfoot>
               <tr className="border-t-2 border-gray-300 font-semibold bg-gray-50">
                 <td className="px-4 py-3">TỔNG CỘNG</td>
+                {isAdmin && <td className="px-4 py-3"></td>}
                 {isAdmin && <td className="px-4 py-3"></td>}
                 <td className="px-4 py-3 text-center">{grandTotal.batchCount}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalInvoiceAmount)}</td>
