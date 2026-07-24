@@ -2,7 +2,7 @@
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { fmtNum } from '../helpers';
-import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
+import { buildCustomerOptions, resolveCustomerId, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
 
@@ -633,8 +633,16 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             }
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <select value={row.customer_id || ''} disabled={disabled}
-                  onChange={e => { const v = resolveCustomerId(e.target.value); isNew ? editNew('customer_id', v) : editExisting(row, 'customer_id', v); }}
+                <select value={(() => {
+                    const idx = row.branch_tax_code ? (customers[row.customer_id]?.branches || []).findIndex(b => b.taxCode === row.branch_tax_code) : -1;
+                    return encodeCustomerOptionValue(row.customer_id || '', idx >= 0 ? idx : null);
+                  })()} disabled={disabled}
+                  onChange={e => {
+                    const { customerId: v, branchIndex } = parseCustomerOptionValue(e.target.value);
+                    const branchTaxCode = branchIndex != null ? (customers[v]?.branches?.[branchIndex]?.taxCode || null) : null;
+                    if (isNew) { editNew('customer_id', v); editNew('branch_tax_code', branchTaxCode); }
+                    else { editExisting(row, 'customer_id', v); editExisting(row, 'branch_tax_code', branchTaxCode); }
+                  }}
                   onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
                   className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Chọn khách hàng --</option>
