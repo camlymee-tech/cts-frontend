@@ -37,8 +37,9 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       key: 'thanh_toan', header: '💰 Thanh toán',
       items: [
         { id: 'cash_flow', icon: '📊', label: 'Tổng hợp công nợ' },
-        { id: 'payment_request', icon: '🧾', label: 'Đề Nghị Thanh Toán' },
-        { id: 'cny_fund', icon: '🏦', label: 'Theo dõi hợp đồng ngoại thương' },
+        { id: 'payment_request', icon: '🧾', label: 'ĐNTT — Thanh Toán Hộ' },
+        { id: 'fx_contract', icon: '🏦', label: 'Hợp đồng ngoại thương' },
+        { id: 'fx_contract_payment_request', icon: '🧾', label: 'ĐNTT — Hợp Đồng Ngoại Thương' },
       ],
     },
     {

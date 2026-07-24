@@ -64,6 +64,11 @@ export default function App() {
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
   const [cashFlowBatches, setCashFlowBatches] = useState([]);
   const [cashFlowLoaded, setCashFlowLoaded] = useState(false);
+  const [fxContractBatches, setFxContractBatches] = useState([]);
+  const [fxContractLoaded, setFxContractLoaded] = useState(false);
+  const [fxPaymentRequestCustomerId, setFxPaymentRequestCustomerId] = useState('');
+  const [fxPaymentRequestReqNo, setFxPaymentRequestReqNo] = useState(null);
+  const [fxPaymentRequestBatchIds, setFxPaymentRequestBatchIds] = useState(null);
   const [cnyFundTransactions, setCnyFundTransactions] = useState([]);
   const [cnyFundLoaded, setCnyFundLoaded] = useState(false);
 
@@ -170,6 +175,21 @@ export default function App() {
     })();
   }, [session, page, cashFlowLoaded]);
 
+  // Hợp đồng ngoại thương — dữ liệu HOÀN TOÀN riêng, không liên quan gì tới Theo dõi dòng tiền/Tổng hợp công nợ
+  const FX_CONTRACT_PAGES = ['fx_contract', 'fx_contract_payment_request'];
+  useEffect(() => {
+    if (!session || fxContractLoaded || !FX_CONTRACT_PAGES.includes(page)) return;
+    (async () => {
+      try {
+        const rows = await api.listFxContractBatches();
+        setFxContractBatches(rows || []);
+        setFxContractLoaded(true);
+      } catch (e) {
+        console.error('Không tải được dữ liệu hợp đồng ngoại thương:', e.message);
+      }
+    })();
+  }, [session, page, fxContractLoaded]);
+
   // Chỉ tải Sổ quỹ ngoại tệ khi vào đúng trang đó
   useEffect(() => {
     if (!session || cnyFundLoaded || page !== 'cny_fund') return;
@@ -197,6 +217,21 @@ export default function App() {
     if (!confirm('Xóa lô hàng này khỏi bảng theo dõi dòng tiền? Thao tác không thể hoàn tác.')) return;
     await api.deleteCashFlowBatch(id);
     setCashFlowBatches(prev => prev.filter(r => r.id !== id));
+  };
+
+  const saveFxContractBatch = async (id, fields) => {
+    const row = await api.upsertFxContractBatch(id, fields);
+    setFxContractBatches(prev => {
+      const exists = prev.some(r => r.id === row.id);
+      return exists ? prev.map(r => (r.id === row.id ? row : r)) : [row, ...prev];
+    });
+    return row;
+  };
+
+  const deleteFxContractBatchRow = async (id) => {
+    if (!confirm('Xóa lô hàng này khỏi Hợp đồng ngoại thương? Thao tác không thể hoàn tác.')) return;
+    await api.deleteFxContractBatch(id);
+    setFxContractBatches(prev => prev.filter(r => r.id !== id));
   };
 
   const saveCnyFundTransaction = async (id, fields) => {
@@ -481,10 +516,20 @@ export default function App() {
           onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPaymentRequestBatchIds(batchIds || null); setPage('payment_request'); }} />;
       case 'payment_request': return <PaymentRequestPrint
           customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
-          requestNo={paymentRequestReqNo} batchIds={paymentRequestBatchIds}
+          requestNo={paymentRequestReqNo} batchIds={paymentRequestBatchIds} docLabel="Thanh Toán Hộ"
           batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
+      // Hợp đồng ngoại thương — HOÀN TOÀN độc lập với "Tổng hợp công nợ" / "Theo dõi dòng tiền" (Thanh toán hộ) ở trên,
+      // dùng lại y hệt 2 màn CashFlowSummary + PaymentRequestPrint nhưng trỏ vào bảng dữ liệu riêng (fxContractBatches).
+      case 'fx_contract': return <CashFlowSummary batches={fxContractBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow}
+          onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setFxPaymentRequestCustomerId(customerId); setFxPaymentRequestReqNo(reqNo ?? null); setFxPaymentRequestBatchIds(batchIds || null); setPage('fx_contract_payment_request'); }} />;
+      case 'fx_contract_payment_request': return <PaymentRequestPrint
+          customerId={fxPaymentRequestCustomerId} customer={customers[fxPaymentRequestCustomerId]}
+          requestNo={fxPaymentRequestReqNo} batchIds={fxPaymentRequestBatchIds} docLabel="Hợp Đồng Ngoại Thương"
+          batches={fxContractBatches} customers={customers} sellers={sellers}
+          onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow} onSelectCustomer={setFxPaymentRequestCustomerId}
+          onClose={() => setPage('fx_contract')} />;
       case 'cny_fund': return <CnyFundPage
           transactions={cnyFundTransactions} batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCnyFundTransaction} onDelete={deleteCnyFundTransactionRow} />;
@@ -524,7 +569,11 @@ export default function App() {
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
-      <Sidebar page={page} setPage={(p) => { if (p === 'payment_request') { setPaymentRequestCustomerId(''); setPaymentRequestReqNo(null); setPaymentRequestBatchIds(null); } setPage(p); }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
+      <Sidebar page={page} setPage={(p) => {
+        if (p === 'payment_request') { setPaymentRequestCustomerId(''); setPaymentRequestReqNo(null); setPaymentRequestBatchIds(null); }
+        if (p === 'fx_contract_payment_request') { setFxPaymentRequestCustomerId(''); setFxPaymentRequestReqNo(null); setFxPaymentRequestBatchIds(null); }
+        setPage(p);
+      }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
       <main className="flex-1 p-6 overflow-auto bg-gray-50" style={{ minHeight: '100vh' }}>
         {noSellers && page !== 'settings' && (
           <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">

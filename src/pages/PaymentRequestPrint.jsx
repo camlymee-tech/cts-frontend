@@ -37,7 +37,7 @@ const MoneyInput = ({ value, onChange, className }) => {
   );
 };
 
-export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, batchIds = null, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
+export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, batchIds = null, docLabel = '', customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const [branchIndex, setBranchIndex] = useState(null); // null = đang dùng thông tin Mã gốc, không phải nhánh nào
   const customer = customers[customerId] || initialCustomer;
@@ -208,7 +208,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3 no-print">
         <div className="flex items-center gap-3">
           {onClose && <button onClick={onClose} className="text-gray-500 hover:text-gray-700">← Quay lại</button>}
-          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${displayCustomerName}` : ''}</h1>
+          <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán{docLabel ? ` (${docLabel})` : ''} {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${displayCustomerName}` : ''}</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSaveToSystem} disabled={saving || !customerId}
@@ -324,7 +324,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tr className="no-border"><td className="no-border" style={{ textAlign: 'center', fontWeight: 'bold' }}>Độc lập - Tự do - Hạnh phúc</td></tr>
         </tbody></table>
 
-        <h2 style={{ textAlign: 'center', margin: '10px 0 2px' }}>GIẤY ĐỀ NGHỊ THANH TOÁN</h2>
+        <h2 style={{ textAlign: 'center', margin: '10px 0 2px' }}>GIẤY ĐỀ NGHỊ THANH TOÁN{docLabel ? ` (${docLabel.toUpperCase()})` : ''}</h2>
 
         <table className="no-border"><tbody>
           <tr className="no-border">

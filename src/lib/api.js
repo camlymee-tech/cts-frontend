@@ -302,6 +302,45 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // --- Hợp đồng ngoại thương: bảng lô hàng RIÊNG, độc lập hoàn toàn với cash_flow_batches (Thanh toán hộ) —
+  // dùng lại y hệt cấu trúc/luồng Theo dõi dòng tiền + Đề Nghị Thanh Toán nhưng cho 1 mảng dữ liệu khác. ---
+  async listFxContractBatches() {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from('fx_contract_batches').select('*').order('order_date', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  },
+
+  async upsertFxContractBatch(id, fields) {
+    const { data: s } = await supabase.auth.getSession();
+    const payload = { ...fields, updated_at: new Date().toISOString() };
+    if (id) {
+      const { data, error } = await supabase
+        .from('fx_contract_batches').update(payload).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    payload.created_by = s.session?.user?.id;
+    const { data, error } = await supabase
+      .from('fx_contract_batches').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteFxContractBatch(id) {
+    const { error } = await supabase.from('fx_contract_batches').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
   // --- Quỹ ngoại tệ (CNY): sổ quỹ riêng theo dõi Thu vào quỹ / Chi trả cho từng lô hàng ---
   async listCnyFundTransactions() {
     const { data, error } = await supabase
