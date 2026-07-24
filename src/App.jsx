@@ -8,6 +8,7 @@ import { SellersPage } from './pages/SellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
 import { CashFlowSummary } from './pages/CashFlowSummary';
+import { FxContractSummary } from './pages/FxContractSummary';
 import { CnyFundPage } from './pages/CnyFundPage';
 import { PaymentRequestPrint } from './pages/PaymentRequestPrint';
 import { ApiKeyManager } from './pages/ApiKeyManager';
@@ -522,7 +523,7 @@ export default function App() {
           onClose={() => setPage('cash_flow')} />;
       // Hợp đồng ngoại thương — HOÀN TOÀN độc lập với "Tổng hợp công nợ" / "Theo dõi dòng tiền" (Thanh toán hộ) ở trên,
       // dùng lại y hệt 2 màn CashFlowSummary + PaymentRequestPrint nhưng trỏ vào bảng dữ liệu riêng (fxContractBatches).
-      case 'fx_contract': return <CashFlowSummary batches={fxContractBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow}
+      case 'fx_contract': return <FxContractSummary batches={fxContractBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow}
           onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setFxPaymentRequestCustomerId(customerId); setFxPaymentRequestReqNo(reqNo ?? null); setFxPaymentRequestBatchIds(batchIds || null); setPage('fx_contract_payment_request'); }} />;
       case 'fx_contract_payment_request': return <PaymentRequestPrint
           customerId={fxPaymentRequestCustomerId} customer={customers[fxPaymentRequestCustomerId]}
