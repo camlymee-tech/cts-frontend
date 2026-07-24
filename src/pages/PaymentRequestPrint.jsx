@@ -221,7 +221,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
         {!!onSelectCustomer && !customerId && (
           <div className="max-w-sm">
-            <SearchableSelect label="Khách hàng" required value={encodeCustomerOptionValue(customerId, branchIndex)}
+            <SearchableSelect label="Tên xuất hóa đơn" required value={encodeCustomerOptionValue(customerId, branchIndex)}
               onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); onSelectCustomer?.(id); }}
               placeholder="-- Chọn khách hàng --" options={customerOptions} />
           </div>
@@ -332,7 +332,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </tr>
           <tr className="no-border">
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
-            <td className="no-border">Tên khách hàng: <b>{displayCustomerName}</b></td>
+            <td className="no-border">Tên xuất hóa đơn: <b>{displayCustomerName}</b></td>
           </tr>
           <tr className="no-border">
             <td className="no-border" colSpan={2}>Công ty bên bán: <b>{sellers[sellerId]?.companyName || '—'}</b></td>
