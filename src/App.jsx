@@ -98,10 +98,28 @@ export default function App() {
       setProfile(prof);
 
       const customersMap = {};
+      const branchMigrations = []; // các khách hàng có nhánh cũ chưa có "id" — cần lưu lại 1 lần để đồng bộ
       custRows.forEach(r => {
-        customersMap[r.customer_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
+        const data = { ...r.data };
+        if (Array.isArray(data.branches) && data.branches.some(b => !b.id)) {
+          data.branches = data.branches.map(b => ({ ...b, id: b.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `b_${Date.now()}_${Math.random().toString(36).slice(2)}`) }));
+          branchMigrations.push({ id: r.customer_id, dbId: r.id, maSale: r.ma_sale, data });
+        }
+        customersMap[r.customer_id] = { ...data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
       });
       setCustomers(customersMap);
+
+      // Vá xong "id" cho các nhánh cũ (chỉ trong bộ nhớ) thì phải lưu lại ngay xuống Supabase —
+      // nếu không, các màn khác (Theo dõi dòng tiền, Đề Nghị Thanh Toán) tải lại dữ liệu gốc sẽ vẫn thiếu "id",
+      // dẫn đến nhận diện nhầm nhánh (nhất là khi nhiều nhánh cùng để trống Mã số thuế).
+      if (branchMigrations.length > 0) {
+        (async () => {
+          for (const m of branchMigrations) {
+            try { await api.upsertCustomer({ _dbId: m.dbId, customerId: m.id, data: m.data, maSale: m.maSale }); }
+            catch (e) { console.error('Không tự vá được id nhánh cho khách hàng', m.id, e.message); }
+          }
+        })();
+      }
 
       const contractsMap = {};
       contractRows.forEach(r => {
