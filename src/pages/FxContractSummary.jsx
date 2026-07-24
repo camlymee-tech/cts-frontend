@@ -46,6 +46,7 @@ export const FxContractSummary = ({ batches = [], customers = {}, sellers = {}, 
   if (detailCustomerId !== undefined) {
     return (
       <CashFlowPage
+        isFxContract
         batches={batches} customers={customers} sellers={sellers} isAdmin={isAdmin}
         onSave={onSave} onDelete={onDelete}
         initialCustomerFilter={detailCustomerId}

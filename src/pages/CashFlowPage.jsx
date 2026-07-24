@@ -71,6 +71,29 @@ const COLS = [
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 
+// Bản rút gọn cột riêng cho "Theo dõi dòng tiền" của Hợp đồng ngoại thương — bỏ hẳn các cột không dùng
+// (Cty thu tiền, Số tài khoản, Ngân hàng, Phải trả cho CTS, Còn phải thanh toán, Khách chuyển tiền lần 2,
+// Ngày khách thanh toán lần 2, Giá trị xuất hóa đơn, Chênh lệch); công thức của các cột tự tính còn lại
+// (Tiền hàng dự kiến, Phần dư sau khi thanh toán, Tổng tiền KH chuyển vào Cty) được tính lại đúng theo
+// vị trí chữ cái MỚI sau khi bỏ bớt cột — không dùng chung công thức với bản đầy đủ ở trên.
+const COLS_FX = [
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
+  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100 },
+  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true },
+  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
+  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'K×L' },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
+  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
+  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
+  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
+  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'H-F' },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'H' },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
+];
+
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
@@ -176,7 +199,8 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
 
-export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack, onOpenPaymentRequest }) => {
+export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack, onOpenPaymentRequest, isFxContract = false }) => {
+  const cols = isFxContract ? COLS_FX : COLS; // Hợp đồng ngoại thương dùng bộ cột rút gọn riêng
   const [view, setView] = useState('batches'); // 'batches' | 'print'
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState(initialCustomerFilter);
@@ -219,7 +243,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const buildPayload = (row) => {
     const computed = deriveComputed(row);
     const payload = { customer_id: row.customer_id || null, seller_id: row.seller_id || null };
-    COLS.forEach(c => {
+    cols.forEach(c => {
       if (c.type === 'computed') return;
       const v = row[c.key];
       if (CHECKBOX_KEYS.includes(c.key)) payload[c.key] = v ? 1 : 0;
@@ -431,7 +455,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const keys = new Set([keyField]); // cột định danh nhóm (Mã lô) luôn giống nhau cả nhóm — ẩn ở dòng con
     // Số đề nghị TT luôn hiện đầy đủ ở MỌI dòng (kể cả dòng con) để bấm vào xem/sửa lại đề nghị đó.
     const NEVER_BLANK_KEYS = ['payment_request_no'];
-    COLS.forEach(col => {
+    cols.forEach(col => {
       if (col.key === keyField || col.type === 'computed' || SUM_KEYS.includes(col.key) || NEVER_BLANK_KEYS.includes(col.key)) return;
       const vals = new Set(rows.map(r => r[col.key] ?? ''));
       if (vals.size === 1 && rows[0][col.key] !== null && rows[0][col.key] !== '' && rows[0][col.key] !== undefined) keys.add(col.key);
@@ -461,7 +485,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         <td className="sticky left-0 bg-yellow-50 px-2 border-r border-gray-200 align-top">
           <input type="checkbox" checked={groupIds.every(id => selectedIds.has(id))} onChange={() => toggleSelectGroup(groupIds)} />
         </td>
-        {COLS.map(col => {
+        {cols.map(col => {
           let content;
           if (col.key === keyField) {
             content = (
@@ -565,7 +589,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             )
         )}
         {isNew && <td className="sticky left-0 bg-blue-50/40 px-2 border-r border-gray-200 text-center text-blue-500 text-xs">Mới</td>}
-        {COLS.map(col => {
+        {cols.map(col => {
           if (isChild && commonKeys.has(col.key)) {
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
@@ -757,7 +781,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               <th className="sticky left-0 bg-gray-50 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
-              {COLS.map((col, i) => (
+              {cols.map((col, i) => (
                 <th key={col.key} style={{ minWidth: col.w }}
                   className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''} ${col.type === 'computed' ? 'text-emerald-700 bg-emerald-50' : ''}`}>
                   <div>{col.label}</div>
