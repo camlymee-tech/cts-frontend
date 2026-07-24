@@ -44,6 +44,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const selectedBranch = branchIndex != null ? customer?.branches?.[branchIndex] : null;
   // Tên/thông tin hiển thị: nếu đã chọn 1 nhánh cụ thể thì dùng đúng tên của nhánh đó, không phải tên gốc.
   const displayCustomerName = selectedBranch?.companyName || customer?.companyName || '';
+  const isFx = docLabel === 'Hợp Đồng Ngoại Thương'; // các thay đổi riêng chỉ áp dụng cho luồng này, không đụng tới ĐNTT Thanh Toán Hộ
   // Nếu mở từ 1 dòng/nhóm cụ thể (bấm vào số ở bảng Theo dõi), CHỈ lấy đúng các lô có ID nằm trong batchIds —
   // xác định chính xác theo ID, KHÔNG so khớp theo giá trị Số đề nghị TT nữa (vì 2 đề nghị khác nhau vẫn có thể
   // trùng số — nếu lọc theo số sẽ gộp nhầm, sửa 1 đề nghị lại làm nhảy số đề nghị kia).
@@ -101,7 +102,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
-  const chenhLechConLai = totalTienChuyen + chenhLech;
+  const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
+  const chenhLechConLai = isFx ? (chenhLech - totalSoTe) : (totalTienChuyen + chenhLech);
   const soTienBangChu = numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
   const [removedIds, setRemovedIds] = useState([]); // các id lô đã có sẵn nhưng bị bấm ✕ — sẽ xoá thật khi bấm Lưu
@@ -229,7 +231,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
-          <div className="grid grid-cols-5 gap-4">
+          <div className={isFx ? 'grid grid-cols-3 gap-4' : 'grid grid-cols-5 gap-4'}>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
               <input type="text" value={requestNoInput}
@@ -240,14 +242,18 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>
               <input type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
-            <div>
-              <SearchableSelect label="Cty thu tiền (bên bán)" value={sellerId} onChange={pickSeller}
-                placeholder="-- Chọn --" options={sellerOptions} />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Số tài khoản nhận tiền</label>
-              <input value={receiveAccount} onChange={e => setReceiveAccount(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
+            {!isFx && (
+              <div>
+                <SearchableSelect label="Cty thu tiền (bên bán)" value={sellerId} onChange={pickSeller}
+                  placeholder="-- Chọn --" options={sellerOptions} />
+              </div>
+            )}
+            {!isFx && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Số tài khoản nhận tiền</label>
+                <input value={receiveAccount} onChange={e => setReceiveAccount(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            )}
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ngân hàng</label>
               <input value={bankName} onChange={e => setBankName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
@@ -263,8 +269,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
             <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
-            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc){docLabel ? ' (CNY)' : ''}</label>
-            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển){docLabel ? ' (CNY)' : ''}</label>
+            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc){isFx ? ' (CNY)' : ''}</label>
+            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển){isFx ? ' (CNY)' : ''}</label>
           </div>
           <div className="space-y-2">
             {voucherRows.map((r, i) => (
@@ -291,16 +297,16 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
             <label className="col-span-6 text-xs text-gray-500">Nội dung / tài khoản nhận</label>
             <label className="col-span-2 text-xs text-gray-500">Tỷ giá</label>
-            <label className="col-span-2 text-xs text-gray-500">Số tệ</label>
-            <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>
+            <label className={isFx ? 'col-span-3 text-xs text-gray-500' : 'col-span-2 text-xs text-gray-500'}>Số tệ</label>
+            {!isFx && <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>}
           </div>
           <div className="space-y-2">
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
-                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
-                <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
+                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} className={isFx ? 'col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right' : 'col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right'} />
+                {!isFx && <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>}
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
             ))}
@@ -335,12 +341,16 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
             <td className="no-border">Tên xuất hóa đơn: <b>{displayCustomerName}</b></td>
           </tr>
-          <tr className="no-border">
-            <td className="no-border" colSpan={2}>Công ty bên bán: <b>{sellers[sellerId]?.companyName || '—'}</b></td>
-          </tr>
-          <tr className="no-border">
-            <td className="no-border" colSpan={2}>Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
-          </tr>
+          {!isFx && (
+            <tr className="no-border">
+              <td className="no-border" colSpan={2}>Công ty bên bán: <b>{sellers[sellerId]?.companyName || '—'}</b></td>
+            </tr>
+          )}
+          {!isFx && (
+            <tr className="no-border">
+              <td className="no-border" colSpan={2}>Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
+            </tr>
+          )}
         </tbody></table>
 
         <p style={{ marginTop: 10, marginBottom: 4 }}>Đề nghị thanh toán theo bảng kê sau:</p>
@@ -379,7 +389,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <th>Nội dung</th>
             <th style={{ width: 80 }}>Tỷ giá</th>
             <th style={{ width: 100 }}>Số tệ</th>
-            <th style={{ width: 130 }}>Thành tiền</th>
+            {!isFx && <th style={{ width: 130 }}>Thành tiền</th>}
           </tr></thead>
           <tbody>
             {fxRows.map((r, i) => (
@@ -387,15 +397,17 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
                 <td style={{ textAlign: 'right' }}>{r.soTe ? fmtNum(r.soTe) : ''}</td>
-                <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>
+                {!isFx && <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>}
               </tr>
             ))}
+            {!isFx && (
+              <tr>
+                <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng tiền chuyển</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalTienChuyen)}</td>
+              </tr>
+            )}
             <tr>
-              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng tiền chuyển</td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalTienChuyen)}</td>
-            </tr>
-            <tr>
-              <td colSpan={3} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
+              <td colSpan={isFx ? 2 : 3} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
               <td style={{ textAlign: 'right' }}>{fmtNum(chenhLechConLai)}</td>
             </tr>
           </tbody>
