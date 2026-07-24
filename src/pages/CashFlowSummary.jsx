@@ -56,7 +56,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
   if (detailCustomerId !== undefined) {
     return (
       <CashFlowPage
-        batches={batches} customers={customers} sellers={sellers} isAdmin={isAdmin}
+        batches={batches} customers={customers} sellers={sellers} isAdmin={isAdmin} saleProfiles={saleProfiles}
         onSave={onSave} onDelete={onDelete}
         initialCustomerFilter={detailCustomerId}
         onBack={() => setDetailCustomerId(undefined)}

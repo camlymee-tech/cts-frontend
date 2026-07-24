@@ -86,6 +86,8 @@ const COLS = [
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
   { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'V-U' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
+  { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
+  { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
 ];
 
 // Bản rút gọn cột riêng cho "Theo dõi dòng tiền" của Hợp đồng ngoại thương — bỏ hẳn các cột không dùng
@@ -211,12 +213,13 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
 
-export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, onSave, onDelete, initialCustomerFilter = '', onBack, onOpenPaymentRequest, isFxContract = false }) => {
-  const cols = isFxContract ? COLS_FX : COLS; // Hợp đồng ngoại thương dùng bộ cột rút gọn riêng
+export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdmin = false, saleProfiles = [], onSave, onDelete, initialCustomerFilter = '', onBack, onOpenPaymentRequest, isFxContract = false }) => {
+  const cols = (isFxContract ? COLS_FX : COLS).filter(c => isAdmin || c.type !== 'saleInfo'); // Hợp đồng ngoại thương dùng bộ cột rút gọn riêng; Mã/Tên Sale chỉ admin thấy
   const [view, setView] = useState('batches'); // 'batches' | 'print'
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState(initialCustomerFilter);
   const [sellerFilter, setSellerFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [drafts, setDrafts] = useState({}); // { [rowId]: { field: value } } — chỉnh sửa tạm trước khi lưu
   const [newRow, setNewRow] = useState(BLANK_ROW);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -249,14 +252,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       || (b.invoice_no || '').toLowerCase().includes(s);
     const matchCustomer = !customerFilter || b.customer_id === customerFilter;
     const matchSeller = !sellerFilter || b.seller_id === sellerFilter;
-    return matchSearch && matchCustomer && matchSeller;
+    const matchDate = !dateFilter || b.order_date === dateFilter;
+    return matchSearch && matchCustomer && matchSeller && matchDate;
   });
 
   const buildPayload = (row) => {
     const computed = deriveComputed(row);
     const payload = { customer_id: row.customer_id || null, seller_id: row.seller_id || null };
     cols.forEach(c => {
-      if (c.type === 'computed' || c.type === 'customerCode') return; // cột ảo chỉ để hiển thị, không phải cột thật trong Supabase
+      if (c.type === 'computed' || c.type === 'customerCode' || c.type === 'saleInfo') return; // cột ảo chỉ để hiển thị, không phải cột thật trong Supabase
       const v = row[c.key];
       if (CHECKBOX_KEYS.includes(c.key)) payload[c.key] = v ? 1 : 0;
       else if (NUMBER_KEYS.includes(c.key)) payload[c.key] = (v === '' || v === undefined || v === null) ? null : Number(v);
@@ -412,6 +416,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
 
   const customerOptions = buildCustomerOptions(customers);
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
+  const saleInfoByUuid = Object.fromEntries(saleProfiles.map(p => [p.uuid, { code: p.ma_sale, name: p.name }]));
+  const customerFilterOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
 
   // Mỗi dòng có 1 ô tích riêng — việc gộp nhóm hiển thị (root/con) nay xử lý riêng ở displayItems bên dưới.
   const filteredWithMeta = useMemo(() => filtered.map((row) => ({
@@ -553,6 +559,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           } else if (col.key === 'customer_code_display') {
             const same = commonValue('customer_id');
             content = same ? <span className="text-gray-500">{same}</span> : <span className="text-gray-400">—</span>;
+          } else if (col.type === 'saleInfo') {
+            const sameCreator = commonValue('created_by');
+            const info = sameCreator ? saleInfoByUuid[sameCreator] : null;
+            const val = col.key === 'sale_code_display' ? info?.code : info?.name;
+            content = val ? <span className="text-gray-500">{val}</span> : <span className="text-gray-400">—</span>;
           } else if (col.key === 'customer_id') {
             const same = commonValue('customer_id');
             const sameBranch = commonValue('branch_tax_code');
@@ -653,6 +664,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
                 {row.customer_id || '—'}
+              </td>
+            );
+          }
+          if (col.type === 'saleInfo') {
+            const info = saleInfoByUuid[row.created_by];
+            const val = col.key === 'sale_code_display' ? info?.code : info?.name;
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
+                {val || '—'}
               </td>
             );
           }
@@ -774,11 +794,19 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       <div className="flex items-center gap-3 mb-4 flex-wrap px-6">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
           className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        <select value={customerFilter} onChange={e => setCustomerFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="">Tất cả khách hàng</option>
+          {customerFilterOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <select value={sellerFilter} onChange={e => setSellerFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
           <option value="">Tất cả công ty bán</option>
           {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+        <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        {dateFilter && <button onClick={() => setDateFilter('')} className="text-xs text-gray-400 hover:text-gray-600 underline">Bỏ lọc ngày</button>}
       </div>
 
       <div className="flex items-center gap-4 mb-3 text-xs px-6 flex-wrap">

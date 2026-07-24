@@ -537,7 +537,7 @@ export default function App() {
           transactions={cnyFundTransactions} batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCnyFundTransaction} onDelete={deleteCnyFundTransactionRow} />;
       case 'daily_payment_requests': return <CashFlowPage
-          batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin}
+          batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} saleProfiles={saleProfiles}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
           initialCustomerFilter="" onBack={() => setPage('cash_flow')}
           onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPaymentRequestBatchIds(batchIds || null); setPage('payment_request'); }} />;
