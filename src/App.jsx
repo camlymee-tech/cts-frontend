@@ -8,6 +8,7 @@ import { SellersPage } from './pages/SellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
 import { CashFlowSummary } from './pages/CashFlowSummary';
+import { CnyFundPage } from './pages/CnyFundPage';
 import { PaymentRequestPrint } from './pages/PaymentRequestPrint';
 import { ApiKeyManager } from './pages/ApiKeyManager';
 import { DepartmentsManager } from './pages/DepartmentsManager';
@@ -62,6 +63,8 @@ export default function App() {
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
   const [cashFlowBatches, setCashFlowBatches] = useState([]);
   const [cashFlowLoaded, setCashFlowLoaded] = useState(false);
+  const [cnyFundTransactions, setCnyFundTransactions] = useState([]);
+  const [cnyFundLoaded, setCnyFundLoaded] = useState(false);
 
   // Supabase auth
   useEffect(() => {
@@ -134,7 +137,7 @@ export default function App() {
 
   // Chỉ tải "Theo dõi dòng tiền" khi thực sự cần (vào trang đó) — dữ liệu này riêng biệt,
   // không cần tải ngay lúc mở app.
-  const CASH_FLOW_PAGES = ['cash_flow', 'payment_request'];
+  const CASH_FLOW_PAGES = ['cash_flow', 'payment_request', 'cny_fund'];
   useEffect(() => {
     if (!session || cashFlowLoaded || !CASH_FLOW_PAGES.includes(page)) return;
     (async () => {
@@ -147,6 +150,20 @@ export default function App() {
       }
     })();
   }, [session, page, cashFlowLoaded]);
+
+  // Chỉ tải Sổ quỹ ngoại tệ khi vào đúng trang đó
+  useEffect(() => {
+    if (!session || cnyFundLoaded || page !== 'cny_fund') return;
+    (async () => {
+      try {
+        const rows = await api.listCnyFundTransactions();
+        setCnyFundTransactions(rows || []);
+        setCnyFundLoaded(true);
+      } catch (e) {
+        console.error('Không tải được dữ liệu quỹ ngoại tệ:', e.message);
+      }
+    })();
+  }, [session, page, cnyFundLoaded]);
 
   const saveCashFlowBatch = async (id, fields) => {
     const row = await api.upsertCashFlowBatch(id, fields);
@@ -161,6 +178,21 @@ export default function App() {
     if (!confirm('Xóa lô hàng này khỏi bảng theo dõi dòng tiền? Thao tác không thể hoàn tác.')) return;
     await api.deleteCashFlowBatch(id);
     setCashFlowBatches(prev => prev.filter(r => r.id !== id));
+  };
+
+  const saveCnyFundTransaction = async (id, fields) => {
+    const row = await api.upsertCnyFundTransaction(id, fields);
+    setCnyFundTransactions(prev => {
+      const exists = prev.some(r => r.id === row.id);
+      return exists ? prev.map(r => (r.id === row.id ? row : r)) : [row, ...prev];
+    });
+    return row;
+  };
+
+  const deleteCnyFundTransactionRow = async (id) => {
+    if (!confirm('Xóa giao dịch này khỏi sổ quỹ ngoại tệ? Thao tác không thể hoàn tác.')) return;
+    await api.deleteCnyFundTransaction(id);
+    setCnyFundTransactions(prev => prev.filter(r => r.id !== id));
   };
 
   // --- Invoice Goods (hàng hóa theo số hóa đơn, nhập từ Excel để chọn nhanh khi tạo ĐĐH/BBBG) ---
@@ -434,6 +466,9 @@ export default function App() {
           batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
+      case 'cny_fund': return <CnyFundPage
+          transactions={cnyFundTransactions} batches={cashFlowBatches} customers={customers} sellers={sellers}
+          onSave={saveCnyFundTransaction} onDelete={deleteCnyFundTransactionRow} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;

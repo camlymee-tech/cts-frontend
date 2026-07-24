@@ -301,4 +301,33 @@ export const api = {
     const { error } = await supabase.from('cash_flow_batches').delete().eq('id', id);
     if (error) throw new Error(error.message);
   },
+
+  // --- Quỹ ngoại tệ (CNY): sổ quỹ riêng theo dõi Thu vào quỹ / Chi trả cho từng lô hàng ---
+  async listCnyFundTransactions() {
+    const { data, error } = await supabase
+      .from('cny_fund_transactions').select('*').order('date', { ascending: false }).order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async upsertCnyFundTransaction(id, fields) {
+    const { data: s } = await supabase.auth.getSession();
+    const payload = { ...fields };
+    if (id) {
+      const { data, error } = await supabase
+        .from('cny_fund_transactions').update(payload).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    payload.created_by = s.session?.user?.id;
+    const { data, error } = await supabase
+      .from('cny_fund_transactions').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteCnyFundTransaction(id) {
+    const { error } = await supabase.from('cny_fund_transactions').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
 };
