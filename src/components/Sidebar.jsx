@@ -36,9 +36,9 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     {
       key: 'thanh_toan_ho', header: '💰 Thanh Toán Hộ',
       items: [
-        { id: 'cash_flow', icon: '📊', label: 'Tổng hợp công nợ' },
+        { id: 'cash_flow', icon: '📊', label: 'Theo dõi từng khách' },
         { id: 'payment_request', icon: '🧾', label: 'ĐNTT — Thanh Toán Hộ' },
-        ...(isAdmin ? [{ id: 'daily_payment_requests', icon: '📅', label: 'Nhật ký ĐNTT hằng ngày' }] : []),
+        ...(isAdmin ? [{ id: 'daily_payment_requests', icon: '📅', label: 'Tổng hợp chung' }] : []),
       ],
     },
     {

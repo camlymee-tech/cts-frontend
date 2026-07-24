@@ -63,7 +63,7 @@ export const DailyPaymentRequestsPage = ({ batches = [], customers = {}, sellers
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-800">📅 Nhật ký Đề Nghị Thanh Toán</h1>
+        <h1 className="text-2xl font-bold text-gray-800">📅 Tổng hợp chung</h1>
       </div>
 
       <div className="flex gap-3 mb-4 flex-wrap">
