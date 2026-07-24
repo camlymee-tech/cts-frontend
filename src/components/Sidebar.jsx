@@ -38,7 +38,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       items: [
         { id: 'cash_flow', icon: '📊', label: 'Tổng hợp công nợ' },
         { id: 'payment_request', icon: '🧾', label: 'Đề Nghị Thanh Toán' },
-        { id: 'cny_fund', icon: '💴', label: 'Quỹ ngoại tệ (CNY)' },
+        { id: 'cny_fund', icon: '🏦', label: 'Theo dõi hợp đồng ngoại thương' },
       ],
     },
     {

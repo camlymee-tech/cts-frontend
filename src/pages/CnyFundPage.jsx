@@ -1,29 +1,19 @@
 // File: src/pages/CnyFundPage.jsx
-// Sổ quỹ ngoại tệ (CNY) riêng — tách khỏi "Theo dõi dòng tiền" (vốn quy hết về VNĐ).
-// Theo dõi: đang có bao nhiêu CNY trong quỹ, đã trả bao nhiêu, còn nợ (theo các lô hàng) bao nhiêu.
+// Theo dõi hợp đồng ngoại thương — theo dõi riêng phần ngoại tệ (CNY) theo TỪNG khách hàng,
+// giống cách "Tổng hợp công nợ" theo dõi VNĐ: 1 dòng/khách hàng, bấm vào xem chi tiết,
+// và có thể tạo nhiều "đề nghị thanh toán ngoại tệ" (chi trả) theo thời gian cho khách đó.
 import { useState, useMemo } from 'react';
 import { fmtNum } from '../helpers';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export const CnyFundPage = ({ transactions = [], batches = [], customers = {}, sellers = {}, onSave, onDelete }) => {
-  const [showInForm, setShowInForm] = useState(false);
-  const [showOutForm, setShowOutForm] = useState(false);
-  const [inDate, setInDate] = useState(todayISO());
-  const [inAmount, setInAmount] = useState('');
-  const [inNote, setInNote] = useState('');
-  const [outDate, setOutDate] = useState(todayISO());
-  const [outAmount, setOutAmount] = useState('');
-  const [outNote, setOutNote] = useState('');
-  const [outBatchId, setOutBatchId] = useState('');
-  const [batchQuery, setBatchQuery] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [detailCustomerId, setDetailCustomerId] = useState(undefined); // undefined = xem danh sách; 'CTSxxx' = xem chi tiết 1 khách
 
   const customerLabel = (id) => customers[id]?.companyName || id || '—';
-  const sellerLabel = (id) => sellers[id]?.companyName || id || '—';
-  const batchLabel = (b) => `${b.batch_code ? `[${b.batch_code}] ` : ''}${customerLabel(b.customer_id)} — ${b.goods_desc || '(không có mô tả)'}`;
 
-  // Đã trả cho từng lô (cộng dồn các giao dịch "Chi trả" đã gắn với lô đó)
+  // Đã chi trả cho từng lô (cộng dồn các giao dịch "Chi trả" đã gắn với lô đó)
   const paidByBatch = useMemo(() => {
     const map = {};
     transactions.forEach(t => {
@@ -32,48 +22,137 @@ export const CnyFundPage = ({ transactions = [], batches = [], customers = {}, s
     return map;
   }, [transactions]);
 
-  // Danh sách lô có Số tệ (amount_cny) > 0 — để chọn khi Chi trả, kèm số đã trả/còn nợ của từng lô
-  const batchOptions = useMemo(() => {
-    return batches
-      .filter(b => Number(b.amount_cny) > 0)
-      .map(b => ({
-        ...b,
-        _paid: paidByBatch[b.id] || 0,
-        _remaining: (Number(b.amount_cny) || 0) - (paidByBatch[b.id] || 0),
-      }))
-      .sort((a, b) => (b._remaining > 0) - (a._remaining > 0) || (b.order_date || '').localeCompare(a.order_date || ''));
-  }, [batches, paidByBatch]);
+  const batchById = useMemo(() => Object.fromEntries(batches.map(b => [b.id, b])), [batches]);
 
-  const filteredBatchOptions = useMemo(() => {
-    const q = batchQuery.trim().toLowerCase();
-    if (!q) return batchOptions;
-    return batchOptions.filter(b => batchLabel(b).toLowerCase().includes(q));
-  }, [batchOptions, batchQuery]);
+  // Tổng hợp theo từng khách hàng: Đã thu khách hàng (theo tệ) = tổng Số tệ (amount_cny) của các lô hàng khách đó;
+  // Thanh toán ngoại tệ = tổng đã chi trả cho các lô của khách đó; Còn lại = 2 số trên trừ nhau.
+  const rows = useMemo(() => {
+    const byCustomer = {};
+    batches.forEach(b => {
+      const id = b.customer_id;
+      if (!id) return;
+      const cny = Number(b.amount_cny) || 0;
+      if (cny <= 0 && !paidByBatch[b.id]) return; // bỏ qua lô không liên quan gì tới ngoại tệ
+      if (!byCustomer[id]) byCustomer[id] = { customerId: id, totalCny: 0, totalPaid: 0, batchCount: 0 };
+      byCustomer[id].totalCny += cny;
+      byCustomer[id].batchCount += 1;
+    });
+    transactions.forEach(t => {
+      if (t.type !== 'out' || !t.batch_id) return;
+      const b = batchById[t.batch_id];
+      const id = b?.customer_id;
+      if (!id) return;
+      if (!byCustomer[id]) byCustomer[id] = { customerId: id, totalCny: 0, totalPaid: 0, batchCount: 0 };
+      byCustomer[id].totalPaid += Number(t.amount_cny) || 0;
+    });
+    return Object.values(byCustomer).map(r => ({ ...r, remaining: r.totalCny - r.totalPaid }));
+  }, [batches, transactions, paidByBatch, batchById]);
 
-  const totalIn = transactions.filter(t => t.type === 'in').reduce((s, t) => s + (Number(t.amount_cny) || 0), 0);
-  const totalOut = transactions.filter(t => t.type === 'out').reduce((s, t) => s + (Number(t.amount_cny) || 0), 0);
-  const balance = totalIn - totalOut;
-  const totalObligation = batches.reduce((s, b) => s + (Number(b.amount_cny) || 0), 0);
-  const remainingDebt = totalObligation - totalOut;
+  const filtered = rows.filter(r => {
+    const s = search.trim().toLowerCase();
+    return !s || r.customerId.toLowerCase().includes(s) || customerLabel(r.customerId).toLowerCase().includes(s);
+  });
 
-  const resetInForm = () => { setInDate(todayISO()); setInAmount(''); setInNote(''); setShowInForm(false); };
-  const resetOutForm = () => { setOutDate(todayISO()); setOutAmount(''); setOutNote(''); setOutBatchId(''); setBatchQuery(''); setShowOutForm(false); };
+  const grandTotal = filtered.reduce((acc, r) => ({
+    totalCny: acc.totalCny + r.totalCny, totalPaid: acc.totalPaid + r.totalPaid, remaining: acc.remaining + r.remaining,
+  }), { totalCny: 0, totalPaid: 0, remaining: 0 });
 
-  const submitIn = async () => {
-    if (!inAmount || Number(inAmount) <= 0) return alert('Vui lòng nhập Số tệ hợp lệ.');
-    setSaving(true);
-    try {
-      await onSave(null, { type: 'in', date: inDate, amount_cny: Number(inAmount), note: inNote || null });
-      resetInForm();
-    } catch (e) {
-      alert('Có lỗi khi lưu: ' + e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+  if (detailCustomerId !== undefined) {
+    return (
+      <CnyCustomerDetail
+        customerId={detailCustomerId}
+        batches={batches.filter(b => b.customer_id === detailCustomerId)}
+        transactions={transactions}
+        paidByBatch={paidByBatch}
+        batchById={batchById}
+        customerLabel={customerLabel}
+        onSave={onSave} onDelete={onDelete}
+        onBack={() => setDetailCustomerId(undefined)}
+      />
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-gray-800">🏦 Theo dõi hợp đồng ngoại thương</h1>
+      </div>
+
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã hoặc tên khách hàng..."
+        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        {filtered.length === 0 ? (
+          <div className="p-10 text-center text-gray-400">Chưa có dữ liệu ngoại tệ nào để tổng hợp.</div>
+        ) : (
+          <table className="w-full text-sm min-w-[800px]">
+            <thead><tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <th className="text-left px-4 py-3 font-semibold">Mã KH</th>
+              <th className="text-left px-4 py-3 font-semibold">Tên khách hàng</th>
+              <th className="text-right px-4 py-3 font-semibold">Đã thu khách hàng (tệ)</th>
+              <th className="text-right px-4 py-3 font-semibold">Thanh toán ngoại tệ</th>
+              <th className="text-right px-4 py-3 font-semibold text-rose-700 bg-rose-50">Còn lại</th>
+              <th className="px-4 py-3 w-24"></th>
+            </tr></thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <tr key={r.customerId} className={`border-t border-gray-100 hover:bg-blue-50/40 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                  <td className="px-4 py-3 font-mono font-semibold text-blue-600">{r.customerId}</td>
+                  <td className="px-4 py-3 text-gray-700">{customerLabel(r.customerId)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalCny)}</td>
+                  <td className="px-4 py-3 text-right text-emerald-600">{fmtNum(r.totalPaid)}</td>
+                  <td className={`px-4 py-3 text-right font-semibold bg-rose-50/70 ${r.remaining > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.remaining)}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800">🔍 Chi tiết</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-300 font-semibold bg-gray-50">
+                <td className="px-4 py-3" colSpan={2}>TỔNG CỘNG</td>
+                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalCny)}</td>
+                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalPaid)}</td>
+                <td className="px-4 py-3 text-right bg-rose-100/70 text-rose-700">{fmtNum(grandTotal.remaining)}</td>
+                <td className="px-4 py-3 bg-rose-100/70"></td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Chi tiết 1 khách hàng: xem các lô cần trả ngoại tệ, và tạo nhiều "đề nghị thanh toán ngoại tệ" (chi trả)
+// theo thời gian cho khách đó — mỗi lần chi trả luôn gắn với đúng 1 lô hàng cụ thể của khách này.
+const CnyCustomerDetail = ({ customerId, batches, transactions, paidByBatch, batchById, customerLabel, onSave, onDelete, onBack }) => {
+  const [showOutForm, setShowOutForm] = useState(false);
+  const [outDate, setOutDate] = useState(todayISO());
+  const [outAmount, setOutAmount] = useState('');
+  const [outNote, setOutNote] = useState('');
+  const [outBatchId, setOutBatchId] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const batchLabel = (b) => `${b.batch_code ? `[${b.batch_code}] ` : ''}${b.payment_request_no ? `Số ĐN ${b.payment_request_no} — ` : ''}${b.goods_desc || '(không có mô tả)'}`;
+
+  const batchOptions = useMemo(() => batches
+    .filter(b => Number(b.amount_cny) > 0)
+    .map(b => ({ ...b, _paid: paidByBatch[b.id] || 0, _remaining: (Number(b.amount_cny) || 0) - (paidByBatch[b.id] || 0) }))
+    .sort((a, b) => (b._remaining > 0) - (a._remaining > 0) || (b.order_date || '').localeCompare(a.order_date || '')), [batches, paidByBatch]);
+
+  const customerTransactions = useMemo(() => transactions
+    .filter(t => t.type === 'out' && t.batch_id && batchById[t.batch_id]?.customer_id === customerId)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '')), [transactions, batchById, customerId]);
+
+  const totalCny = batches.reduce((s, b) => s + (Number(b.amount_cny) || 0), 0);
+  const totalPaid = customerTransactions.reduce((s, t) => s + (Number(t.amount_cny) || 0), 0);
+  const remaining = totalCny - totalPaid;
+
+  const resetOutForm = () => { setOutDate(todayISO()); setOutAmount(''); setOutNote(''); setOutBatchId(''); setShowOutForm(false); };
 
   const submitOut = async () => {
-    if (!outBatchId) return alert('Vui lòng chọn lô hàng cần chi trả.');
+    if (!outBatchId) return alert('Vui lòng chọn lô hàng cần trả.');
     if (!outAmount || Number(outAmount) <= 0) return alert('Vui lòng nhập Số tệ hợp lệ.');
     setSaving(true);
     try {
@@ -86,77 +165,41 @@ export const CnyFundPage = ({ transactions = [], batches = [], customers = {}, s
     }
   };
 
-  const batchById = useMemo(() => Object.fromEntries(batches.map(b => [b.id, b])), [batches]);
-
   return (
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">💴 Quỹ ngoại tệ (CNY)</h1>
+        <button onClick={onBack} className="text-blue-600 hover:text-blue-800 text-sm">← Quay lại</button>
+        <h1 className="text-2xl font-bold text-gray-800">🏦 {customerLabel(customerId)} <span className="text-gray-400 font-mono text-lg">({customerId})</span></h1>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="text-xs text-gray-500 mb-1">🔵 Đang có trong quỹ</div>
-          <div className="text-2xl font-bold text-blue-600">{fmtNum(balance)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
-          <div className="text-xs text-gray-400 mt-1">Thu vào: {fmtNum(totalIn)} — Đã chi: {fmtNum(totalOut)}</div>
+          <div className="text-xs text-gray-500 mb-1">Đã thu khách hàng (tệ)</div>
+          <div className="text-2xl font-bold text-blue-600">{fmtNum(totalCny)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="text-xs text-gray-500 mb-1">🟢 Đã trả (theo lô hàng)</div>
-          <div className="text-2xl font-bold text-emerald-600">{fmtNum(totalOut)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
+          <div className="text-xs text-gray-500 mb-1">Thanh toán ngoại tệ (đã trả)</div>
+          <div className="text-2xl font-bold text-emerald-600">{fmtNum(totalPaid)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <div className="text-xs text-gray-500 mb-1">🔴 Còn nợ (theo lô hàng)</div>
-          <div className={`text-2xl font-bold ${remainingDebt > 0 ? 'text-red-600' : 'text-gray-400'}`}>{fmtNum(remainingDebt)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
-          <div className="text-xs text-gray-400 mt-1">Tổng cần trả: {fmtNum(totalObligation)}</div>
+          <div className="text-xs text-gray-500 mb-1">Còn lại</div>
+          <div className={`text-2xl font-bold ${remaining > 0 ? 'text-red-600' : 'text-gray-400'}`}>{fmtNum(remaining)} <span className="text-sm font-normal text-gray-400">CNY</span></div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => { setShowInForm(v => !v); setShowOutForm(false); }} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">
-          + Thu vào quỹ
-        </button>
-        <button onClick={() => { setShowOutForm(v => !v); setShowInForm(false); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium shadow">
-          + Chi trả cho 1 lô hàng
-        </button>
-      </div>
-
-      {showInForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">Thu vào quỹ (mua/nạp thêm CNY)</h3>
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Ngày</label>
-              <input type="date" value={inDate} onChange={e => setInDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Số tệ (CNY)</label>
-              <input type="number" value={inAmount} onChange={e => setInAmount(e.target.value)} placeholder="VD: 50000" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Ghi chú (không bắt buộc)</label>
-              <input value={inNote} onChange={e => setInNote(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={submitIn} disabled={saving} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50">
-              {saving ? 'Đang lưu...' : 'Lưu'}
-            </button>
-            <button onClick={resetInForm} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">Huỷ</button>
-          </div>
-        </div>
-      )}
+      <button onClick={() => setShowOutForm(v => !v)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium shadow mb-4">
+        + Thêm đề nghị thanh toán ngoại tệ
+      </button>
 
       {showOutForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">Chi trả cho 1 lô hàng</h3>
+          <h3 className="font-semibold text-gray-700 mb-3">Đề nghị thanh toán ngoại tệ cho 1 lô hàng</h3>
           <div className="mb-3">
             <label className="block text-xs font-medium text-gray-600 mb-1">Chọn lô hàng cần trả <span className="text-red-500">*</span></label>
-            <input value={batchQuery} onChange={e => setBatchQuery(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, mô tả hàng hóa..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2" />
             <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
-              {filteredBatchOptions.length === 0 ? (
-                <div className="px-3 py-3 text-sm text-gray-400 text-center">Không tìm thấy lô hàng nào có Số tệ &gt; 0</div>
-              ) : filteredBatchOptions.map(b => (
+              {batchOptions.length === 0 ? (
+                <div className="px-3 py-3 text-sm text-gray-400 text-center">Khách này chưa có lô hàng nào có Số tệ &gt; 0</div>
+              ) : batchOptions.map(b => (
                 <button key={b.id} type="button" onClick={() => setOutBatchId(b.id)}
                   className={`w-full text-left px-3 py-2 text-sm border-b border-gray-100 last:border-0 hover:bg-emerald-50 ${outBatchId === b.id ? 'bg-emerald-50 font-medium' : ''}`}>
                   <div>{batchLabel(b)}</div>
@@ -190,40 +233,52 @@ export const CnyFundPage = ({ transactions = [], batches = [], customers = {}, s
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="px-4 py-2.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">Các lô hàng cần thanh toán ngoại tệ của khách này</div>
         <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <th className="text-left px-4 py-2.5">Ngày</th>
-              <th className="text-left px-4 py-2.5">Loại</th>
-              <th className="text-right px-4 py-2.5">Số tệ (CNY)</th>
-              <th className="text-left px-4 py-2.5">Lô hàng liên quan</th>
-              <th className="text-left px-4 py-2.5">Ghi chú</th>
-              <th className="px-4 py-2.5"></th>
-            </tr>
-          </thead>
+          <thead><tr className="text-gray-500 text-xs uppercase border-t border-gray-100">
+            <th className="text-left px-4 py-2">Lô hàng</th>
+            <th className="text-right px-4 py-2">Cần trả</th>
+            <th className="text-right px-4 py-2">Đã trả</th>
+            <th className="text-right px-4 py-2">Còn nợ</th>
+          </tr></thead>
           <tbody>
-            {transactions.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Chưa có giao dịch nào trong sổ quỹ.</td></tr>
-            ) : transactions.map(t => {
-              const b = t.batch_id ? batchById[t.batch_id] : null;
-              return (
-                <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2.5 whitespace-nowrap">{t.date}</td>
-                  <td className="px-4 py-2.5">
-                    {t.type === 'in'
-                      ? <span className="inline-block bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">Thu vào quỹ</span>
-                      : <span className="inline-block bg-emerald-50 text-emerald-600 text-xs px-2 py-1 rounded-full font-medium">Chi trả</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-medium">{fmtNum(t.amount_cny)}</td>
-                  <td className="px-4 py-2.5 text-gray-500">{b ? batchLabel(b) : '—'}</td>
-                  <td className="px-4 py-2.5 text-gray-500">{t.note || '—'}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <button onClick={() => onDelete(t.id)} className="text-red-500 hover:text-red-700 text-xs">Xóa</button>
-                  </td>
-                </tr>
-              );
-            })}
+            {batchOptions.length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400">Không có lô hàng nào có Số tệ.</td></tr>
+            ) : batchOptions.map(b => (
+              <tr key={b.id} className="border-t border-gray-100">
+                <td className="px-4 py-2 text-gray-600">{batchLabel(b)}</td>
+                <td className="px-4 py-2 text-right">{fmtNum(b.amount_cny)}</td>
+                <td className="px-4 py-2 text-right text-emerald-600">{fmtNum(b._paid)}</td>
+                <td className={`px-4 py-2 text-right font-medium ${b._remaining > 0 ? 'text-red-500' : 'text-gray-400'}`}>{fmtNum(b._remaining)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-4 py-2.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase">Lịch sử các đề nghị thanh toán ngoại tệ đã lưu</div>
+        <table className="w-full text-sm">
+          <thead><tr className="text-gray-500 text-xs uppercase border-t border-gray-100">
+            <th className="text-left px-4 py-2">Ngày</th>
+            <th className="text-right px-4 py-2">Số tệ</th>
+            <th className="text-left px-4 py-2">Lô hàng</th>
+            <th className="text-left px-4 py-2">Ghi chú</th>
+            <th className="px-4 py-2"></th>
+          </tr></thead>
+          <tbody>
+            {customerTransactions.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">Chưa có đề nghị thanh toán ngoại tệ nào cho khách này.</td></tr>
+            ) : customerTransactions.map(t => (
+              <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
+                <td className="px-4 py-2 whitespace-nowrap">{t.date}</td>
+                <td className="px-4 py-2 text-right font-medium">{fmtNum(t.amount_cny)}</td>
+                <td className="px-4 py-2 text-gray-500">{t.batch_id && batchById[t.batch_id] ? batchLabel(batchById[t.batch_id]) : '—'}</td>
+                <td className="px-4 py-2 text-gray-500">{t.note || '—'}</td>
+                <td className="px-4 py-2 text-right"><button onClick={() => onDelete(t.id)} className="text-red-500 hover:text-red-700 text-xs">Xóa</button></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
