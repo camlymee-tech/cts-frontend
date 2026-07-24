@@ -38,6 +38,7 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     ? { ...blank, ...init, branches: (init.branches || []).map(migrateBranch), ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
     : blank;
   const [form, setForm] = useState(initialForm);
+  const [expandedBranch, setExpandedBranch] = useState(null); // chỉ 1 mã nhánh mở rộng xem/sửa tại 1 thời điểm
   const upd = (f) => (v) => setForm(p => ({ ...p, [f]: v }));
   const selectSale = (uuid) => {
     const p = saleProfiles.find(sp => sp.uuid === uuid);
@@ -45,7 +46,11 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     setForm(prev => ({ ...prev, assignedSale: { code: p.ma_sale || '', name: p.name || '', accountId: p.uuid } }));
   };
 
-  const addBranch = () => setForm(p => ({ ...p, branches: [...(p.branches || []), blankBranch()] }));
+  const addBranch = () => setForm(p => {
+    const next = { ...p, branches: [...(p.branches || []), blankBranch()] };
+    setExpandedBranch(next.branches.length - 1);
+    return next;
+  });
   const updBranch = (idx, field, v) => setForm(p => ({
     ...p, branches: p.branches.map((b, i) => i === idx ? { ...b, [field]: v } : b),
   }));
@@ -74,26 +79,37 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
           {(form.branches || []).length === 0 ? (
             <p className="text-xs text-gray-400">Chưa có mã nhánh nào — khách hàng này chỉ dùng 1 mã số thuế gốc ở trên.</p>
           ) : (
-            <div className="space-y-3">
-              {form.branches.map((b, i) => (
-                <div key={i} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-500">Mã nhánh #{i + 1}</span>
-                    <button type="button" onClick={() => removeBranch(i)} className="text-red-500 hover:text-red-700 text-sm">✕ Xoá nhánh</button>
+            <div className="space-y-2">
+              {form.branches.map((b, i) => {
+                const isOpen = expandedBranch === i;
+                const title = b.companyName || b.taxCode || `Nhánh #${i + 1}`;
+                return (
+                  <div key={i} className="border border-gray-200 rounded-lg bg-gray-50/50 overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-100/60"
+                      onClick={() => setExpandedBranch(isOpen ? null : i)}>
+                      <span className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                        <span className="text-gray-400 text-xs">{isOpen ? '▾' : '▸'}</span>
+                        {title}{b.taxCode && b.companyName ? ` — MST ${b.taxCode}` : ''}
+                      </span>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); removeBranch(i); if (isOpen) setExpandedBranch(null); }}
+                        className="text-red-500 hover:text-red-700 text-sm">✕ Xoá nhánh</button>
+                    </div>
+                    {isOpen && (
+                      <div className="grid grid-cols-2 gap-3 p-3 border-t border-gray-200">
+                        <Field label="Tên công ty / HKD (nhánh)" value={b.companyName} onChange={v => updBranch(i, 'companyName', v)} cols={2} />
+                        <Field label="Địa chỉ" value={b.address} onChange={v => updBranch(i, 'address', v)} cols={2} />
+                        <Field label="Mã số thuế nhánh" value={b.taxCode} onChange={v => updBranch(i, 'taxCode', v)} />
+                        <Field label="Số điện thoại" value={b.phone} onChange={v => updBranch(i, 'phone', v)} />
+                        <Field label="Email" value={b.email} onChange={v => updBranch(i, 'email', v)} type="email" />
+                        <Field label="Số tài khoản" value={b.bankAccount} onChange={v => updBranch(i, 'bankAccount', v)} />
+                        <Field label="Ngân hàng" value={b.bankName} onChange={v => updBranch(i, 'bankName', v)} cols={2} />
+                        <Field label="Người đại diện" value={b.representative} onChange={v => updBranch(i, 'representative', v)} />
+                        <Field label="Chức vụ" value={b.position} onChange={v => updBranch(i, 'position', v)} />
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Tên công ty / HKD (nhánh)" value={b.companyName} onChange={v => updBranch(i, 'companyName', v)} cols={2} />
-                    <Field label="Địa chỉ" value={b.address} onChange={v => updBranch(i, 'address', v)} cols={2} />
-                    <Field label="Mã số thuế nhánh" value={b.taxCode} onChange={v => updBranch(i, 'taxCode', v)} />
-                    <Field label="Số điện thoại" value={b.phone} onChange={v => updBranch(i, 'phone', v)} />
-                    <Field label="Email" value={b.email} onChange={v => updBranch(i, 'email', v)} type="email" />
-                    <Field label="Số tài khoản" value={b.bankAccount} onChange={v => updBranch(i, 'bankAccount', v)} />
-                    <Field label="Ngân hàng" value={b.bankName} onChange={v => updBranch(i, 'bankName', v)} cols={2} />
-                    <Field label="Người đại diện" value={b.representative} onChange={v => updBranch(i, 'representative', v)} />
-                    <Field label="Chức vụ" value={b.position} onChange={v => updBranch(i, 'position', v)} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

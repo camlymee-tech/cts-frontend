@@ -491,7 +491,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 onChange={(e) => setGroupField(rows, 'branch_tax_code', e.target.value || null)}
                 className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40">
                 <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                {branches.map((b, i) => <option key={i} value={b.taxCode}>{commonCustomerId} — {b.companyName || b.name || b.taxCode}</option>)}
+                {branches.map((b, i) => <option key={i} value={b.taxCode}>{b.taxCode}{b.name ? ` — ${b.name}` : ''}</option>)}
                 {same && !branches.some(b => b.taxCode === same) && <option value={same}>{same} (không còn trong danh sách)</option>}
               </select>
             );
@@ -639,7 +639,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   onBlur={async () => { if (isNew) { if (row.customer_id) await commitRow(null, row); } else if (drafts[row.id]) await commitRow(row.id, row); }}
                   className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{row.customer_id} — {b.companyName || b.name || b.taxCode}</option>)}
+                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{b.taxCode}{b.name ? ` — ${b.name}` : ''}</option>)}
                   {!hasCurrentInList && <option value={currentVal}>{currentVal} (không còn trong danh sách)</option>}
                 </select>
               </td>
