@@ -256,7 +256,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const computed = deriveComputed(row);
     const payload = { customer_id: row.customer_id || null, seller_id: row.seller_id || null };
     cols.forEach(c => {
-      if (c.type === 'computed') return;
+      if (c.type === 'computed' || c.type === 'customerCode') return; // cột ảo chỉ để hiển thị, không phải cột thật trong Supabase
       const v = row[c.key];
       if (CHECKBOX_KEYS.includes(c.key)) payload[c.key] = v ? 1 : 0;
       else if (NUMBER_KEYS.includes(c.key)) payload[c.key] = (v === '' || v === undefined || v === null) ? null : Number(v);
