@@ -72,25 +72,21 @@ const COLS = [
 ];
 
 // Bản rút gọn cột riêng cho "Theo dõi dòng tiền" của Hợp đồng ngoại thương — bỏ hẳn các cột không dùng
-// (Cty thu tiền, Số tài khoản, Ngân hàng, Phải trả cho CTS, Còn phải thanh toán, Khách chuyển tiền lần 2,
-// Ngày khách thanh toán lần 2, Giá trị xuất hóa đơn, Chênh lệch); "Tiền vào" (Đã thu khách — customer_paid_total)
-// và "Tiền ra" (Đã thanh toán ngoại tệ — amount_cny) đặt cạnh nhau để dễ so sánh từng dòng. Công thức của các
-// cột tự tính còn lại được tính lại đúng theo vị trí chữ cái MỚI — không dùng chung công thức với bản đầy đủ.
+// (Mã lô, Cty thu tiền, Số tài khoản, Ngân hàng, Phải trả cho CTS, Còn phải thanh toán, Khách chuyển tiền lần 2,
+// Ngày khách thanh toán lần 2, Giá trị xuất hóa đơn, Chênh lệch, Tiền hàng dự kiến, Phần dư sau khi thanh toán,
+// Tổng tiền KH chuyển vào Cty); "Tiền vào" (Đã thu khách — customer_paid_total) và "Tiền ra" (Đã thanh toán
+// ngoại tệ — amount_cny) đặt cạnh nhau để dễ so sánh từng dòng; "Tiền cọc" đổi tên thành "CTS phải thu".
 const COLS_FX = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100 },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
   { key: 'customer_paid_total', label: 'Tiền vào (CNY)', type: 'number', w: 160, fromDntt: true },
   { key: 'amount_cny', label: 'Tiền ra (CNY)', type: 'number', w: 160, fromDntt: true },
-  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
+  { key: 'deposit_vnd', label: 'CTS phải thu', type: 'number', w: 160, fromDntt: true },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'K×G' },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'F-L' },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'F' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
 ];
 
@@ -743,7 +739,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <h1 className="text-2xl font-bold text-gray-800">💰 Theo dõi dòng tiền</h1>
         </div>
         <div className="flex items-center gap-3">
-          {selectedIds.size >= 2 && (
+          {!isFxContract && selectedIds.size >= 2 && (
             <button onClick={handleGroupSelected} disabled={grouping} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium shadow disabled:opacity-50">
               {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành lô (${selectedIds.size})`}
             </button>
