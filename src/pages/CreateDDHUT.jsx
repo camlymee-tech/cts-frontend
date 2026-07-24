@@ -11,6 +11,7 @@ import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { DDHUTPreview } from '../previews/DDHUTPreview';
 import { buildContractId, calcUSDTotal, fmtNum } from '../helpers';
 import { api } from '../lib/api';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 
 export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -131,9 +132,9 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng (Bên Ủy Thác)" required
-            value={customerId} onChange={setCustomerId}
+            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
             placeholder="-- Chọn khách hàng --"
-            options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+            options={buildCustomerOptions(customers)}
           />
           <SearchableSelect
             label="Công ty bên bán (Bên Nhận Ủy Thác)" required

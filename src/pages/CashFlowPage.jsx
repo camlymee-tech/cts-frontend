@@ -2,6 +2,7 @@
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { fmtNum } from '../helpers';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
 
@@ -358,7 +359,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     );
   }
 
-  const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
+  const customerOptions = buildCustomerOptions(customers);
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
   // Mỗi dòng có 1 ô tích riêng — việc gộp nhóm hiển thị (root/con) nay xử lý riêng ở displayItems bên dưới.
@@ -491,7 +492,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 onChange={(e) => setGroupField(rows, 'branch_tax_code', e.target.value || null)}
                 className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40">
                 <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                {branches.map((b, i) => <option key={i} value={b.taxCode}>{b.taxCode}{b.name ? ` — ${b.name}` : ''}</option>)}
+                {branches.map((b, i) => <option key={i} value={b.taxCode}>{commonCustomerId} — {b.companyName || b.name || b.taxCode}</option>)}
                 {same && !branches.some(b => b.taxCode === same) && <option value={same}>{same} (không còn trong danh sách)</option>}
               </select>
             );
@@ -617,7 +618,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             return (
               <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={row.customer_id || ''} disabled={disabled}
-                  onChange={e => isNew ? editNew('customer_id', e.target.value) : editExisting(row, 'customer_id', e.target.value)}
+                  onChange={e => { const v = resolveCustomerId(e.target.value); isNew ? editNew('customer_id', v) : editExisting(row, 'customer_id', v); }}
                   onBlur={async () => { if (isNew && row.customer_id) await commitRow(null, row); else if (!isNew && drafts[row.id]) await commitRow(row.id, row); }}
                   className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Chọn khách hàng --</option>
@@ -639,7 +640,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   onBlur={async () => { if (isNew) { if (row.customer_id) await commitRow(null, row); } else if (drafts[row.id]) await commitRow(row.id, row); }}
                   className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
                   <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{b.taxCode}{b.name ? ` — ${b.name}` : ''}</option>)}
+                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{row.customer_id} — {b.companyName || b.name || b.taxCode}</option>)}
                   {!hasCurrentInList && <option value={currentVal}>{currentVal} (không còn trong danh sách)</option>}
                 </select>
               </td>

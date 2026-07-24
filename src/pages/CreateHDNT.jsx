@@ -8,6 +8,7 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { Alert } from '../components/Alert';
 import { HDNTPreview } from '../previews/HDNTPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 
 export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -61,9 +62,9 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
             <div className="space-y-3">
               <SearchableSelect
                 label="Bên Mua (Khách hàng)" required
-                value={customerId} onChange={setCustomerId}
+                value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
                 placeholder="-- Chọn khách hàng --"
-                options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+                options={buildCustomerOptions(customers)}
               />
               {customerId && <PartyInfoCard title="Thông tin Bên Mua (tự điền)" p={customer} extra={customer.assignedSale?.code ? <span className="text-gray-400 font-normal"> • Sale: {customer.assignedSale.code}</span> : null} />}
             </div>

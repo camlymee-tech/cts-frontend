@@ -9,6 +9,7 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { BBBGUTPreview } from '../previews/BBBGUTPreview';
 import { buildContractId } from '../helpers';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 
 export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -86,9 +87,9 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng (Bên Ủy Thác)" required
-            value={customerId} onChange={setCustomerId}
+            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
             placeholder="-- Chọn khách hàng --"
-            options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+            options={buildCustomerOptions(customers)}
           />
           <SearchableSelect
             label="Công ty bên bán (Bên Nhận Ủy Thác)" required

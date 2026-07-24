@@ -2,6 +2,7 @@
 // Giấy Đề Nghị Thanh Toán — vừa là màn nhập liệu thật (lưu ngược vào bảng lô hàng), vừa in ra giấy.
 import { useState, useEffect } from 'react';
 import { fmtNum, numberToWords } from '../helpers';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
 
@@ -187,7 +188,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     setTimeout(() => { if (!w.closed) { w.focus(); w.print(); w.close(); } }, 800);
   };
 
-  const customerOptions = Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} — ${c.companyName}` }));
+  const customerOptions = buildCustomerOptions(customers);
   const sellerOptions = Object.entries(sellers).map(([id, s]) => ({ value: id, label: s.shortName ? `[${s.shortName}] ${s.companyName}` : s.companyName }));
 
   return (
@@ -210,7 +211,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         {!!onSelectCustomer && !customerId && (
           <div className="max-w-sm">
             <SearchableSelect label="Khách hàng" required value={customerId}
-              onChange={(v) => { setCustomerId(v); onSelectCustomer?.(v); }}
+              onChange={(v) => { const id = resolveCustomerId(v); setCustomerId(id); onSelectCustomer?.(id); }}
               placeholder="-- Chọn khách hàng --" options={customerOptions} />
           </div>
         )}

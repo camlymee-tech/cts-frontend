@@ -9,6 +9,7 @@ import { ContractIdPreview } from '../components/ContractIdPreview';
 import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { DDHVCPreview } from '../previews/DDHVCPreview';
 import { buildContractId } from '../helpers';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 
 export const CreateDDHVC = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
@@ -71,9 +72,9 @@ export const CreateDDHVC = ({ sellers, customers, contracts, onSave, setPage, ed
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng (Bên Thuê Dịch Vụ)" required
-            value={customerId} onChange={setCustomerId}
+            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
             placeholder="-- Chọn khách hàng --"
-            options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+            options={buildCustomerOptions(customers)}
           />
           <SearchableSelect
             label="Công ty bên bán (Bên Nhận Dịch Vụ)" required

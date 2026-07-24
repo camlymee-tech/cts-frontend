@@ -13,6 +13,7 @@ import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';
 import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
+import { buildCustomerOptions, resolveCustomerId } from '../utils/customerOptions';
 
 export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
@@ -243,9 +244,9 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
         <div className="grid grid-cols-2 gap-4 mb-4">
           <SearchableSelect
             label="Khách hàng" required
-            value={customerId} onChange={setCustomerId}
+            value={customerId} onChange={(v) => setCustomerId(resolveCustomerId(v))}
             placeholder="-- Chọn khách hàng --"
-            options={Object.entries(customers).map(([id, c]) => ({ value: id, label: `${id} – ${c.companyName}` }))}
+            options={buildCustomerOptions(customers)}
           />
           <SearchableSelect
             label="Công ty bên bán" required
