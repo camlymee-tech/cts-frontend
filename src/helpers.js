@@ -57,14 +57,14 @@ const readHundred = (n) => {
   return s.trim();
 };
 
-export const numberToWords = (n) => {
+export const numberToWords = (n, unit = 'đồng') => {
   const num = Math.round(Number(n) || 0);
-  if (num === 0) return 'Không đồng';
+  if (num === 0) return `Không ${unit}`;
   const units = ['', 'nghìn', 'triệu', 'tỷ'];
   let parts = [], tmp = num, i = 0;
   while (tmp > 0) { parts.push([tmp % 1000, units[i++]]); tmp = Math.floor(tmp / 1000); }
   const words = parts.reverse().filter(p => p[0]).map(([v, u]) => readHundred(v) + (u ? ' ' + u : '')).join(' ');
-  return words.charAt(0).toUpperCase() + words.slice(1) + ' đồng';
+  return words.charAt(0).toUpperCase() + words.slice(1) + ` ${unit}`;
 };
 
 export const getInitials = (name) => {

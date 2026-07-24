@@ -105,7 +105,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
   const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
   const chenhLechConLai = isFx ? (chenhLech - totalSoTe) : (totalTienChuyen + chenhLech);
-  const soTienBangChu = numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
+  const soTienBangChu = isFx
+    ? numberToWords(Math.abs(chenhLechConLai || totalSoTe), 'tệ')
+    : numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
   const [removedIds, setRemovedIds] = useState([]); // các id lô đã có sẵn nhưng bị bấm ✕ — sẽ xoá thật khi bấm Lưu
 
