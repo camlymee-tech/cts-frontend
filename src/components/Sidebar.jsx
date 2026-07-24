@@ -36,8 +36,8 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     {
       key: 'thanh_toan_ho', header: '💰 Thanh Toán Hộ',
       items: [
-        { id: 'cash_flow', icon: '📊', label: 'Theo dõi từng khách' },
         { id: 'payment_request', icon: '🧾', label: 'ĐNTT — Thanh Toán Hộ' },
+        { id: 'cash_flow', icon: '📊', label: 'Theo dõi từng khách' },
         ...(isAdmin ? [{ id: 'daily_payment_requests', icon: '📅', label: 'Tổng hợp chung' }] : []),
       ],
     },

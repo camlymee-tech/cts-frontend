@@ -8,6 +8,7 @@ import { SellersPage } from './pages/SellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
 import { CashFlowSummary } from './pages/CashFlowSummary';
+import { CashFlowPage } from './pages/CashFlowPage';
 import { DailyPaymentRequestsPage } from './pages/DailyPaymentRequestsPage';
 import { FxContractSummary } from './pages/FxContractSummary';
 import { CnyFundPage } from './pages/CnyFundPage';
@@ -535,8 +536,10 @@ export default function App() {
       case 'cny_fund': return <CnyFundPage
           transactions={cnyFundTransactions} batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCnyFundTransaction} onDelete={deleteCnyFundTransactionRow} />;
-      case 'daily_payment_requests': return <DailyPaymentRequestsPage
-          batches={cashFlowBatches} customers={customers} sellers={sellers} saleProfiles={saleProfiles}
+      case 'daily_payment_requests': return <CashFlowPage
+          batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin}
+          onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
+          initialCustomerFilter="" onBack={() => setPage('cash_flow')}
           onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPaymentRequestBatchIds(batchIds || null); setPage('payment_request'); }} />;
       case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
