@@ -37,17 +37,18 @@ const MoneyInput = ({ value, onChange, className }) => {
   );
 };
 
-export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
+export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, batchIds = null, customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const [branchIndex, setBranchIndex] = useState(null); // null = đang dùng thông tin Mã gốc, không phải nhánh nào
   const customer = customers[customerId] || initialCustomer;
   const selectedBranch = branchIndex != null ? customer?.branches?.[branchIndex] : null;
   // Tên/thông tin hiển thị: nếu đã chọn 1 nhánh cụ thể thì dùng đúng tên của nhánh đó, không phải tên gốc.
   const displayCustomerName = selectedBranch?.companyName || customer?.companyName || '';
-  // Nếu mở từ 1 Số đề nghị TT cụ thể (bấm vào số ở bảng Theo dõi), CHỈ lấy đúng các lô cùng số đó —
-  // không lấy hết mọi lô của khách, tránh gộp nhầm và làm đổi số của các đề nghị khác khi lưu lại.
+  // Nếu mở từ 1 dòng/nhóm cụ thể (bấm vào số ở bảng Theo dõi), CHỈ lấy đúng các lô có ID nằm trong batchIds —
+  // xác định chính xác theo ID, KHÔNG so khớp theo giá trị Số đề nghị TT nữa (vì 2 đề nghị khác nhau vẫn có thể
+  // trùng số — nếu lọc theo số sẽ gộp nhầm, sửa 1 đề nghị lại làm nhảy số đề nghị kia).
   const batchesOfCustomer = (initialBatches && customerId)
-    ? initialBatches.filter(b => b.customer_id === customerId && (requestNo == null || String(b.payment_request_no ?? '') === String(requestNo)))
+    ? initialBatches.filter(b => b.customer_id === customerId && (batchIds ? batchIds.includes(b.id) : (requestNo == null || String(b.payment_request_no ?? '') === String(requestNo))))
     : [];
 
   const [requestDate, setRequestDate] = useState(todayISO());

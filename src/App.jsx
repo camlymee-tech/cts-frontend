@@ -57,6 +57,7 @@ export default function App() {
   const [editContractData, setEditContractData] = useState(null);
   const [paymentRequestCustomerId, setPaymentRequestCustomerId] = useState('');
   const [paymentRequestReqNo, setPaymentRequestReqNo] = useState(null);
+  const [paymentRequestBatchIds, setPaymentRequestBatchIds] = useState(null);
   const [dataReady, setDataReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
@@ -477,10 +478,10 @@ export default function App() {
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} isAdmin={isAdmin} />;
       case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
-          onOpenPaymentRequest={(customerId, reqNo) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPage('payment_request'); }} />;
+          onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPaymentRequestBatchIds(batchIds || null); setPage('payment_request'); }} />;
       case 'payment_request': return <PaymentRequestPrint
           customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
-          requestNo={paymentRequestReqNo}
+          requestNo={paymentRequestReqNo} batchIds={paymentRequestBatchIds}
           batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
@@ -523,7 +524,7 @@ export default function App() {
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
-      <Sidebar page={page} setPage={(p) => { if (p === 'payment_request') { setPaymentRequestCustomerId(''); setPaymentRequestReqNo(null); } setPage(p); }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
+      <Sidebar page={page} setPage={(p) => { if (p === 'payment_request') { setPaymentRequestCustomerId(''); setPaymentRequestReqNo(null); setPaymentRequestBatchIds(null); } setPage(p); }} counts={counts} onLogout={handleLogout} isAdmin={isAdmin} />
       <main className="flex-1 p-6 overflow-auto bg-gray-50" style={{ minHeight: '100vh' }}>
         {noSellers && page !== 'settings' && (
           <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-center justify-between">

@@ -470,7 +470,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   {collapsed ? '⌄' : '︿'}
                 </button>
                 {keyField === 'payment_request_no' ? (
-                  <button type="button" onClick={() => onOpenPaymentRequest?.(rows[0].customer_id, rows[0].payment_request_no)} className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
+                  <button type="button" onClick={() => onOpenPaymentRequest?.(rows[0].customer_id, rows[0].payment_request_no, rows.map(r => r.id))} className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
                     {label}
                   </button>
                 ) : (
@@ -676,7 +676,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           if (col.key === 'payment_request_no' && !isNew && row.payment_request_no != null) {
             return (
               <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w }} className="border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-right">
-                <button type="button" onClick={() => onOpenPaymentRequest?.(row.customer_id, row.payment_request_no)}
+                <button type="button" onClick={() => onOpenPaymentRequest?.(row.customer_id, row.payment_request_no, [row.id])}
                   className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
                   {row.payment_request_no}
                 </button>
