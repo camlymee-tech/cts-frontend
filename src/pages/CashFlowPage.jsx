@@ -9,6 +9,23 @@ import { api } from '../lib/api';
 const num = (v) => Number(v) || 0;
 const EMPTY_SET = new Set();
 
+// Ô nhập tổng ở dòng gốc (Phải trả cho CTS / Khách chuyển tiền lần 2 / Giá trị xuất hóa đơn) — hiện dấu chấm
+// phân cách hàng nghìn NGAY KHI GÕ (không phải chỉ sau khi rời khỏi ô), rồi lưu khi rời khỏi ô (onBlur).
+const GroupSumInput = ({ initial, onCommit }) => {
+  const [text, setText] = useState(initial ? fmtNum(initial) : '');
+  return (
+    <input
+      type="text" inputMode="numeric" value={text}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/\D/g, '');
+        setText(raw === '' ? '' : Number(raw).toLocaleString('vi-VN'));
+      }}
+      onBlur={() => onCommit(text.replace(/\D/g, ''))}
+      className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
+    />
+  );
+};
+
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
 export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
@@ -339,6 +356,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       if (id) setDrafts(d => { const next = { ...d }; delete next[id]; return next; });
       else setNewRow(BLANK_ROW);
       return saved;
+    } catch (e) {
+      alert('Không lưu được: ' + e.message);
+      throw e;
     } finally {
       setSaving(null);
     }
@@ -516,12 +536,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
             content = (
-              <input
-                type="text" inputMode="numeric"
-                defaultValue={sumField(col.key) ? fmtNum(sumField(col.key)) : ''}
+              <GroupSumInput
                 key={`${groupKey}-${col.key}-${sumField(col.key)}`}
-                onBlur={(e) => { const raw = e.target.value.replace(/\D/g, ''); setGroupTotal(rows, col.key, raw); }}
-                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
+                initial={sumField(col.key)}
+                onCommit={(raw) => setGroupTotal(rows, col.key, raw)}
               />
             );
           } else if (SUM_KEYS.includes(col.key)) {
