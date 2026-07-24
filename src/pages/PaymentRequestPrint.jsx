@@ -101,7 +101,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
-  const chenhLechConLai = totalTienChuyen + chenhLech;
+  const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
+  const chenhLechConLai = totalThuKhach - totalSoTe;
   const soTienBangChu = numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
   const [removedIds, setRemovedIds] = useState([]); // các id lô đã có sẵn nhưng bị bấm ✕ — sẽ xoá thật khi bấm Lưu
@@ -263,8 +264,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
             <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
-            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc)</label>
-            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển)</label>
+            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc){docLabel ? ' (CNY)' : ''}</label>
+            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển){docLabel ? ' (CNY)' : ''}</label>
           </div>
           <div className="space-y-2">
             {voucherRows.map((r, i) => (
@@ -379,7 +380,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <th>Nội dung</th>
             <th style={{ width: 80 }}>Tỷ giá</th>
             <th style={{ width: 100 }}>Số tệ</th>
-            <th style={{ width: 130 }}>Thành tiền</th>
           </tr></thead>
           <tbody>
             {fxRows.map((r, i) => (
@@ -387,15 +387,14 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
                 <td style={{ textAlign: 'right' }}>{r.soTe ? fmtNum(r.soTe) : ''}</td>
-                <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>
               </tr>
             ))}
             <tr>
-              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng tiền chuyển</td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalTienChuyen)}</td>
+              <td colSpan={2} style={{ textAlign: 'right', fontWeight: 'bold' }}>Tổng số tệ</td>
+              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalSoTe)}</td>
             </tr>
             <tr>
-              <td colSpan={3} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
+              <td colSpan={2} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
               <td style={{ textAlign: 'right' }}>{fmtNum(chenhLechConLai)}</td>
             </tr>
           </tbody>
