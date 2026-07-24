@@ -95,9 +95,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
-  const chenhLech = totalPhaiThu - totalThuKhach;
-  const phaiThuKhach = chenhLech >= 0 ? chenhLech : 0;
-  const phaiTraKhach = chenhLech < 0 ? chenhLech : 0;
+  const chenhLech = isFx ? (totalThuKhach - totalPhaiThu) : (totalPhaiThu - totalThuKhach);
+  const iMinusII = totalPhaiThu - totalThuKhach;
+  const phaiThuKhach = iMinusII > 0 ? iMinusII : 0;
+  const phaiTraKhach = iMinusII < 0 ? iMinusII : 0;
 
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
@@ -231,7 +232,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
-          <div className={isFx ? 'grid grid-cols-3 gap-4' : 'grid grid-cols-5 gap-4'}>
+          <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-5 gap-4'}>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
               <input type="text" value={requestNoInput}
@@ -254,10 +255,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <input value={receiveAccount} onChange={e => setReceiveAccount(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
               </div>
             )}
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Ngân hàng</label>
-              <input value={bankName} onChange={e => setBankName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-            </div>
+            {!isFx && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Ngân hàng</label>
+                <input value={bankName} onChange={e => setBankName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              </div>
+            )}
           </div>
         )}
 
