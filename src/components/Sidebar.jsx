@@ -38,6 +38,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       items: [
         { id: 'cash_flow', icon: '📊', label: 'Tổng hợp công nợ' },
         { id: 'payment_request', icon: '🧾', label: 'ĐNTT — Thanh Toán Hộ' },
+        ...(isAdmin ? [{ id: 'daily_payment_requests', icon: '📅', label: 'Nhật ký ĐNTT hằng ngày' }] : []),
       ],
     },
     {
