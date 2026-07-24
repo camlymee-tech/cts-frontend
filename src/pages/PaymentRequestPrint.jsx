@@ -219,7 +219,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 no-print">
-        {!!onSelectCustomer && !customerId && (
+        {!!onSelectCustomer && (
           <div className="max-w-sm">
             <SearchableSelect label="Tên xuất hóa đơn" required value={encodeCustomerOptionValue(customerId, branchIndex)}
               onChange={(v) => { const { customerId: id, branchIndex: bi } = parseCustomerOptionValue(v); setCustomerId(id); setBranchIndex(bi); onSelectCustomer?.(id); }}
