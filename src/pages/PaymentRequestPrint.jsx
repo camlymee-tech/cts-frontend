@@ -25,8 +25,23 @@ const fmtDateVN = (d) => {
 const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
-// Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ
-const MoneyInput = ({ value, onChange, className }) => {
+// Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ.
+// allowDecimal=true (dùng cho Số tệ) cho phép gõ cả số thập phân, không tự format dấu phân cách khi đang gõ.
+const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
+  if (allowDecimal) {
+    return (
+      <input
+        type="text" inputMode="decimal" value={value ?? ''}
+        onChange={(e) => {
+          let raw = e.target.value.replace(/[^0-9.]/g, '');
+          const parts = raw.split('.');
+          if (parts.length > 2) raw = parts[0] + '.' + parts.slice(1).join('');
+          onChange(raw);
+        }}
+        className={className}
+      />
+    );
+  }
   const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
   return (
     <input
@@ -310,7 +325,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
-                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} className={isFx ? 'col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right' : 'col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right'} />
+                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className={isFx ? 'col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right' : 'col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right'} />
                 {!isFx && <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>}
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
@@ -433,10 +448,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <td style={{ textAlign: 'center', width: '25%' }}>Giám Đốc</td>
             </tr>
             <tr>
-              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 60 }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic' }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic' }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic' }}>(Ký, đóng dấu)</td>
+              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
+              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
+              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
+              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, đóng dấu)</td>
             </tr>
           </tbody>
         </table>
