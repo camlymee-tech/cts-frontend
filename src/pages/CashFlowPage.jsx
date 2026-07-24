@@ -48,8 +48,8 @@ const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
+  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100 },
   { key: 'customer_id', label: 'Khách hàng', type: 'customer', w: 220, fromDntt: true },
-  { key: 'branch_tax_code', label: 'Mã nhánh', type: 'branch', w: 180 },
   { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
   { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'N×O' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
@@ -483,19 +483,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
               />
             );
-          } else if (col.key === 'branch_tax_code') {
-            const same = commonValue('branch_tax_code') || '';
-            const commonCustomerId = commonValue('customer_id');
-            const branches = (commonCustomerId && customers[commonCustomerId]?.branches) || [];
-            content = (
-              <select value={same} key={`${groupKey}-branch-${same}`}
-                onChange={(e) => setGroupField(rows, 'branch_tax_code', e.target.value || null)}
-                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40">
-                <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                {branches.map((b, i) => <option key={i} value={b.taxCode}>{commonCustomerId} — {b.companyName || b.name || b.taxCode}</option>)}
-                {same && !branches.some(b => b.taxCode === same) && <option value={same}>{same} (không còn trong danh sách)</option>}
-              </select>
-            );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
             content = (
               <input
@@ -514,6 +501,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const same = commonValue('seller_id');
             const label = same ? (sellers[same] ? (sellers[same].shortName ? `[${sellers[same].shortName}] ${sellers[same].companyName}` : sellers[same].companyName) : same) : null;
             content = label ? <span className="whitespace-normal break-words leading-snug">{label}</span> : <span className="text-gray-400">—</span>;
+          } else if (col.key === 'customer_code_display') {
+            const same = commonValue('customer_id');
+            content = same ? <span className="text-gray-500">{same}</span> : <span className="text-gray-400">—</span>;
           } else if (col.key === 'customer_id') {
             const same = commonValue('customer_id');
             content = same ? <span className="whitespace-normal break-words leading-snug">{customerLabel(same)}</span> : <span className="text-gray-400">—</span>;
@@ -603,6 +593,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               </td>
             );
           }
+          if (col.type === 'customerCode') {
+            return (
+              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
+                {row.customer_id || '—'}
+              </td>
+            );
+          }
           if (col.type === 'customer') {
             const disabled = col.fromDntt && !isNew;
             const merging = disabled && MERGEABLE_KEYS.includes(col.key);
@@ -627,25 +624,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               </td>
             );
           }
-          if (col.type === 'branch') {
-            const branches = customers[row.customer_id]?.branches || [];
-            const currentVal = row.branch_tax_code || '';
-            // Nếu giá trị đang lưu không khớp mã nhánh nào hiện có (VD khách hàng đổi danh sách nhánh sau),
-            // vẫn hiện thêm 1 lựa chọn riêng để không bị mất dữ liệu cũ.
-            const hasCurrentInList = !currentVal || branches.some(b => b.taxCode === currentVal);
-            return (
-              <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 p-0">
-                <select value={currentVal}
-                  onChange={e => isNew ? editNew('branch_tax_code', e.target.value) : editExisting(row, 'branch_tax_code', e.target.value)}
-                  onBlur={async () => { if (isNew) { if (row.customer_id) await commitRow(null, row); } else if (drafts[row.id]) await commitRow(row.id, row); }}
-                  className="w-full border border-gray-200 hover:border-gray-300 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 bg-white">
-                  <option value="">-- Mã gốc (không chọn nhánh) --</option>
-                  {branches.map((b, i) => <option key={i} value={b.taxCode}>{row.customer_id} — {b.companyName || b.name || b.taxCode}</option>)}
-                  {!hasCurrentInList && <option value={currentVal}>{currentVal} (không còn trong danh sách)</option>}
-                </select>
-              </td>
-            );
-          }
           if (col.type === 'computed') {
             const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
               amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
@@ -656,8 +634,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
-          if (isChild && (col.key === 'customer_final_payment_date' || col.key === 'branch_tax_code')) {
-            // Ngày khách thanh toán lần 2 / Mã nhánh chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
+          if (isChild && col.key === 'customer_final_payment_date') {
+            // Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
