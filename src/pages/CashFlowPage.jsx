@@ -31,7 +31,7 @@ const GroupSumInput = ({ initial, onCommit }) => {
 export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
   const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
-  const amountDueMore = num(r.total_due_on_arrival) - remainderAfterGoods; // Còn phải thanh toán = Tổng phải thu khi hàng về - Phần dư sau khi thanh toán tiền hàng
+  const amountDueMore = num(r.invoice_amount) - num(r.customer_paid_total); // Còn phải thanh toán = Giá trị xuất hóa đơn - Khách chuyển khoản lần 1
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred; // Chênh lệch (cột V)
   const remainingDebt = diffAmount; // Công nợ còn lại = Chênh lệch (cột V)
@@ -79,13 +79,12 @@ const COLS = [
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
   { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
-  { key: 'total_due_on_arrival', label: 'Phải trả cho CTS (VNĐ)', type: 'number', w: 170 },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'Q-P' },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'U-I' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+S' },
+  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+R' },
   { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'V-U' },
+  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
   { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
   { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
@@ -113,10 +112,10 @@ const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
-const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'total_due_on_arrival', 'actual_collected', 'invoice_amount'];
+const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'actual_collected', 'invoice_amount'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
 // chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
-const EDITABLE_SUM_KEYS = ['total_due_on_arrival', 'actual_collected', 'invoice_amount'];
+const EDITABLE_SUM_KEYS = ['actual_collected', 'invoice_amount'];
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
