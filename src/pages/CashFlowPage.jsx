@@ -31,7 +31,7 @@ const GroupSumInput = ({ initial, onCommit }) => {
 export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
   const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
-  const amountDueMore = num(r.invoice_amount) - num(r.customer_paid_total); // Còn phải thanh toán = Giá trị xuất hóa đơn - Khách chuyển khoản lần 1
+  const amountDueMore = num(r.invoice_amount) - num(r.customer_paid_total) - num(r.actual_collected); // Còn phải thanh toán = Giá trị xuất hóa đơn - Khách chuyển khoản lần 1 - Khách chuyển khoản lần 2
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
   const diffAmount = num(r.invoice_amount) - totalCustomerTransferred; // Chênh lệch (cột V)
   const remainingDebt = diffAmount; // Công nợ còn lại = Chênh lệch (cột V)
@@ -79,7 +79,7 @@ const COLS = [
   { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
   { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'U-I' },
+  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'U-I-R' },
   { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
   { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
   { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+R' },
