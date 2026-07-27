@@ -866,19 +866,39 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               };
               const row1Groups = buildSpanRow(c => c.group1 || '', c => c.group1 || '');
               const row2Groups = buildSpanRow(c => `${c.group1 || ''}::${c.group2 || ''}`, c => c.group2 || '');
+              // Mỗi cụm (group1) 1 màu riêng để nhìn tách bạch từng khối — hàng 2 dùng bản nhạt hơn của cùng màu.
+              const GROUP_COLORS = {
+                'Thông tin khách hàng': { dark: 'bg-sky-200 text-sky-900', light: 'bg-sky-50 text-sky-700' },
+                'Công ty bán hàng': { dark: 'bg-violet-200 text-violet-900', light: 'bg-violet-50 text-violet-700' },
+                'Phải thu khách hàng': { dark: 'bg-amber-200 text-amber-900', light: 'bg-amber-50 text-amber-700' },
+                'Đã thu khách hàng': { dark: 'bg-emerald-200 text-emerald-900', light: 'bg-emerald-50 text-emerald-700' },
+                'Còn lại': { dark: 'bg-rose-200 text-rose-900', light: 'bg-rose-50 text-rose-700' },
+                'Ghi chú': { dark: 'bg-gray-200 text-gray-700', light: 'bg-gray-50 text-gray-600' },
+              };
+              const colorFor = (label) => GROUP_COLORS[label] || { dark: 'bg-slate-200 text-slate-700', light: 'bg-slate-50 text-slate-600' };
               return (
                 <>
-                  <tr className="bg-gray-100 text-gray-700 text-xs uppercase">
+                  <tr className="text-xs uppercase">
                     <th rowSpan={3} className="sticky left-0 bg-gray-100 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
                     {row1Groups.map((g, gi) => (
-                      <th key={gi} colSpan={g.span} className="text-center px-2 py-1.5 border-r border-b border-gray-200 font-semibold">{g.label}</th>
+                      <th key={gi} colSpan={g.span} className={`text-center px-2 py-1.5 border-r border-b border-white/60 font-semibold ${colorFor(g.label).dark}`}>{g.label}</th>
                     ))}
                     <th rowSpan={3} className="sticky right-0 bg-gray-100 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
                   </tr>
-                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
-                    {row2Groups.map((g, gi) => (
-                      <th key={gi} colSpan={g.span} className="text-center px-2 py-1 border-r border-b border-gray-200 font-medium">{g.label}</th>
-                    ))}
+                  <tr className="text-xs uppercase">
+                    {(() => {
+                      // Tra đúng group1 của mỗi ô hàng 2 (dựa theo cột đầu tiên trong span đó) để lấy màu nhạt tương ứng
+                      const out = [];
+                      let idx = 0;
+                      row2Groups.forEach((g, gi) => {
+                        const col = cols[idx];
+                        out.push(
+                          <th key={gi} colSpan={g.span} className={`text-center px-2 py-1 border-r border-b border-white/60 font-medium ${colorFor(col.group1 || '').light}`}>{g.label}</th>
+                        );
+                        idx += g.span;
+                      });
+                      return out;
+                    })()}
                   </tr>
                 </>
               );
