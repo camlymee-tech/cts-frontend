@@ -476,10 +476,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Giám Đốc</td>
             </tr>
             <tr className="no-border">
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, đóng dấu)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 50, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 50, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 50, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 50, verticalAlign: 'bottom' }}>(Ký, đóng dấu)</td>
             </tr>
           </tbody>
         </table>
