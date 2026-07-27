@@ -117,17 +117,18 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   // CTS phải thu (tiền hàng): Thanh Toán Hộ giờ tự tính = Tổng tiền chuyển ngoại tệ (Tỷ giá × Số tệ cộng dồn);
   // Hợp Đồng Ngoại Thương vẫn giữ nguyên là ô nhập tay như cũ.
-  const ctsPhaiThuFor = (r) => isFx ? num(r.ctsPhaiThu) : totalTienChuyen;
-  const totalPhaiThu = isFx ? voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0) : totalTienChuyen;
+  // CTS phải thu: Thanh Toán Hộ tự tính = Tổng tiền chuyển ngoại tệ (VNĐ quy đổi);
+  // Hợp Đồng Ngoại Thương tự tính = Tổng tiền tệ thanh toán cho khách (Số tệ cộng dồn, không quy đổi VNĐ).
+  const ctsPhaiThuFor = (r) => isFx ? totalSoTe : totalTienChuyen;
+  const totalPhaiThu = isFx ? totalSoTe : totalTienChuyen;
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
   const chenhLech = totalThuKhach - totalPhaiThu; // III = II - I (áp dụng cho cả 2 luồng)
   const iMinusII = totalPhaiThu - totalThuKhach;
   const phaiThuKhach = iMinusII > 0 ? iMinusII : 0;
   const phaiTraKhach = iMinusII < 0 ? iMinusII : 0;
 
-  const chenhLechConLai = isFx ? (chenhLech - totalSoTe) : (totalTienChuyen + chenhLech);
   const soTienBangChu = isFx
-    ? numberToWords(Math.abs(chenhLechConLai || totalSoTe), 'tệ')
+    ? numberToWords(Math.abs(chenhLech || totalSoTe), 'tệ')
     : numberToWords(Math.abs(totalTienChuyen || Math.abs(phaiTraKhach) || phaiThuKhach));
 
   const [removedIds, setRemovedIds] = useState([]); // các id lô đã có sẵn nhưng bị bấm ✕ — sẽ xoá thật khi bấm Lưu
@@ -174,7 +175,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
-          deposit_vnd: !isFx ? (r ? chenhLech : null) : (r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null),
+          deposit_vnd: !isFx ? (r ? chenhLech : null) : (r ? totalSoTe : null),
           customer_paid_total: r && r.daThuKhach !== '' ? num(r.daThuKhach) : null,
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
@@ -307,25 +308,54 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <button onClick={addVoucherRow} className="text-blue-600 hover:text-blue-800 text-sm">+ Thêm dòng</button>
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
-            <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
-            <label className="col-span-3 text-xs text-gray-500">{isFx ? 'CTS phải thu (tiền cọc) (CNY)' : 'CTS phải thu (tiền hàng)'}</label>
-            <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển){isFx ? ' (CNY)' : ''}</label>
+            {isFx ? (
+              <>
+                <label className="col-span-2 text-xs text-gray-500">Diễn giải</label>
+                <label className="col-span-1 text-xs text-gray-500">Tỉ giá $</label>
+                <label className="col-span-2 text-xs text-gray-500">Tiền hàng $</label>
+                <label className="col-span-2 text-xs text-gray-500">Tổng tiền Việt</label>
+                <label className="col-span-2 text-xs text-gray-500">CTS phải thu (tiền cọc) (CNY)</label>
+                <label className="col-span-2 text-xs text-gray-500">Đã thu khách (CNY)</label>
+              </>
+            ) : (
+              <>
+                <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
+                <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền hàng)</label>
+                <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển)</label>
+              </>
+            )}
           </div>
           <div className="space-y-2">
-            {voucherRows.map((r, i) => (
+            {voucherRows.map((r, i) => {
+              const fx = fxRows[i] || {};
+              return (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 {isFx ? (
-                  <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                  <>
+                    <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                    <MoneyInput value={fx.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                    <MoneyInput value={fx.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                    <div className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tỉ giá × Tiền hàng $">
+                      {fmtNum(fxThanhTien(fx))}
+                    </div>
+                    <div className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tổng tiền tệ thanh toán cho khách">
+                      {fmtNum(ctsPhaiThuFor(r))}
+                    </div>
+                    <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                  </>
                 ) : (
-                  <div className="col-span-3 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tổng tiền chuyển ngoại tệ (Tỷ giá × Số tệ)">
-                    {fmtNum(ctsPhaiThuFor(r))}
-                  </div>
+                  <>
+                    <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
+                    <div className="col-span-3 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tổng tiền chuyển ngoại tệ (Tỷ giá × Số tệ)">
+                      {fmtNum(ctsPhaiThuFor(r))}
+                    </div>
+                    <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                  </>
                 )}
-                <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <button onClick={() => removeVoucherRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
-            ))}
+              );
+            })}
           </div>
           <div className="text-xs text-gray-400 mt-2">
             I - Tổng phải thu: <b>{fmtNum(totalPhaiThu)}</b> &nbsp;|&nbsp; II - Tổng thu khách: <b>{fmtNum(totalThuKhach)}</b> &nbsp;|&nbsp; III - Chênh lệch: <b>{fmtNum(chenhLech)}</b>
