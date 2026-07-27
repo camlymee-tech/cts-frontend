@@ -29,14 +29,23 @@ const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 // allowDecimal=true (dùng cho Số tệ) cho phép gõ cả số thập phân, không tự format dấu phân cách khi đang gõ.
 const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
   if (allowDecimal) {
+    // Hiện dấu chấm phân cách hàng nghìn ở phần nguyên, dấu phẩy cho phần thập phân (kiểu VN) —
+    // vẫn lưu giá trị chuẩn (dùng dấu chấm cho thập phân) để tính toán không bị sai.
+    const display = (() => {
+      if (value === '' || value === null || value === undefined) return '';
+      const [intPart, decPart] = String(value).split('.');
+      const withThousands = intPart === '' ? '' : Number(intPart).toLocaleString('vi-VN');
+      return decPart !== undefined ? `${withThousands},${decPart}` : withThousands;
+    })();
     return (
       <input
-        type="text" inputMode="decimal" value={value ?? ''}
+        type="text" inputMode="decimal" value={display}
         onChange={(e) => {
-          let raw = e.target.value.replace(/[^0-9.]/g, '');
-          const parts = raw.split('.');
-          if (parts.length > 2) raw = parts[0] + '.' + parts.slice(1).join('');
-          onChange(raw);
+          let raw = e.target.value.replace(/[^0-9,]/g, '');
+          const parts = raw.split(',');
+          const intPart = parts[0] || '';
+          const decPart = parts.length > 1 ? parts.slice(1).join('') : undefined;
+          onChange(decPart !== undefined ? `${intPart}.${decPart}` : intPart);
         }}
         className={className}
       />
@@ -314,7 +323,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <label className="col-span-1 text-xs text-gray-500">Tỉ giá $</label>
                 <label className="col-span-2 text-xs text-gray-500">Tiền hàng $</label>
                 <label className="col-span-2 text-xs text-gray-500">Tổng tiền Việt</label>
-                <label className="col-span-2 text-xs text-gray-500">CTS phải thu (tiền cọc) (CNY)</label>
+                <label className="col-span-2 text-xs text-gray-500 whitespace-normal leading-snug">CTS phải thu (CNY)</label>
                 <label className="col-span-2 text-xs text-gray-500">Đã thu khách (CNY)</label>
               </>
             ) : (
@@ -437,6 +446,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <thead>
             <tr>
               <th>Diễn giải</th>
+              {isFx && <th style={{ width: 90 }}>Tỉ giá $</th>}
+              {isFx && <th style={{ width: 100 }}>Tiền hàng $</th>}
+              {isFx && <th style={{ width: 110 }}>Tổng tiền Việt</th>}
               <th style={{ width: 120 }}>{isFx ? 'CTS Phải thu' : 'CTS Phải thu (tiền hàng)'}</th>
               <th style={{ width: 120 }}>Đã thu khách</th>
               <th style={{ width: 120 }}>Chênh lệch</th>
@@ -445,9 +457,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tbody>
             {voucherRows.map((r, i) => {
               const ctsPhaiThu = ctsPhaiThuFor(r);
+              const fx = fxRows[i] || {};
               return (
                 <tr key={i}>
                   <td>{r.dienGiai}</td>
+                  {isFx && <td style={{ textAlign: 'right' }}>{fx.tyGia || ''}</td>}
+                  {isFx && <td style={{ textAlign: 'right' }}>{fx.soTe ? fmtNum(fx.soTe) : ''}</td>}
+                  {isFx && <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(fx))}</td>}
                   <td style={{ textAlign: 'right' }}>{ctsPhaiThu ? fmtNum(ctsPhaiThu) : ''}</td>
                   <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>
                   <td style={{ textAlign: 'right' }}>{(num(r.daThuKhach) || ctsPhaiThu) ? fmtNum(num(r.daThuKhach) - ctsPhaiThu) : ''}</td>
