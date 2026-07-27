@@ -110,20 +110,21 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const num = (v) => Number(v) || 0;
 
+  // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
+  const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
+  const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
   const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
-  // CTS phải thu (tiền cọc): Thanh Toán Hộ giờ tự tính = Đã thu khách - Tổng thanh toán ngoại tệ cho khách;
+
+  // CTS phải thu (tiền hàng): Thanh Toán Hộ giờ tự tính = Tổng tiền chuyển ngoại tệ (Tỷ giá × Số tệ cộng dồn);
   // Hợp Đồng Ngoại Thương vẫn giữ nguyên là ô nhập tay như cũ.
-  const ctsPhaiThuFor = (r) => isFx ? num(r.ctsPhaiThu) : (num(r.daThuKhach) - totalSoTe);
-  const totalPhaiThu = voucherRows.reduce((s, r) => s + ctsPhaiThuFor(r), 0);
+  const ctsPhaiThuFor = (r) => isFx ? num(r.ctsPhaiThu) : totalTienChuyen;
+  const totalPhaiThu = isFx ? voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0) : totalTienChuyen;
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
-  const chenhLech = isFx ? (totalThuKhach - totalPhaiThu) : (totalPhaiThu - totalThuKhach);
+  const chenhLech = totalThuKhach - totalPhaiThu; // III = II - I (áp dụng cho cả 2 luồng)
   const iMinusII = totalPhaiThu - totalThuKhach;
   const phaiThuKhach = iMinusII > 0 ? iMinusII : 0;
   const phaiTraKhach = iMinusII < 0 ? iMinusII : 0;
 
-  // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
-  const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
-  const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
   const chenhLechConLai = isFx ? (chenhLech - totalSoTe) : (totalTienChuyen + chenhLech);
   const soTienBangChu = isFx
     ? numberToWords(Math.abs(chenhLechConLai || totalSoTe), 'tệ')
@@ -307,7 +308,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </div>
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
             <label className="col-span-6 text-xs text-gray-500">Diễn giải</label>
-            <label className="col-span-3 text-xs text-gray-500">CTS phải thu (tiền cọc){isFx ? ' (CNY)' : ''}</label>
+            <label className="col-span-3 text-xs text-gray-500">{isFx ? 'CTS phải thu (tiền cọc) (CNY)' : 'CTS phải thu (tiền hàng)'}</label>
             <label className="col-span-2 text-xs text-gray-500">Đã thu khách (tổng KH đã chuyển){isFx ? ' (CNY)' : ''}</label>
           </div>
           <div className="space-y-2">
@@ -317,7 +318,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 {isFx ? (
                   <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 ) : (
-                  <div className="col-span-3 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Đã thu khách - Tổng thanh toán ngoại tệ cho khách">
+                  <div className="col-span-3 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tổng tiền chuyển ngoại tệ (Tỷ giá × Số tệ)">
                     {fmtNum(ctsPhaiThuFor(r))}
                   </div>
                 )}
@@ -406,7 +407,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <thead>
             <tr>
               <th>Diễn giải</th>
-              <th style={{ width: 120 }}>CTS Phải thu</th>
+              <th style={{ width: 120 }}>{isFx ? 'CTS Phải thu' : 'CTS Phải thu (tiền hàng)'}</th>
               <th style={{ width: 120 }}>Đã thu khách</th>
               <th style={{ width: 120 }}>Chênh lệch</th>
             </tr>
@@ -457,10 +458,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalTienChuyen)}</td>
               </tr>
             )}
-            <tr>
-              <td colSpan={isFx ? 2 : 3} style={{ textAlign: 'right' }}>Chênh lệch còn lại</td>
-              <td style={{ textAlign: 'right' }}>{fmtNum(chenhLechConLai)}</td>
-            </tr>
           </tbody>
         </table>
 
@@ -470,19 +467,19 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         <table className="no-border" style={{ marginTop: 20 }}><tbody>
           <tr className="no-border"><td className="no-border" colSpan={4} style={{ textAlign: 'right' }}>Ngày {new Date(requestDate).getDate()} tháng {new Date(requestDate).getMonth() + 1} năm {new Date(requestDate).getFullYear()}</td></tr>
         </tbody></table>
-        <table style={{ marginTop: 6 }}>
+        <table className="no-border" style={{ marginTop: 6 }}>
           <tbody>
-            <tr>
-              <td style={{ textAlign: 'center', width: '25%' }}>Người đề nghị</td>
-              <td style={{ textAlign: 'center', width: '25%' }}>Trưởng phòng</td>
-              <td style={{ textAlign: 'center', width: '25%' }}>Kế toán trưởng</td>
-              <td style={{ textAlign: 'center', width: '25%' }}>Giám Đốc</td>
+            <tr className="no-border">
+              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Người đề nghị</td>
+              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Trưởng phòng</td>
+              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Kế toán trưởng</td>
+              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Giám Đốc</td>
             </tr>
-            <tr>
-              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, họ tên)</td>
-              <td style={{ textAlign: 'center', fontStyle: 'italic', height: 110 }}>(Ký, đóng dấu)</td>
+            <tr className="no-border">
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
+              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, đóng dấu)</td>
             </tr>
           </tbody>
         </table>
