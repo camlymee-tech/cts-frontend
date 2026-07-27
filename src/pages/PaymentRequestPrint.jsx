@@ -470,16 +470,22 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         <table className="no-border" style={{ marginTop: 6 }}>
           <tbody>
             <tr className="no-border">
-              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Người đề nghị</td>
-              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Trưởng phòng</td>
-              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Kế toán trưởng</td>
-              <td className="no-border" style={{ textAlign: 'center', width: '25%' }}>Giám Đốc</td>
-            </tr>
-            <tr className="no-border">
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, họ tên)</td>
-              <td className="no-border" style={{ textAlign: 'center', fontStyle: 'italic', height: 110, verticalAlign: 'bottom' }}>(Ký, đóng dấu)</td>
+              <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
+                <div>Người đề nghị</div>
+                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+              </td>
+              <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
+                <div>Trưởng phòng</div>
+                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+              </td>
+              <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
+                <div>Kế toán trưởng</div>
+                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+              </td>
+              <td className="no-border" style={{ textAlign: 'center', width: '22%', padding: '2px 6px' }}>
+                <div>Giám Đốc</div>
+                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, đóng dấu)</div>
+              </td>
             </tr>
           </tbody>
         </table>
