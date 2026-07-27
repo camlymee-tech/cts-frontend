@@ -52,7 +52,7 @@ const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
   );
 };
 
-export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, batchIds = null, docLabel = '', customers = {}, sellers = {}, onSave, onDelete, onSelectCustomer, onClose }) => {
+export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: initialCustomer, batches: initialBatches, requestNo = null, batchIds = null, docLabel = '', customers = {}, sellers = {}, myName = '', myPhone = '', onSave, onDelete, onSelectCustomer, onClose }) => {
   const [customerId, setCustomerId] = useState(initialCustomerId || '');
   const [branchIndex, setBranchIndex] = useState(null); // null = đang dùng thông tin Mã gốc, không phải nhánh nào
   const customer = customers[customerId] || initialCustomer;
@@ -68,6 +68,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     : [];
 
   const [requestDate, setRequestDate] = useState(todayISO());
+  const [saleName, setSaleName] = useState(myName);
+  const [salePhone, setSalePhone] = useState(myPhone);
 
   const [sellerId, setSellerId] = useState('');
   const [receiveAccount, setReceiveAccount] = useState('');
@@ -108,7 +110,11 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const num = (v) => Number(v) || 0;
 
-  const totalPhaiThu = voucherRows.reduce((s, r) => s + num(r.ctsPhaiThu), 0);
+  const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
+  // CTS phải thu (tiền cọc): Thanh Toán Hộ giờ tự tính = Đã thu khách - Tổng thanh toán ngoại tệ cho khách;
+  // Hợp Đồng Ngoại Thương vẫn giữ nguyên là ô nhập tay như cũ.
+  const ctsPhaiThuFor = (r) => isFx ? num(r.ctsPhaiThu) : (num(r.daThuKhach) - totalSoTe);
+  const totalPhaiThu = voucherRows.reduce((s, r) => s + ctsPhaiThuFor(r), 0);
   const totalThuKhach = voucherRows.reduce((s, r) => s + num(r.daThuKhach), 0);
   const chenhLech = isFx ? (totalThuKhach - totalPhaiThu) : (totalPhaiThu - totalThuKhach);
   const iMinusII = totalPhaiThu - totalThuKhach;
@@ -118,7 +124,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
-  const totalSoTe = fxRows.reduce((s, r) => s + num(r.soTe), 0);
   const chenhLechConLai = isFx ? (chenhLech - totalSoTe) : (totalTienChuyen + chenhLech);
   const soTienBangChu = isFx
     ? numberToWords(Math.abs(chenhLechConLai || totalSoTe), 'tệ')
@@ -168,7 +173,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
-          deposit_vnd: r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null,
+          deposit_vnd: !isFx ? (r ? ctsPhaiThuFor(r) : null) : (r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null),
           customer_paid_total: r && r.daThuKhach !== '' ? num(r.daThuKhach) : null,
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
@@ -282,6 +287,19 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Tên Sale</label>
+              <input value={saleName} onChange={e => setSaleName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Số điện thoại Sale</label>
+              <input value={salePhone} onChange={e => setSalePhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
+          </div>
+        )}
+
+        {customerId && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-gray-600 uppercase">Bảng chứng từ — mỗi dòng sẽ lưu thành 1 lô hàng mới</label>
@@ -296,7 +314,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             {voucherRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                {isFx ? (
+                  <MoneyInput value={r.ctsPhaiThu} onChange={v => setVoucherField(i, 'ctsPhaiThu', v)} className="col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                ) : (
+                  <div className="col-span-3 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Đã thu khách - Tổng thanh toán ngoại tệ cho khách">
+                    {fmtNum(ctsPhaiThuFor(r))}
+                  </div>
+                )}
                 <MoneyInput value={r.daThuKhach} onChange={v => setVoucherField(i, 'daThuKhach', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <button onClick={() => removeVoucherRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
@@ -371,6 +395,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
               <td className="no-border" colSpan={2}>Số tài khoản nhận tiền: <b>{receiveAccount}{bankName ? ` (${bankName})` : ''}</b></td>
             </tr>
           )}
+          <tr className="no-border">
+            <td className="no-border">Tên Sale: <b>{saleName || '—'}</b></td>
+            <td className="no-border">Số điện thoại Sale: <b>{salePhone || '—'}</b></td>
+          </tr>
         </tbody></table>
 
         <p style={{ marginTop: 10, marginBottom: 4 }}>Đề nghị thanh toán theo bảng kê sau:</p>
@@ -384,14 +412,17 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             </tr>
           </thead>
           <tbody>
-            {voucherRows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.dienGiai}</td>
-                <td style={{ textAlign: 'right' }}>{r.ctsPhaiThu ? fmtNum(r.ctsPhaiThu) : ''}</td>
-                <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>
-                <td style={{ textAlign: 'right' }}>{(num(r.daThuKhach) || num(r.ctsPhaiThu)) ? fmtNum(num(r.daThuKhach) - num(r.ctsPhaiThu)) : ''}</td>
-              </tr>
-            ))}
+            {voucherRows.map((r, i) => {
+              const ctsPhaiThu = ctsPhaiThuFor(r);
+              return (
+                <tr key={i}>
+                  <td>{r.dienGiai}</td>
+                  <td style={{ textAlign: 'right' }}>{ctsPhaiThu ? fmtNum(ctsPhaiThu) : ''}</td>
+                  <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>
+                  <td style={{ textAlign: 'right' }}>{(num(r.daThuKhach) || ctsPhaiThu) ? fmtNum(num(r.daThuKhach) - ctsPhaiThu) : ''}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 

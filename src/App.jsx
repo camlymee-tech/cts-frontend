@@ -149,7 +149,7 @@ export default function App() {
             };
             map[p.id] = info;           // tra theo uuid (luôn có)
             if (p.ma_sale) map[p.ma_sale] = info; // tra theo mã sale (nếu có)
-            list.push({ uuid: p.id, name: info.name, ma_sale: p.ma_sale || '', deptName: info.deptName });
+            list.push({ uuid: p.id, name: info.name, ma_sale: p.ma_sale || '', deptName: info.deptName, phone: p.phone || '' });
           });
           setSaleMap(map);
           setSaleProfiles(list);
@@ -521,6 +521,7 @@ export default function App() {
           customerId={paymentRequestCustomerId} customer={customers[paymentRequestCustomerId]}
           requestNo={paymentRequestReqNo} batchIds={paymentRequestBatchIds} docLabel="Thanh Toán Hộ"
           batches={cashFlowBatches} customers={customers} sellers={sellers}
+          myName={profile?.full_name || ''} myPhone={profile?.phone || ''}
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow} onSelectCustomer={setPaymentRequestCustomerId}
           onClose={() => setPage('cash_flow')} />;
       // Hợp đồng ngoại thương — HOÀN TOÀN độc lập với "Tổng hợp công nợ" / "Theo dõi dòng tiền" (Thanh toán hộ) ở trên,
@@ -531,6 +532,7 @@ export default function App() {
           customerId={fxPaymentRequestCustomerId} customer={customers[fxPaymentRequestCustomerId]}
           requestNo={fxPaymentRequestReqNo} batchIds={fxPaymentRequestBatchIds} docLabel="Hợp Đồng Ngoại Thương"
           batches={fxContractBatches} customers={customers} sellers={sellers}
+          myName={profile?.full_name || ''} myPhone={profile?.phone || ''}
           onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow} onSelectCustomer={setFxPaymentRequestCustomerId}
           onClose={() => setPage('fx_contract')} />;
       case 'cny_fund': return <CnyFundPage
