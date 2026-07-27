@@ -114,7 +114,7 @@ const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
 // chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
-const EDITABLE_SUM_KEYS = ['actual_collected'];
+const EDITABLE_SUM_KEYS = ['actual_collected', 'tax_service_fee'];
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
@@ -538,6 +538,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
               />
             );
+          } else if (col.key === 'note') {
+            const same = commonValue('note');
+            content = (
+              <input
+                type="text" defaultValue={same || ''} key={`${groupKey}-note-${same}`}
+                onBlur={(e) => setGroupField(rows, 'note', e.target.value || null)}
+                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
+              />
+            );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
             content = (
               <GroupSumInput
@@ -876,24 +885,33 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 'Ghi chú': { dark: 'bg-gray-200 text-gray-700', light: 'bg-gray-50 text-gray-600' },
               };
               const colorFor = (label) => GROUP_COLORS[label] || { dark: 'bg-slate-200 text-slate-700', light: 'bg-slate-50 text-slate-600' };
+              // Màu riêng cho từng nhóm PHỤ (group2) để phân biệt rõ VNĐ/Tệ, Lần 1/Lần 2 — không chỉ dựa vào chữ.
+              const GROUP2_COLORS = {
+                'VNĐ': 'bg-indigo-100 text-indigo-800',
+                'Tệ': 'bg-amber-100 text-amber-900',
+                'Lần 1': 'bg-emerald-100 text-emerald-800',
+                'Lần 2': 'bg-teal-100 text-teal-800',
+              };
               return (
                 <>
                   <tr className="text-xs uppercase">
                     <th rowSpan={3} className="sticky left-0 bg-gray-100 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
                     {row1Groups.map((g, gi) => (
-                      <th key={gi} colSpan={g.span} className={`text-center px-2 py-1.5 border-r border-b border-white/60 font-semibold ${colorFor(g.label).dark}`}>{g.label}</th>
+                      <th key={gi} colSpan={g.span} className={`text-center px-2 py-1.5 border-r-2 border-b border-gray-300 font-semibold ${colorFor(g.label).dark}`}>{g.label}</th>
                     ))}
                     <th rowSpan={3} className="sticky right-0 bg-gray-100 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
                   </tr>
                   <tr className="text-xs uppercase">
                     {(() => {
-                      // Tra đúng group1 của mỗi ô hàng 2 (dựa theo cột đầu tiên trong span đó) để lấy màu nhạt tương ứng
+                      // Tra đúng group1 của mỗi ô hàng 2 (dựa theo cột đầu tiên trong span đó) để lấy màu nhạt tương ứng;
+                      // nếu group2 có màu riêng (VNĐ/Tệ/Lần 1/Lần 2) thì ưu tiên dùng màu đó để tách rõ 2 nhóm phụ.
                       const out = [];
                       let idx = 0;
                       row2Groups.forEach((g, gi) => {
                         const col = cols[idx];
+                        const cls = GROUP2_COLORS[g.label] || colorFor(col.group1 || '').light;
                         out.push(
-                          <th key={gi} colSpan={g.span} className={`text-center px-2 py-1 border-r border-b border-white/60 font-medium ${colorFor(col.group1 || '').light}`}>{g.label}</th>
+                          <th key={gi} colSpan={g.span} className={`text-center px-2 py-1 border-r-2 border-b border-gray-300 font-medium ${cls}`}>{g.label}</th>
                         );
                         idx += g.span;
                       });

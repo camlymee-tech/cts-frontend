@@ -21,18 +21,15 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
       if (!byCustomer[id]) {
         byCustomer[id] = {
           customerId: id, batchCount: 0,
-          totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalTransferredToCompany: 0,
-          totalRemainingDebt: 0, batchesInDebt: 0, saleCode: saleInfoByUuid[b.created_by]?.code || '', saleName: saleInfoByUuid[b.created_by]?.name || '',
+          totalInvoiceAmount: 0, totalTransferredToCompany: 0, totalRemainingDebt: 0,
+          saleCode: saleInfoByUuid[b.created_by]?.code || '', saleName: saleInfoByUuid[b.created_by]?.name || '',
         };
       }
       const r = byCustomer[id];
       r.batchCount += 1;
-      r.totalInvoiceAmount += Number(b.invoice_amount) || 0;
-      r.totalAmountVnd += Number(b.amount_vnd) || 0;
-      r.totalDueOnArrival += Number(b.total_due_on_arrival) || 0;
+      r.totalInvoiceAmount += c.invoiceAmount || 0;
       r.totalTransferredToCompany += c.totalCustomerTransferred || 0;
       r.totalRemainingDebt += c.remainingDebt || 0;
-      if (c.remainingDebt > 0) r.batchesInDebt += 1;
     });
     return Object.values(byCustomer);
   }, [batches, saleInfoByUuid]);
@@ -47,11 +44,9 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
   const grandTotal = filtered.reduce((acc, r) => ({
     batchCount: acc.batchCount + r.batchCount,
     totalInvoiceAmount: acc.totalInvoiceAmount + r.totalInvoiceAmount,
-    totalAmountVnd: acc.totalAmountVnd + r.totalAmountVnd,
-    totalDueOnArrival: acc.totalDueOnArrival + r.totalDueOnArrival,
     totalTransferredToCompany: acc.totalTransferredToCompany + r.totalTransferredToCompany,
     totalRemainingDebt: acc.totalRemainingDebt + r.totalRemainingDebt,
-  }), { batchCount: 0, totalInvoiceAmount: 0, totalAmountVnd: 0, totalDueOnArrival: 0, totalTransferredToCompany: 0, totalRemainingDebt: 0 });
+  }), { batchCount: 0, totalInvoiceAmount: 0, totalTransferredToCompany: 0, totalRemainingDebt: 0 });
 
   if (detailCustomerId !== undefined) {
     return (
@@ -103,12 +98,9 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
               {isAdmin && <th className="text-left px-4 py-3 font-semibold">Mã Sale</th>}
               {isAdmin && <th className="text-left px-4 py-3 font-semibold">Tên Sale</th>}
               <th className="text-center px-4 py-3 font-semibold">Số lô</th>
-              <th className="text-right px-4 py-3 font-semibold">Tổng tiền xuất hóa đơn</th>
-              <th className="text-right px-4 py-3 font-semibold">Tổng tiền KH chuyển vào Cty</th>
-              <th className="text-right px-4 py-3 font-semibold">Tiền hàng</th>
-              <th className="text-right px-4 py-3 font-semibold">Phải trả cho CTS (VNĐ)</th>
-              <th className="text-right px-4 py-3 font-semibold text-rose-700 bg-rose-50">Công nợ còn lại</th>
-              <th className="text-center px-4 py-3 font-semibold text-rose-700 bg-rose-50">Số lô còn nợ</th>
+              <th className="text-right px-4 py-3 font-semibold">Tổng phải thu khách hàng</th>
+              <th className="text-right px-4 py-3 font-semibold">Tổng đã thu khách hàng</th>
+              <th className="text-right px-4 py-3 font-semibold text-rose-700 bg-rose-50">Còn lại</th>
               <th className="px-4 py-3 w-24"></th>
             </tr></thead>
             <tbody>
@@ -120,10 +112,7 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                   <td className="px-4 py-3 text-center text-gray-600">{r.batchCount}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalInvoiceAmount)}</td>
                   <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalTransferredToCompany)}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalAmountVnd)}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{fmtNum(r.totalDueOnArrival)}</td>
                   <td className={`px-4 py-3 text-right font-semibold bg-rose-50/70 ${r.totalRemainingDebt > 0 ? 'text-red-600' : 'text-gray-700'}`}>{fmtNum(r.totalRemainingDebt)}</td>
-                  <td className="px-4 py-3 text-center font-medium bg-rose-50/70 text-gray-700">{r.batchesInDebt}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button onClick={() => setDetailCustomerId(r.customerId)} className="text-gray-600 hover:text-gray-800">🔍 Chi tiết</button>
                   </td>
@@ -138,10 +127,8 @@ export const CashFlowSummary = ({ batches = [], customers = {}, sellers = {}, is
                 <td className="px-4 py-3 text-center">{grandTotal.batchCount}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalInvoiceAmount)}</td>
                 <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalTransferredToCompany)}</td>
-                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalAmountVnd)}</td>
-                <td className="px-4 py-3 text-right">{fmtNum(grandTotal.totalDueOnArrival)}</td>
                 <td className="px-4 py-3 text-right bg-rose-100/70 text-rose-700">{fmtNum(grandTotal.totalRemainingDebt)}</td>
-                <td className="px-4 py-3 bg-rose-100/70" colSpan={2}></td>
+                <td className="px-4 py-3 bg-rose-100/70"></td>
               </tr>
             </tfoot>
           </table>
