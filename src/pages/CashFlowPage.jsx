@@ -29,13 +29,12 @@ const GroupSumInput = ({ initial, onCommit }) => {
 
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
 export const deriveComputed = (r) => {
-  const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng dự kiến = Tỷ giá x Số tệ
-  const remainderAfterGoods = num(r.customer_paid_total) - amountVnd; // Phần dư sau khi thanh toán tiền hàng = Tổng KH đã chuyển - Tiền hàng dự kiến
-  const amountDueMore = num(r.invoice_amount) - num(r.customer_paid_total) - num(r.actual_collected); // Còn phải thanh toán = Giá trị xuất hóa đơn - Khách chuyển khoản lần 1 - Khách chuyển khoản lần 2
-  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected);
-  const diffAmount = num(r.invoice_amount) - totalCustomerTransferred; // Chênh lệch (cột V)
-  const remainingDebt = diffAmount; // Công nợ còn lại = Chênh lệch (cột V)
-  return { amountVnd, remainderAfterGoods, amountDueMore, remainingDebt, totalCustomerTransferred, diffAmount };
+  const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng (VNĐ) = Tỷ giá x Số tệ
+  const invoiceAmount = amountVnd + num(r.tax_service_fee); // Tổng (= giá trị xuất hóa đơn) = Tiền hàng + Thuế + phí dịch vụ
+  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected); // Tổng đã thu = Lần 1 (Tiền hàng) + Lần 2 (Số tiền chuyển)
+  const diffAmount = invoiceAmount - totalCustomerTransferred; // Còn lại = Tổng hóa đơn - Tổng đã thu
+  const remainingDebt = diffAmount; // Công nợ còn lại = Còn lại
+  return { amountVnd, invoiceAmount, remainingDebt, totalCustomerTransferred, diffAmount };
 };
 
 // Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
@@ -60,32 +59,32 @@ const excelColLetter = (n) => {
   return s;
 };
 
-// Cấu hình cột — đúng thứ tự bảng "CHI TIẾT THEO DÕI CÔNG NỢ" (GUI_LY)
+// Cấu hình cột — đúng thứ tự + nhóm tiêu đề theo file Excel chị Ly cung cấp (group1/group2 dùng để vẽ
+// tiêu đề gộp 3 hàng: group1 = tiêu đề lớn, group2 = tiêu đề nhỏ bên trong, cột không có group2 chiếm
+// trọn chiều cao 2 hàng dưới nếu group1 có group2 ở cột khác cùng nhóm).
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130 },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
-  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true },
-  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100 },
-  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true },
-  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
-  { key: 'amountVnd', label: 'Tiền hàng dự kiến (VNĐ)', type: 'computed', w: 170, formula: 'N×O' },
-  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true },
-  { key: 'customer_paid_total', label: 'Tổng KH đã chuyển lần 1 (VNĐ)', type: 'number', w: 180, fromDntt: true },
-  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
-  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 220, fromDntt: true },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
-  { key: 'exchange_rate', label: 'Tỷ giá', type: 'number', w: 110, fromDntt: true },
-  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true },
-  { key: 'cnyDiff', label: 'Phần dư sau khi thanh toán tiền hàng', type: 'computed', w: 190, formula: 'I-G' },
-  { key: 'amountDueMore', label: 'Còn phải thanh toán', type: 'computed', w: 170, formula: 'U-I-R' },
-  { key: 'actual_collected', label: 'Khách chuyển tiền lần 2 (VNĐ)', type: 'number', w: 180 },
-  { key: 'customer_final_payment_date', label: 'Ngày khách thanh toán lần 2', type: 'date', w: 170 },
-  { key: 'totalCustomerTransferred', label: 'Tổng tiền KH chuyển vào Cty', type: 'computed', w: 180, formula: 'I+R' },
-  { key: 'invoice_amount', label: 'Giá trị xuất hóa đơn', type: 'number', w: 170 },
-  { key: 'diffAmount', label: 'Chênh lệch', type: 'computed', w: 150, formula: 'U-T' },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130, group1: 'Thông tin khách hàng' },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
+  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 220, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 170, formula: 'I×J', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
+  { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 110, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150, group1: 'Phải thu khách hàng', group2: 'Tệ' },
+  { key: 'tax_service_fee', label: 'Thuế + phí dịch vụ', type: 'number', w: 170, group1: 'Phải thu khách hàng' },
+  { key: 'invoice_amount', label: 'Tổng (= giá trị xuất hóa đơn)', type: 'computed', w: 190, formula: 'H+L', group1: 'Phải thu khách hàng' },
+  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
+  { key: 'customer_paid_total', label: 'Tiền hàng', type: 'number', w: 180, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
+  { key: 'customer_final_payment_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 170, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
+  { key: 'actual_collected', label: 'Số tiền chuyển', type: 'number', w: 180, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
+  { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 180, formula: 'O+R', group1: 'Đã thu khách hàng' },
+  { key: 'diffAmount', label: 'Còn lại', type: 'computed', w: 150, formula: 'M-S', group1: 'Còn lại' },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 220, group1: 'Ghi chú' },
   { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
   { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
 ];
@@ -112,10 +111,10 @@ const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
-const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'actual_collected', 'invoice_amount'];
+const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
 // chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
-const EDITABLE_SUM_KEYS = ['actual_collected', 'invoice_amount'];
+const EDITABLE_SUM_KEYS = ['actual_collected'];
 
 const BLANK_ROW = { customer_id: '', seller_id: '' };
 
@@ -271,7 +270,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     payload.order_date = row.customer_paid_date || null;
     // Lưu kèm các cột tổng hợp quan trọng để tiện xuất báo cáo/đối chiếu về sau
     payload.amount_vnd = computed.amountVnd;
-    payload.amount_due_more = computed.amountDueMore;
+    payload.invoice_amount = computed.invoiceAmount; // Tổng (= giá trị xuất hóa đơn) — giờ tự tính = Tiền hàng + Thuế phí, không nhập tay nữa
     payload.remaining_debt = computed.remainingDebt;
     payload.total_customer_transferred = computed.totalCustomerTransferred;
     payload.diff_amount = computed.diffAmount;
@@ -496,8 +495,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     };
     const computedFns = {
       amountVnd: (c) => c.amountVnd,
-      cnyDiff: (c) => c.remainderAfterGoods,
-      amountDueMore: (c) => c.amountDueMore,
+      invoice_amount: (c) => c.invoiceAmount,
       totalCustomerTransferred: (c) => c.totalCustomerTransferred,
       diffAmount: (c) => c.diffAmount,
     };
@@ -709,12 +707,12 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           }
           if (col.type === 'computed') {
-            const map = { amountVnd: computed.amountVnd, cnyDiff: computed.remainderAfterGoods,
-              amountDueMore: computed.amountDueMore, remainingDebt: computed.remainingDebt,
+            const map = { amountVnd: computed.amountVnd, invoice_amount: computed.invoiceAmount,
+              remainingDebt: computed.remainingDebt,
               totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
-            // "Tiền hàng dự kiến" và "Phần dư sau khi thanh toán tiền hàng" vẫn hiện chi tiết từng dòng con —
+            // "Tiền hàng" và "Tổng (= giá trị xuất hóa đơn)" vẫn hiện chi tiết từng dòng con —
             // các cột tự tính còn lại chỉ hiện tổng ở dòng gốc như trước.
-            const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'cnyDiff'];
+            const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'invoice_amount'];
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
@@ -771,7 +769,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const exportExcel = () => {
     const computedMapFor = (row) => {
       const c = deriveComputed(row);
-      return { amountVnd: c.amountVnd, cnyDiff: c.remainderAfterGoods, amountDueMore: c.amountDueMore, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount };
+      return { amountVnd: c.amountVnd, invoice_amount: c.invoiceAmount, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount };
     };
     const data = filtered.map(row => {
       const computedMap = computedMapFor(row);
@@ -853,8 +851,39 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
         <table className="text-sm border-collapse" style={{ minWidth: 3600 }}>
           <thead className="sticky top-0 z-10">
+            {(() => {
+              const buildSpanRow = (getKey, getLabel) => {
+                const out = [];
+                let i = 0;
+                while (i < cols.length) {
+                  const k = getKey(cols[i]);
+                  let span = 1;
+                  while (i + span < cols.length && getKey(cols[i + span]) === k) span++;
+                  out.push({ label: getLabel(cols[i]), span });
+                  i += span;
+                }
+                return out;
+              };
+              const row1Groups = buildSpanRow(c => c.group1 || '', c => c.group1 || '');
+              const row2Groups = buildSpanRow(c => `${c.group1 || ''}::${c.group2 || ''}`, c => c.group2 || '');
+              return (
+                <>
+                  <tr className="bg-gray-100 text-gray-700 text-xs uppercase">
+                    <th rowSpan={3} className="sticky left-0 bg-gray-100 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
+                    {row1Groups.map((g, gi) => (
+                      <th key={gi} colSpan={g.span} className="text-center px-2 py-1.5 border-r border-b border-gray-200 font-semibold">{g.label}</th>
+                    ))}
+                    <th rowSpan={3} className="sticky right-0 bg-gray-100 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
+                  </tr>
+                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
+                    {row2Groups.map((g, gi) => (
+                      <th key={gi} colSpan={g.span} className="text-center px-2 py-1 border-r border-b border-gray-200 font-medium">{g.label}</th>
+                    ))}
+                  </tr>
+                </>
+              );
+            })()}
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <th className="sticky left-0 bg-gray-50 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
               {cols.map((col, i) => (
                 <th key={col.key} style={{ minWidth: col.w }}
                   className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''} ${col.type === 'computed' ? 'text-emerald-700 bg-emerald-50' : ''}`}>
@@ -862,7 +891,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                   <div className="normal-case font-mono opacity-70">{excelColLetter(i)}{col.formula ? ` = ${col.formula}` : ''}</div>
                 </th>
               ))}
-              <th className="sticky right-0 bg-gray-50 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
             </tr>
           </thead>
           <tbody>
