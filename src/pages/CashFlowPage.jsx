@@ -34,7 +34,10 @@ export const deriveComputed = (r) => {
   const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected); // Tổng đã thu = Lần 1 (Tiền hàng) + Lần 2 (Số tiền chuyển)
   const diffAmount = invoiceAmount - totalCustomerTransferred; // Còn lại = Tổng hóa đơn - Tổng đã thu
   const remainingDebt = diffAmount; // Công nợ còn lại = Còn lại
-  return { amountVnd, invoiceAmount, remainingDebt, totalCustomerTransferred, diffAmount };
+  // Riêng cho "Theo dõi chi tiết" của Hợp đồng ngoại thương (COLS_FX):
+  const fxAmountVnd = num(r.exchange_rate) * num(r.customer_paid_total); // Tổng tiền Việt = Tỉ giá $ × Tiền hàng ($)
+  const fxRemaining = num(r.amount_cny) - num(r.customer_paid_total); // Còn lại = Số tệ (Tiền hàng tệ) - Tiền hàng ($)
+  return { amountVnd, invoiceAmount, remainingDebt, totalCustomerTransferred, diffAmount, fxAmountVnd, fxRemaining };
 };
 
 // Các cột lấy giá trị từ Đề Nghị Thanh Toán — khoá không cho sửa trực tiếp ở đây (trừ khi đang tạo dòng mới),
@@ -94,24 +97,29 @@ const COLS = [
 // Ngày khách thanh toán lần 2, Giá trị xuất hóa đơn, Chênh lệch, Tiền hàng dự kiến, Phần dư sau khi thanh toán,
 // Tổng tiền KH chuyển vào Cty); "Tiền vào" (Đã thu khách — customer_paid_total) và "Tiền ra" (Đã thanh toán
 // ngoại tệ — amount_cny) đặt cạnh nhau để dễ so sánh từng dòng; "Tiền cọc" đổi tên thành "CTS phải thu".
+// Bản cột riêng cho "Theo dõi dòng tiền" (Theo dõi chi tiết) của Hợp đồng ngoại thương — theo đúng mẫu Excel
+// chị Ly cung cấp: Thông tin khách hàng | Đã thu khách hàng (Tỉ giá $, Tiền hàng $, Tổng tiền Việt tự tính,
+// Tổng tiền tệ quy đổi nhập tay) | Phải thu khách hàng (Số tệ, Ngày chuyển xưởng) | Còn lại (tự tính) | Ghi chú.
 const COLS_FX = [
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true },
-  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100 },
-  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true },
-  { key: 'goods_desc', label: 'Mô tả hàng hóa', type: 'text', w: 200, fromDntt: true },
-  { key: 'customer_paid_total', label: 'Tiền vào (CNY)', type: 'number', w: 160, fromDntt: true },
-  { key: 'amount_cny', label: 'Tiền ra (CNY)', type: 'number', w: 160, fromDntt: true },
-  { key: 'deposit_vnd', label: 'CTS phải thu', type: 'number', w: 160, fromDntt: true },
-  { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150 },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 220 },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 130, group1: 'Thông tin khách hàng' },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
+  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'exchange_rate', label: 'Tỉ giá $', type: 'number', w: 110, fromDntt: true, group1: 'Đã thu khách hàng' },
+  { key: 'customer_paid_total', label: 'Tiền hàng ($)', type: 'number', w: 160, fromDntt: true, group1: 'Đã thu khách hàng' },
+  { key: 'fxAmountVnd', label: 'Tổng tiền Việt', type: 'computed', w: 170, formula: 'E×F', group1: 'Đã thu khách hàng' },
+  { key: 'fx_converted_total', label: 'Tổng tiền tệ quy đổi', type: 'number', w: 180, group1: 'Đã thu khách hàng' },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true, group1: 'Phải thu khách hàng' },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150, group1: 'Phải thu khách hàng' },
+  { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 150, formula: 'I-F', group1: 'Còn lại' },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 220, group1: 'Ghi chú' },
 ];
 
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
-const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected'];
+const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected', 'fx_converted_total'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
 // chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
 const EDITABLE_SUM_KEYS = ['actual_collected', 'tax_service_fee'];
@@ -498,6 +506,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       invoice_amount: (c) => c.invoiceAmount,
       totalCustomerTransferred: (c) => c.totalCustomerTransferred,
       diffAmount: (c) => c.diffAmount,
+      fxAmountVnd: (c) => c.fxAmountVnd,
+      fxRemaining: (c) => c.fxRemaining,
     };
     return (
       <tr key={`group-${groupKey}`} className="bg-yellow-50 hover:bg-yellow-100/70 border-b border-gray-200">
@@ -718,10 +728,11 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           if (col.type === 'computed') {
             const map = { amountVnd: computed.amountVnd, invoice_amount: computed.invoiceAmount,
               remainingDebt: computed.remainingDebt,
-              totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount };
-            // "Tiền hàng" và "Tổng (= giá trị xuất hóa đơn)" vẫn hiện chi tiết từng dòng con —
-            // các cột tự tính còn lại chỉ hiện tổng ở dòng gốc như trước.
-            const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'invoice_amount'];
+              totalCustomerTransferred: computed.totalCustomerTransferred, diffAmount: computed.diffAmount,
+              fxAmountVnd: computed.fxAmountVnd, fxRemaining: computed.fxRemaining };
+            // "Tiền hàng", "Tổng (= giá trị xuất hóa đơn)", "Tổng tiền Việt" và "Còn lại" (Hợp đồng ngoại thương)
+            // vẫn hiện chi tiết từng dòng con — các cột tự tính còn lại chỉ hiện tổng ở dòng gốc như trước.
+            const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'invoice_amount', 'fxAmountVnd', 'fxRemaining'];
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
             return <td key={col.key} style={{ minWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
@@ -778,7 +789,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const exportExcel = () => {
     const computedMapFor = (row) => {
       const c = deriveComputed(row);
-      return { amountVnd: c.amountVnd, invoice_amount: c.invoiceAmount, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount };
+      return { amountVnd: c.amountVnd, invoice_amount: c.invoiceAmount, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount, fxAmountVnd: c.fxAmountVnd, fxRemaining: c.fxRemaining };
     };
     const data = filtered.map(row => {
       const computedMap = computedMapFor(row);
@@ -816,7 +827,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           <button onClick={exportExcel} className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium shadow">
             📥 Xuất Excel
           </button>
-          {!isFxContract && selectedIds.size >= 2 && (
+          {selectedIds.size >= 2 && (
             <button onClick={handleGroupSelected} disabled={grouping} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium shadow disabled:opacity-50">
               {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành lô (${selectedIds.size})`}
             </button>
@@ -874,7 +885,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                 return out;
               };
               const row1Groups = buildSpanRow(c => c.group1 || '', c => c.group1 || '');
-              const row2Groups = buildSpanRow(c => `${c.group1 || ''}::${c.group2 || ''}`, c => c.group2 || '');
+              const hasGroup2 = cols.some(c => c.group2);
+              const row2Groups = hasGroup2 ? buildSpanRow(c => `${c.group1 || ''}::${c.group2 || ''}`, c => c.group2 || '') : [];
+              const headerRowSpan = hasGroup2 ? 3 : 2;
               // Mỗi cụm (group1) 1 màu riêng để nhìn tách bạch từng khối — hàng 2 dùng bản nhạt hơn của cùng màu.
               const GROUP_COLORS = {
                 'Thông tin khách hàng': { dark: 'bg-sky-200 text-sky-900', light: 'bg-sky-50 text-sky-700' },
@@ -895,29 +908,31 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               return (
                 <>
                   <tr className="text-xs uppercase">
-                    <th rowSpan={3} className="sticky left-0 bg-gray-100 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
+                    <th rowSpan={headerRowSpan} className="sticky left-0 bg-gray-100 px-2 py-2 border-r border-gray-200 z-20 w-8"></th>
                     {row1Groups.map((g, gi) => (
                       <th key={gi} colSpan={g.span} className={`text-center px-2 py-1.5 border-r-2 border-b border-gray-300 font-semibold ${colorFor(g.label).dark}`}>{g.label}</th>
                     ))}
-                    <th rowSpan={3} className="sticky right-0 bg-gray-100 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
+                    <th rowSpan={headerRowSpan} className="sticky right-0 bg-gray-100 px-2 py-2 border-l border-gray-200 z-20 w-20"></th>
                   </tr>
-                  <tr className="text-xs uppercase">
-                    {(() => {
-                      // Tra đúng group1 của mỗi ô hàng 2 (dựa theo cột đầu tiên trong span đó) để lấy màu nhạt tương ứng;
-                      // nếu group2 có màu riêng (VNĐ/Tệ/Lần 1/Lần 2) thì ưu tiên dùng màu đó để tách rõ 2 nhóm phụ.
-                      const out = [];
-                      let idx = 0;
-                      row2Groups.forEach((g, gi) => {
-                        const col = cols[idx];
-                        const cls = GROUP2_COLORS[g.label] || colorFor(col.group1 || '').light;
-                        out.push(
-                          <th key={gi} colSpan={g.span} className={`text-center px-2 py-1 border-r-2 border-b border-gray-300 font-medium ${cls}`}>{g.label}</th>
-                        );
-                        idx += g.span;
-                      });
-                      return out;
-                    })()}
-                  </tr>
+                  {hasGroup2 && (
+                    <tr className="text-xs uppercase">
+                      {(() => {
+                        // Tra đúng group1 của mỗi ô hàng 2 (dựa theo cột đầu tiên trong span đó) để lấy màu nhạt tương ứng;
+                        // nếu group2 có màu riêng (VNĐ/Tệ/Lần 1/Lần 2) thì ưu tiên dùng màu đó để tách rõ 2 nhóm phụ.
+                        const out = [];
+                        let idx = 0;
+                        row2Groups.forEach((g, gi) => {
+                          const col = cols[idx];
+                          const cls = GROUP2_COLORS[g.label] || colorFor(col.group1 || '').light;
+                          out.push(
+                            <th key={gi} colSpan={g.span} className={`text-center px-2 py-1 border-r-2 border-b border-gray-300 font-medium ${cls}`}>{g.label}</th>
+                          );
+                          idx += g.span;
+                        });
+                        return out;
+                      })()}
+                    </tr>
+                  )}
                 </>
               );
             })()}
