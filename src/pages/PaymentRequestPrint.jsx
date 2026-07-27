@@ -174,7 +174,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
-          deposit_vnd: !isFx ? (r ? ctsPhaiThuFor(r) : null) : (r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null),
+          deposit_vnd: !isFx ? (r ? chenhLech : null) : (r && r.ctsPhaiThu !== '' ? num(r.ctsPhaiThu) : null),
           customer_paid_total: r && r.daThuKhach !== '' ? num(r.daThuKhach) : null,
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
