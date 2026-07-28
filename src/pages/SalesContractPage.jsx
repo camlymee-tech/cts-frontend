@@ -346,7 +346,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-700 mb-3">Hàng hóa - Số lượng - Đơn giá</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[1400px] border-collapse">
+              <table className="w-full text-sm min-w-[1500px] border-collapse">
                 <thead>
                   <tr className="text-left text-xs text-gray-500">
                     <th className="pb-2 pl-1 w-8">#</th>
@@ -354,10 +354,10 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                     <th className="pb-2 px-2 w-80">Mô tả tiếng Việt (nội bộ) — gõ xong rời ô sẽ tự dịch</th>
                     <th className="pb-2 px-2 w-28">Mã HS</th>
                     <th className="pb-2 px-2 w-28">Xuất xứ</th>
-                    <th className="pb-2 px-2 w-16">SL</th>
-                    <th className="pb-2 px-2 w-16">ĐVT</th>
-                    <th className="pb-2 px-2 w-28">Đơn giá</th>
-                    <th className="pb-2 px-2 w-32 text-right">Thành tiền</th>
+                    <th className="pb-2 px-2 w-20">SL</th>
+                    <th className="pb-2 px-2 w-20">ĐVT</th>
+                    <th className="pb-2 px-2 w-36">Đơn giá</th>
+                    <th className="pb-2 px-2 w-36 text-right">Thành tiền</th>
                     <th className="pb-2 w-8"></th>
                   </tr>
                 </thead>

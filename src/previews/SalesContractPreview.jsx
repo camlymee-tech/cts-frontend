@@ -9,6 +9,32 @@ const fmtDMY = (d) => {
   return `${day}/${m}/${y}`;
 };
 
+const cellLabel = { border: '1px solid #000', padding: '6px 10px', fontWeight: 'bold', fontSize: '12.5px', whiteSpace: 'nowrap', verticalAlign: 'top' };
+const cellValue = { border: '1px solid #000', padding: '6px 10px', fontSize: '12.5px', verticalAlign: 'top' };
+const cellValueBold = { ...cellValue, fontWeight: 'bold' };
+
+const PartyTable = ({ heading, p }) => (
+  <>
+    <p className="font-bold text-xs mb-1">{heading}</p>
+    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+      <tbody>
+        <tr>
+          <td style={{ ...cellLabel, width: '8%' }}>Reg:</td>
+          <td style={{ ...cellValueBold, width: '47%' }}>{p.name}</td>
+          <td style={{ ...cellLabel, width: '18%' }}>Representative by:</td>
+          <td style={{ ...cellValue, width: '27%' }}>{p.rep}</td>
+        </tr>
+        <tr>
+          <td style={cellLabel}>Add:</td>
+          <td style={cellValue}>{p.address}</td>
+          <td style={cellLabel}>Position:</td>
+          <td style={cellValue}>{p.position}</td>
+        </tr>
+      </tbody>
+    </table>
+  </>
+);
+
 // c = sales contract record (data phần jsonb)
 export const SalesContractPreview = ({ c }) => {
   const items = c.items || [];
@@ -44,15 +70,8 @@ export const SalesContractPreview = ({ c }) => {
 
       <p className="mb-4 text-xs">This agreement is drawn between the following parties:</p>
 
-      <p className="font-bold text-xs mb-1">The Seller (Party A):</p>
-      <p className="text-xs mb-0.5">Reg: {seller.name}</p>
-      <p className="text-xs mb-0.5">Add: {seller.address}</p>
-      <p className="text-xs mb-4">Representative by: {seller.rep} — Position: {seller.position}</p>
-
-      <p className="font-bold text-xs mb-1">The Buyer (Party B):</p>
-      <p className="text-xs mb-0.5">Reg: {buyer.name}</p>
-      <p className="text-xs mb-0.5">Add: {buyer.address}</p>
-      <p className="text-xs mb-5">Representative by: {buyer.rep} — Position: {buyer.position}</p>
+      <PartyTable heading="The Seller (Party A):" p={seller} />
+      <PartyTable heading="The Buyer (Party B):" p={buyer} />
 
       <p className="text-xs mb-4 italic">
         In accordance with the seller's quotation, we are mutually agreed between two parties to sign this sales contract on the terms and conditions as following:
