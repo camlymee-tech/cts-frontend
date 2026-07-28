@@ -178,7 +178,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
       const data = {
         ...form,
         buyer: {
-          name: customer.companyNameEN || customer.companyName || '', address: customer.address || '',
+          name: customer.companyNameEN || customer.companyName || '', address: customer.addressEN || customer.address || '',
           rep: customer.representative || '', position: customer.position || 'Director',
         },
       };
@@ -327,11 +327,14 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                   />
                   {form.customerId && <PartyInfoCard title="Thông tin Buyer (tự điền)" p={customer} />}
                   {form.customerId && (
-                    customer.companyNameEN ? (
-                      <p className="text-xs text-emerald-700">✓ Tên trên Sales Contract sẽ dùng: <strong>{customer.companyNameEN}</strong></p>
+                    customer.companyNameEN && customer.addressEN ? (
+                      <p className="text-xs text-emerald-700">
+                        ✓ Trên Sales Contract sẽ dùng: <strong>{customer.companyNameEN}</strong> — {customer.addressEN}
+                      </p>
                     ) : (
                       <p className="text-xs text-amber-600">
-                        ⚠️ Khách hàng này chưa có "Tên công ty (tiếng Anh)" — hợp đồng sẽ tạm dùng tên tiếng Việt. Vào mục Khách hàng để bổ sung tên tiếng Anh.
+                        ⚠️ Khách hàng này chưa có đủ {!customer.companyNameEN && '"Tên công ty (tiếng Anh)"'}{!customer.companyNameEN && !customer.addressEN && ' và '}{!customer.addressEN && '"Địa chỉ (tiếng Anh)"'} —
+                        hợp đồng sẽ tạm dùng bản tiếng Việt. Vào mục Khách hàng để bổ sung (có nút dịch tự động).
                       </p>
                     )
                   )}

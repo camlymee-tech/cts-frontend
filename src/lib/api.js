@@ -59,6 +59,23 @@ export const api = {
     return data.en || ''; // { en: "..." }
   },
 
+  // ───────── AI dịch địa chỉ tiếng Việt → tiếng Anh (dùng cho Sales Contract) ─────────
+  async translateAddressToEnglish(vietnameseAddress) {
+    const { data, error } = await supabase.functions.invoke('clever-handler', {
+      body: { text: vietnameseAddress, mode: 'translate_address_en' },
+    });
+    if (error) {
+      let msg = error.message;
+      try {
+        const body = await error.context?.json();
+        if (body?.error) msg = body.error;
+      } catch { /* ignore */ }
+      throw new Error(msg || 'Lỗi gọi AI dịch địa chỉ.');
+    }
+    if (data?.error) throw new Error(data.error);
+    return data.en || ''; // { en: "..." }
+  },
+
   async _invokeReadInvoice(imageBase64, mediaType, mode) {
     const { data, error } = await supabase.functions.invoke('clever-handler', {
       body: { imageBase64, mediaType, mode },

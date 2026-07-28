@@ -93,6 +93,34 @@ Deno.serve(async (req) => {
       return json({ en });
     }
 
+    // 3a-2. Chế độ dịch địa chỉ tiếng Việt → tiếng Anh (Sales Contract) — giữ format địa chỉ chuẩn quốc tế.
+    if (mode === 'translate_address_en') {
+      if (!text || !text.trim()) return json({ error: 'Thiếu nội dung cần dịch.' }, 400);
+      const prompt =
+        'Bạn là nhân viên xuất nhập khẩu lâu năm. Chuyển địa chỉ công ty tiếng Việt sau đây sang tiếng Anh, đúng thứ tự và văn phong dùng ' +
+        'trên Sales Contract quốc tế (số nhà/ngõ → đường/phố → phường/xã → thành phố/tỉnh → "Vietnam"). Giữ nguyên tên riêng (đường, phường, ' +
+        'quận, tỉnh...) chỉ chuyển sang dạng không dấu hoặc phiên âm quen thuộc, KHÔNG dịch nghĩa tên riêng. Ví dụ:\n' +
+        '- "Số 18, Ngõ 117, Phố Thái Hà, Phường Đống Đa, Thành phố Hà Nội, Việt Nam" → "No. 18, Lane 117, Thai Ha Street, Dong Da Ward, Hanoi City, Vietnam"\n' +
+        'Chỉ trả về đúng 1 dòng địa chỉ tiếng Anh, không thêm giải thích, không thêm dấu ngoặc kép.\n\n' +
+        'Địa chỉ tiếng Việt: ' + text;
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        return json({ error: 'Lỗi gọi AI (' + aiRes.status + '): ' + errText.slice(0, 300) }, 502);
+      }
+      const aiData = await aiRes.json();
+      const en = (aiData.content?.[0]?.text || '').trim().replace(/^"|"$/g, '');
+      return json({ en });
+    }
+
     // 3b. Chế độ đọc hóa đơn/đơn hàng từ ảnh hoặc PDF (như cũ).
     if (!imageBase64 || !mediaType) {
       return json({ error: 'Thiếu dữ liệu ảnh/file gửi lên.' }, 400);

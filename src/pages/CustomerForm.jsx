@@ -4,6 +4,7 @@ import { Field } from '../components/Field';
 import { Select } from '../components/Select';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { normalizeText } from '../utils/customerExcel';
+import { api } from '../lib/api';
 
 // Với khách hàng cũ chưa gắn accountId (dữ liệu nhập trước khi có dropdown), tự đối chiếu
 // theo mã/tên sale đã lưu để điền sẵn — người dùng không cần chọn lại thủ công.
@@ -23,7 +24,7 @@ const genBranchId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ?
 
 const blankBranch = () => ({
   id: genBranchId(), // để nhận diện đúng nhánh, không dựa vào Mã số thuế (có thể để trống/trùng nhau)
-  taxCode: '', companyName: '', companyNameEN: '', address: '', phone: '', email: '',
+  taxCode: '', companyName: '', companyNameEN: '', address: '', addressEN: '', phone: '', email: '',
   bankAccount: '', bankName: '', representative: '', position: '',
 });
 // Bản cũ chỉ lưu {taxCode, name} và chưa có "id" — chuyển "name" thành "companyName", tự cấp thêm "id" ổn định
@@ -32,7 +33,7 @@ const migrateBranch = (b) => ({ ...blankBranch(), ...b, id: b.id || genBranchId(
 
 export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [], autoSaleAssign = null }) => {
   const blank = {
-    companyName: '', companyNameEN: '', address: '', taxCode: '', phone: '', email: '',
+    companyName: '', companyNameEN: '', address: '', addressEN: '', taxCode: '', phone: '', email: '',
     bankAccount: '', bankName: '', representative: '', position: '',
     branches: [], // Mã nhánh — 1 khách hàng gốc có thể có nhiều nhánh, mỗi nhánh có đủ thông tin riêng như khách hàng gốc
     ...(withShortName ? { shortName: '' } : {}),
@@ -42,8 +43,22 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     ? { ...blank, ...init, branches: (init.branches || []).map(migrateBranch), ...(withAssignment ? { assignedSale: resolveAssignedSale(init.assignedSale, saleProfiles) } : {}) }
     : blank;
   const [form, setForm] = useState(initialForm);
+  const [translatingAddress, setTranslatingAddress] = useState(false);
+  const [translatingBranchIdx, setTranslatingBranchIdx] = useState(null);
   const [expandedBranch, setExpandedBranch] = useState(null); // chỉ 1 mã nhánh mở rộng xem/sửa tại 1 thời điểm
   const upd = (f) => (v) => setForm(p => ({ ...p, [f]: v }));
+
+  const translateAddress = async () => {
+    if (!form.address?.trim()) return alert('Vui lòng nhập Địa chỉ (tiếng Việt) trước.');
+    setTranslatingAddress(true);
+    try {
+      const en = await api.translateAddressToEnglish(form.address);
+      if (en) upd('addressEN')(en);
+    } catch (e) {
+      alert(e.message || 'Có lỗi khi dịch địa chỉ.');
+    }
+    setTranslatingAddress(false);
+  };
   const selectSale = (uuid) => {
     const p = saleProfiles.find(sp => sp.uuid === uuid);
     if (!p) return;
@@ -60,6 +75,19 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
   }));
   const removeBranch = (idx) => setForm(p => ({ ...p, branches: p.branches.filter((_, i) => i !== idx) }));
 
+  const translateBranchAddress = async (idx) => {
+    const b = form.branches[idx];
+    if (!b?.address?.trim()) return alert('Vui lòng nhập Địa chỉ (tiếng Việt) của nhánh này trước.');
+    setTranslatingBranchIdx(idx);
+    try {
+      const en = await api.translateAddressToEnglish(b.address);
+      if (en) updBranch(idx, 'addressEN', en);
+    } catch (e) {
+      alert(e.message || 'Có lỗi khi dịch địa chỉ.');
+    }
+    setTranslatingBranchIdx(null);
+  };
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-3">
@@ -71,6 +99,20 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
           <Field label="Ngày ký / Ngày hiệu lực" value={form.shortName} onChange={upd('shortName')} type="date" />
         )}
         <Field label="Địa chỉ" value={form.address} onChange={upd('address')} cols={2} />
+        {!withShortName && (
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Địa chỉ (tiếng Anh) — dùng cho Sales Contract</label>
+            <div className="flex gap-2">
+              <input value={form.addressEN} onChange={e => upd('addressEN')(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="No. 18, Lane 117, Thai Ha Street, Dong Da Ward, Hanoi City, Vietnam" />
+              <button type="button" onClick={translateAddress} disabled={translatingAddress}
+                className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+                {translatingAddress ? '⏳ Đang dịch...' : '🔄 Dịch tự động'}
+              </button>
+            </div>
+          </div>
+        )}
         <Field label="Mã số thuế (gốc)" value={form.taxCode} onChange={upd('taxCode')} />
         <Field label="Số điện thoại" value={form.phone} onChange={upd('phone')} />
         <Field label="Email" value={form.email} onChange={upd('email')} type="email" />
@@ -106,6 +148,17 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
                         <Field label="Tên công ty / HKD (nhánh)" value={b.companyName} onChange={v => updBranch(i, 'companyName', v)} cols={2} />
                         <Field label="Tên tiếng Anh (nhánh) — dùng cho Sales Contract" value={b.companyNameEN} onChange={v => updBranch(i, 'companyNameEN', v)} cols={2} />
                         <Field label="Địa chỉ" value={b.address} onChange={v => updBranch(i, 'address', v)} cols={2} />
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Địa chỉ (tiếng Anh) — dùng cho Sales Contract</label>
+                          <div className="flex gap-2">
+                            <input value={b.addressEN} onChange={e => updBranch(i, 'addressEN', e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                            <button type="button" onClick={() => translateBranchAddress(i)} disabled={translatingBranchIdx === i}
+                              className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+                              {translatingBranchIdx === i ? '⏳...' : '🔄 Dịch'}
+                            </button>
+                          </div>
+                        </div>
                         <Field label="Mã số thuế nhánh" value={b.taxCode} onChange={v => updBranch(i, 'taxCode', v)} />
                         <Field label="Số điện thoại" value={b.phone} onChange={v => updBranch(i, 'phone', v)} />
                         <Field label="Email" value={b.email} onChange={v => updBranch(i, 'email', v)} type="email" />
