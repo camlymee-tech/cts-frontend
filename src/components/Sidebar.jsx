@@ -48,6 +48,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       items: [
         { id: 'fx_contract', icon: '🏦', label: 'Theo dõi tiền HĐNT' },
         { id: 'fx_contract_payment_request', icon: '🧾', label: 'Đề nghị TT - HĐNT' },
+        { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
       ],
     },
     {
@@ -72,12 +73,6 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
         { id: 'hdnt_ut', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT_UT, color: 'bg-green-500' },
         { id: 'ddh_ut', icon: '📦', label: 'Đơn Đặt Dịch Vụ', count: counts.DDH_UT, color: 'bg-yellow-500' },
         { id: 'bbbg_ut', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG_UT, color: 'bg-purple-500' },
-      ],
-    },
-    {
-      key: 'sales_contract', header: '📄 Sales Contract',
-      items: [
-        { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
       ],
     },
   ];
