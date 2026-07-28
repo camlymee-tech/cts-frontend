@@ -112,6 +112,57 @@ export const fmtYYMMDD = (dateStr) => {
   return String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
 };
 
+// DDMMYY — dùng riêng cho số hợp đồng Sales Contract (theo đúng quy ước bên bán Trung Quốc hay dùng, vd GJ/AD-250726)
+export const fmtDDMMYY = (dateStr) => {
+  if (!dateStr) return 'DDMMYY';
+  const d = new Date(dateStr + 'T00:00:00');
+  return String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + String(d.getFullYear()).slice(2);
+};
+
+// Gợi ý số Sales Contract dạng "GJ/AD-250726" (chữ đầu Seller / chữ đầu Buyer - DDMMYY). Chỉ là gợi ý, người dùng sửa được.
+export const buildSalesContractNo = ({ sellerName, buyerName, date }) => {
+  const sellerInit = getInitials(sellerName) || 'XX';
+  const buyerInit = getInitials(buyerName) || 'XX';
+  return `${sellerInit}/${buyerInit}-${fmtDDMMYY(date)}`;
+};
+
+// Đọc số tiền USD ra chữ tiếng Anh, dùng cho dòng "Say: ..." trên Sales Contract (vd "Twenty-eight thousand ... US dollars only.")
+export const amountToWordsEN = (amount) => {
+  const onesW = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tensW = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const threeDigitsEN = (n) => {
+    let str = '';
+    if (n >= 100) {
+      str += onesW[Math.floor(n / 100)] + ' Hundred';
+      n %= 100;
+      if (n > 0) str += ' ';
+    }
+    if (n >= 20) {
+      str += tensW[Math.floor(n / 10)];
+      if (n % 10 > 0) str += '-' + onesW[n % 10].toLowerCase();
+    } else if (n > 0) {
+      str += onesW[n];
+    }
+    return str;
+  };
+  const dollars = Math.floor(Number(amount) || 0);
+  const cents = Math.round(((Number(amount) || 0) - dollars) * 100);
+  if (dollars === 0 && cents === 0) return 'Zero US dollars only.';
+  const groupsW = ['', ' Thousand', ' Million', ' Billion'];
+  let n = dollars, groupIndex = 0;
+  const parts = [];
+  while (n > 0) {
+    const chunk = n % 1000;
+    if (chunk > 0) parts.unshift(threeDigitsEN(chunk) + groupsW[groupIndex]);
+    n = Math.floor(n / 1000);
+    groupIndex++;
+  }
+  let words = parts.join(' ') + (dollars === 1 ? ' US dollar' : ' US dollars');
+  if (cents > 0) words += ` and ${cents}/100`;
+  return words + ' only.';
+};
+
 export const buildContractId = ({ type, date, saleCode, stt, sellerName, customerName }) => {
   const seq = String(stt || '').replace(/\D/g, '').slice(0, 3);
   const sellerInit = getInitials(sellerName) || '—';

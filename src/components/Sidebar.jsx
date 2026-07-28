@@ -4,6 +4,7 @@ const CATEGORY_STYLE = {
   van_chuyen: 'border-sky-400',
   uy_thac: 'border-amber-400',
   thanh_toan: 'border-emerald-400',
+  sales_contract: 'border-rose-400',
 };
 
 const NavBtn = ({ item, page, setPage, indent }) => {
@@ -70,6 +71,12 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
         { id: 'hdnt_ut', icon: '📋', label: 'HĐ Nguyên Tắc', count: counts.HDNT_UT, color: 'bg-green-500' },
         { id: 'ddh_ut', icon: '📦', label: 'Đơn Đặt Dịch Vụ', count: counts.DDH_UT, color: 'bg-yellow-500' },
         { id: 'bbbg_ut', icon: '✅', label: 'Biên Bản BG', count: counts.BBBG_UT, color: 'bg-purple-500' },
+      ],
+    },
+    {
+      key: 'sales_contract', header: '📄 Sales Contract',
+      items: [
+        { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
       ],
     },
   ];

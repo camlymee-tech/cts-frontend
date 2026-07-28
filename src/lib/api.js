@@ -341,6 +341,45 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // --- Sales Contract: hợp đồng ngoại thương tiếng Anh (Seller nhà máy TQ tự do nhập / Buyer = khách hàng),
+  // bảng RIÊNG hoàn toàn, độc lập với contracts (HĐNT/ĐĐH/BBBG) và cash_flow_batches/fx_contract_batches. ---
+  async listSalesContracts() {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from('sales_contracts').select('*').order('date', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  },
+
+  async upsertSalesContract(id, fields) {
+    const { data: s } = await supabase.auth.getSession();
+    const payload = { ...fields, updated_at: new Date().toISOString() };
+    if (id) {
+      const { data, error } = await supabase
+        .from('sales_contracts').update(payload).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    payload.created_by = s.session?.user?.id;
+    const { data, error } = await supabase
+      .from('sales_contracts').insert(payload).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteSalesContract(id) {
+    const { error } = await supabase.from('sales_contracts').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
   // --- Quỹ ngoại tệ (CNY): sổ quỹ riêng theo dõi Thu vào quỹ / Chi trả cho từng lô hàng ---
   async listCnyFundTransactions() {
     const { data, error } = await supabase

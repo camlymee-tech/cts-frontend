@@ -1,0 +1,123 @@
+// File: src/previews/SalesContractPreview.jsx
+import { fmtNum, amountToWordsEN } from '../helpers';
+import { SignatureBlock } from './SignatureBlock';
+
+const fmtUSD = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDMY = (d) => {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+};
+
+// c = sales contract record (data phần jsonb)
+export const SalesContractPreview = ({ c }) => {
+  const items = c.items || [];
+  const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.unitPrice) || 0), 0);
+  const seller = c.seller || {};
+  const buyer = c.buyer || {};
+
+  return (
+    <div className="contract-paper" style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+      <h1 className="text-center text-lg font-bold tracking-wide mb-1">SALES CONTRACT</h1>
+      <div className="flex justify-between text-xs mb-6">
+        <span>No: {c.contractNo || '________'}</span>
+        <span>Date: {fmtDMY(c.date)}</span>
+      </div>
+
+      <p className="mb-4 text-xs">This agreement is drawn between the following parties:</p>
+
+      <p className="font-bold text-xs mb-1">The Seller (Party A):</p>
+      <p className="text-xs mb-0.5">Reg: {seller.name}</p>
+      <p className="text-xs mb-0.5">Add: {seller.address}</p>
+      <p className="text-xs mb-4">Representative by: {seller.rep} — Position: {seller.position}</p>
+
+      <p className="font-bold text-xs mb-1">The Buyer (Party B):</p>
+      <p className="text-xs mb-0.5">Reg: {buyer.name}</p>
+      <p className="text-xs mb-0.5">Add: {buyer.address}</p>
+      <p className="text-xs mb-5">Representative by: {buyer.rep} — Position: {buyer.position}</p>
+
+      <p className="text-xs mb-4 italic">
+        In accordance with the seller's quotation, we are mutually agreed between two parties to sign this sales contract on the terms and conditions as following:
+      </p>
+
+      <p className="font-bold text-xs mb-2">1. Commodity - Specification - Quantity - Price:</p>
+      <table className="w-full text-xs mb-2 border-collapse">
+        <thead>
+          <tr className="border-b border-t" style={{ borderColor: '#333' }}>
+            <th className="py-1.5 text-left font-semibold">Item No.</th>
+            <th className="py-1.5 text-left font-semibold">Description of commodity</th>
+            <th className="py-1.5 text-left font-semibold">Origin</th>
+            <th className="py-1.5 text-right font-semibold">Quantity</th>
+            <th className="py-1.5 text-left font-semibold pl-2">Unit</th>
+            <th className="py-1.5 text-right font-semibold">Unit price</th>
+            <th className="py-1.5 text-right font-semibold">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it, i) => (
+            <tr key={it.id || i} className="border-b" style={{ borderColor: '#ccc' }}>
+              <td className="py-1.5">{i + 1}</td>
+              <td className="py-1.5">{it.descriptionEN}</td>
+              <td className="py-1.5">{it.origin}</td>
+              <td className="py-1.5 text-right">{fmtNum(it.qty)}</td>
+              <td className="py-1.5 pl-2">{it.unit}</td>
+              <td className="py-1.5 text-right">${fmtUSD(it.unitPrice)}</td>
+              <td className="py-1.5 text-right">${fmtUSD((Number(it.qty) || 0) * (Number(it.unitPrice) || 0))}</td>
+            </tr>
+          ))}
+          <tr>
+            <td colSpan={6} className="py-1.5 text-right font-semibold">Total amount (USD)</td>
+            <td className="py-1.5 text-right font-semibold">${fmtUSD(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="text-xs mb-4">Say: {amountToWordsEN(total)}</p>
+
+      <p className="text-xs mb-4">Quality: {c.quality}</p>
+
+      <div className="grid grid-cols-2 gap-6 mb-4">
+        <div>
+          <p className="font-bold text-xs mb-1">2. Shipping terms:</p>
+          <p className="text-xs mb-0.5">Shipping method: {c.shippingMethod}</p>
+          <p className="text-xs mb-0.5">Shipping terms: {c.incoterms}</p>
+          <p className="text-xs mb-0.5">Port of loading: {c.portLoading}</p>
+          <p className="text-xs mb-0.5">Port of discharge: {c.portDischarge}</p>
+          <p className="text-xs mb-0.5">Latest shipment date: {c.latestShipment}</p>
+          <p className="text-xs">Notice of shipment: {c.noticeShipment}</p>
+        </div>
+        <div>
+          <p className="font-bold text-xs mb-1">3. Packing:</p>
+          <p className="text-xs">{c.packing}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 mb-4">
+        <div>
+          <p className="font-bold text-xs mb-1">4. Payments:</p>
+          <p className="text-xs mb-1">{c.paymentTerm}</p>
+          <p className="text-xs mb-0.5">Bank: {c.bankName}</p>
+          <p className="text-xs mb-0.5">Bank address: {c.bankAddress}</p>
+          <p className="text-xs mb-0.5">Swift code: {c.swiftCode}</p>
+          <p className="text-xs mb-0.5">Account number: {c.accountNumber}</p>
+          <p className="text-xs mb-0.5">Beneficiary: {c.beneficiary}</p>
+          <p className="text-xs">{c.feesNote}</p>
+        </div>
+        <div>
+          <p className="font-bold text-xs mb-1">5. Required Documents:</p>
+          <p className="text-xs mb-0.5">Commercial invoice and Packing list: 02 original sets</p>
+          <p className="text-xs">Certificate of origin: 01 original set (issued by China Chamber of Commerce)</p>
+        </div>
+      </div>
+
+      <p className="font-bold text-xs mb-1">6. Penalty - Arbitration:</p>
+      <p className="text-xs mb-2">
+        {c.penalty} Any dispute arising out of this contract shall be first amicably settled by parties. If agreeable result
+        cannot be reached it shall be finally settled by the Vietnam International Arbitration Center at the Chamber of
+        Commerce and Industry of Vietnam (VCCI). Decision reached by this arbitration shall be final and promptly accepted
+        by all parties.
+      </p>
+
+      <SignatureBlock marginTop="30px" leftTitle="SELLER/PARTY A" rightTitle="BUYER/PARTY B" />
+    </div>
+  );
+};
