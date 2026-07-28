@@ -53,18 +53,51 @@ Deno.serve(async (req) => {
       return json({ error: 'Chưa đăng nhập hoặc phiên đã hết hạn. Vui lòng tải lại trang và đăng nhập lại.' }, 401);
     }
 
-    // 2. Đọc dữ liệu ảnh/PDF gửi lên từ trình duyệt.
-    const { imageBase64, mediaType, mode } = await req.json();
-    if (!imageBase64 || !mediaType) {
-      return json({ error: 'Thiếu dữ liệu ảnh/file gửi lên.' }, 400);
-    }
-    const prompt = PROMPTS[mode] || PROMPTS.vat;
+    // 2. Đọc dữ liệu gửi lên từ trình duyệt — có 2 dạng: ảnh/PDF (đọc hóa đơn) hoặc text thuần (dịch mô tả).
+    const { imageBase64, mediaType, mode, text } = await req.json();
 
     // 3. API Key chỉ đọc từ biến môi trường (Secret) của Supabase — không lưu, không trả về client.
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
       return json({ error: 'Server chưa cấu hình ANTHROPIC_API_KEY. Vào Supabase Dashboard → Edge Functions → Secrets để thêm.' }, 500);
     }
+
+    // 3a. Chế độ dịch mô tả sản phẩm tiếng Việt → tiếng Anh (Sales Contract) — không cần ảnh, chỉ cần text.
+    if (mode === 'translate_en') {
+      if (!text || !text.trim()) return json({ error: 'Thiếu nội dung cần dịch.' }, 400);
+      const prompt =
+        'Bạn là nhân viên xuất nhập khẩu lâu năm. Dựa vào mô tả tiếng Việt chi tiết sau, viết TÊN SẢN PHẨM NGẮN GỌN bằng tiếng Anh ' +
+        'dùng cho Sales Contract — không phải dịch nguyên văn toàn bộ câu. Chỉ giữ: loại sản phẩm + đặc điểm nhận diện chính (chất liệu/kích ' +
+        'thước/dung tích nếu ngắn gọn) + mã hàng/model nếu có (ghi dạng "item code: (...)" hoặc "model ..."). KHÔNG liệt kê các chi tiết phụ ' +
+        '(không có nắp, không phải pha lê chì, không dùng pin điện, v.v...). Vài ví dụ đúng phong cách cần viết:\n' +
+        '- "Cốc thủy tinh thường, không nắp, không chân, không phải pha lê chì, dung tích 250-300ml, mã hàng: (GW7701, 8597)..." → "Glass drinking cup, item code: (GW7701, 8597)"\n' +
+        '- "Nồi inox 201 đáy liền, dày 1mm, không chống dính, không dùng pin điện, dung tích 20L..." → "Inox 201 cooking pot 20L"\n' +
+        '- "Áo tank nữ, model WX307, chất liệu dệt kim 75% nylon 25% spandex..." → "Women\'s tank top, model WX307"\n' +
+        'Chỉ trả về đúng 1 dòng tiếng Anh ngắn gọn (thường dưới 10 từ), không thêm giải thích, không thêm dấu ngoặc kép.\n\n' +
+        'Mô tả tiếng Việt: ' + text;
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        return json({ error: 'Lỗi gọi AI (' + aiRes.status + '): ' + errText.slice(0, 300) }, 502);
+      }
+      const aiData = await aiRes.json();
+      const en = (aiData.content?.[0]?.text || '').trim().replace(/^"|"$/g, '');
+      return json({ en });
+    }
+
+    // 3b. Chế độ đọc hóa đơn/đơn hàng từ ảnh hoặc PDF (như cũ).
+    if (!imageBase64 || !mediaType) {
+      return json({ error: 'Thiếu dữ liệu ảnh/file gửi lên.' }, 400);
+    }
+    const prompt = PROMPTS[mode] || PROMPTS.vat;
 
     const isPdf = mediaType === 'application/pdf';
     const fileBlock = isPdf
