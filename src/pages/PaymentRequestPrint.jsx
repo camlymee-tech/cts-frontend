@@ -190,12 +190,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
-          exchange_rate: fx ? num(fx.tyGia) : null,
+          exchange_rate: isFx ? (r && r.tyGiaRow !== '' ? num(r.tyGiaRow) : null) : (fx ? num(fx.tyGia) : null),
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
           ...(isFx ? {
             voucher_exchange_rate: r && r.tyGiaRow !== '' ? num(r.tyGiaRow) : null,
             voucher_amount_fx: r && r.tienHangRow !== '' ? num(r.tienHangRow) : null,
+            fx_converted_total: r && r.daThuKhach !== '' ? num(r.daThuKhach) : null,
           } : {}),
           payment_request_no: savedRequestNo,
           order_date: requestDate,
@@ -385,16 +386,16 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className="grid grid-cols-12 gap-2 mb-1 px-1">
             <label className="col-span-6 text-xs text-gray-500">Nội dung / tài khoản nhận</label>
             <label className="col-span-2 text-xs text-gray-500">Tỷ giá</label>
-            <label className={isFx ? 'col-span-3 text-xs text-gray-500' : 'col-span-2 text-xs text-gray-500'}>Số tệ</label>
-            {!isFx && <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>}
+            <label className="col-span-2 text-xs text-gray-500">Số tệ</label>
+            <label className="col-span-2 text-xs text-gray-500">Thành tiền (tự tính)</label>
           </div>
           <div className="space-y-2">
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
                 <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
-                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className={isFx ? 'col-span-3 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right' : 'col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right'} />
-                {!isFx && <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>}
+                <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
               </div>
             ))}
@@ -490,7 +491,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <th>Nội dung</th>
             <th style={{ width: 80 }}>Tỷ giá</th>
             <th style={{ width: 100 }}>Số tệ</th>
-            {!isFx && <th style={{ width: 130 }}>Thành tiền</th>}
+            <th style={{ width: 130 }}>Thành tiền</th>
           </tr></thead>
           <tbody>
             {fxRows.map((r, i) => (
@@ -498,7 +499,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
                 <td style={{ textAlign: 'right' }}>{r.soTe ? fmtNum(r.soTe) : ''}</td>
-                {!isFx && <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>}
+                <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(r))}</td>
               </tr>
             ))}
             {!isFx && (
