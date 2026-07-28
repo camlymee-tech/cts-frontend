@@ -68,7 +68,7 @@ const excelColLetter = (n) => {
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 90, group1: 'Thông tin khách hàng' },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 140, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 170, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true, group1: 'Công ty bán hàng' },
@@ -101,18 +101,18 @@ const COLS = [
 // chị Ly cung cấp: Thông tin khách hàng | Đã thu khách hàng (Tỉ giá $, Tiền hàng $, Tổng tiền Việt tự tính,
 // Tổng tiền tệ quy đổi nhập tay) | Phải thu khách hàng (Số tệ, Ngày chuyển xưởng) | Còn lại (tự tính) | Ghi chú.
 const COLS_FX = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 70, group1: 'Thông tin khách hàng' },
-  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 100, fromDntt: true, group1: 'Thông tin khách hàng' },
-  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 80, group1: 'Thông tin khách hàng' },
-  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 160, fromDntt: true, group1: 'Thông tin khách hàng' },
-  { key: 'exchange_rate', label: 'Tỉ giá $', type: 'number', w: 90, fromDntt: true, group1: 'Đã thu khách hàng' },
-  { key: 'voucher_amount_fx', label: 'Tiền hàng ($)', type: 'number', w: 110, fromDntt: true, group1: 'Đã thu khách hàng' },
-  { key: 'fxAmountVnd', label: 'Tổng tiền Việt', type: 'computed', w: 120, formula: 'E×F', group1: 'Đã thu khách hàng' },
-  { key: 'fx_converted_total', label: 'Tổng tiền tệ quy đổi', type: 'number', w: 130, group1: 'Đã thu khách hàng' },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 65, group1: 'Thông tin khách hàng' },
+  { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 90, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 70, group1: 'Thông tin khách hàng' },
+  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 140, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'exchange_rate', label: 'Tỉ giá $', type: 'number', w: 75, fromDntt: true, group1: 'Đã thu khách hàng' },
+  { key: 'voucher_amount_fx', label: 'Tiền hàng ($)', type: 'number', w: 95, fromDntt: true, group1: 'Đã thu khách hàng' },
+  { key: 'fxAmountVnd', label: 'Tổng tiền Việt', type: 'computed', w: 100, formula: 'E×F', group1: 'Đã thu khách hàng' },
+  { key: 'fx_converted_total', label: 'Tổng tiền tệ quy đổi', type: 'number', w: 110, group1: 'Đã thu khách hàng' },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 110, fromDntt: true, group1: 'Phải thu khách hàng' },
-  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 120, group1: 'Phải thu khách hàng' },
-  { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 110, formula: 'H-I', group1: 'Còn lại' },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 160, group1: 'Ghi chú' },
+  { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 125, group1: 'Phải thu khách hàng' },
+  { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 80, formula: 'H-I', group1: 'Còn lại' },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 100, group1: 'Ghi chú' },
 ];
 
 const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
