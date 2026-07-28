@@ -31,7 +31,7 @@ const GroupSumInput = ({ initial, onCommit }) => {
 export const deriveComputed = (r) => {
   const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng (VNĐ) = Tỷ giá x Số tệ
   const invoiceAmount = amountVnd + num(r.tax_service_fee); // Tổng (= giá trị xuất hóa đơn) = Tiền hàng + Thuế + phí dịch vụ
-  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.actual_collected); // Tổng đã thu = Lần 1 (Tiền hàng) + Lần 2 (Số tiền chuyển)
+  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.deposit_vnd) + num(r.actual_collected); // Tổng đã thu = Lần 1 (Tiền hàng + Tiền cọc) + Lần 2 (Số tiền chuyển)
   const diffAmount = invoiceAmount - totalCustomerTransferred; // Còn lại = Tổng hóa đơn - Tổng đã thu
   const remainingDebt = diffAmount; // Công nợ còn lại = Còn lại
   // Riêng cho "Theo dõi chi tiết" của Hợp đồng ngoại thương (COLS_FX):
@@ -85,7 +85,7 @@ const COLS = [
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
   { key: 'customer_final_payment_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 170, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
   { key: 'actual_collected', label: 'Số tiền chuyển', type: 'number', w: 180, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
-  { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 180, formula: 'O+R', group1: 'Đã thu khách hàng' },
+  { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 180, formula: 'O+P+R', group1: 'Đã thu khách hàng' },
   { key: 'diffAmount', label: 'Còn lại', type: 'computed', w: 150, formula: 'M-S', group1: 'Còn lại' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 220, group1: 'Ghi chú' },
   { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
