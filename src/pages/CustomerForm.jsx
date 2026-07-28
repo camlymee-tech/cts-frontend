@@ -23,7 +23,7 @@ const genBranchId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ?
 
 const blankBranch = () => ({
   id: genBranchId(), // để nhận diện đúng nhánh, không dựa vào Mã số thuế (có thể để trống/trùng nhau)
-  taxCode: '', companyName: '', address: '', phone: '', email: '',
+  taxCode: '', companyName: '', companyNameEN: '', address: '', phone: '', email: '',
   bankAccount: '', bankName: '', representative: '', position: '',
 });
 // Bản cũ chỉ lưu {taxCode, name} và chưa có "id" — chuyển "name" thành "companyName", tự cấp thêm "id" ổn định
@@ -32,7 +32,7 @@ const migrateBranch = (b) => ({ ...blankBranch(), ...b, id: b.id || genBranchId(
 
 export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [], autoSaleAssign = null }) => {
   const blank = {
-    companyName: '', address: '', taxCode: '', phone: '', email: '',
+    companyName: '', companyNameEN: '', address: '', taxCode: '', phone: '', email: '',
     bankAccount: '', bankName: '', representative: '', position: '',
     branches: [], // Mã nhánh — 1 khách hàng gốc có thể có nhiều nhánh, mỗi nhánh có đủ thông tin riêng như khách hàng gốc
     ...(withShortName ? { shortName: '' } : {}),
@@ -64,6 +64,9 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
     <div>
       <div className="grid grid-cols-2 gap-3">
         <Field label={companyLabel} value={form.companyName} onChange={upd('companyName')} cols={2} required />
+        {!withShortName && (
+          <Field label="Tên công ty (tiếng Anh) — dùng cho Sales Contract" value={form.companyNameEN} onChange={upd('companyNameEN')} cols={2} />
+        )}
         {withShortName && (
           <Field label="Ngày ký / Ngày hiệu lực" value={form.shortName} onChange={upd('shortName')} type="date" />
         )}
@@ -101,6 +104,7 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
                     {isOpen && (
                       <div className="grid grid-cols-2 gap-3 p-3 border-t border-gray-200">
                         <Field label="Tên công ty / HKD (nhánh)" value={b.companyName} onChange={v => updBranch(i, 'companyName', v)} cols={2} />
+                        <Field label="Tên tiếng Anh (nhánh) — dùng cho Sales Contract" value={b.companyNameEN} onChange={v => updBranch(i, 'companyNameEN', v)} cols={2} />
                         <Field label="Địa chỉ" value={b.address} onChange={v => updBranch(i, 'address', v)} cols={2} />
                         <Field label="Mã số thuế nhánh" value={b.taxCode} onChange={v => updBranch(i, 'taxCode', v)} />
                         <Field label="Số điện thoại" value={b.phone} onChange={v => updBranch(i, 'phone', v)} />

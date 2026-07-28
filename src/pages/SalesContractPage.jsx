@@ -10,6 +10,7 @@ import { SalesContractPreview } from '../previews/SalesContractPreview';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { buildSalesContractNo, fmtNum, amountToWordsEN, genForeignSellerId } from '../helpers';
 import { doPrintZone, doDownloadPDFZone, doDownloadWordZone, safeFilename } from '../utils/docExport';
+import { api } from '../lib/api';
 
 const PRINT_STYLE = `
   @page { size: A4 portrait; margin: 18mm; }
@@ -59,6 +60,8 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
   const [editingId, setEditingId] = useState(null); // id (uuid) đang sửa, null = tạo mới
   const [selectedForeignSellerId, setSelectedForeignSellerId] = useState('');
   const [savingSeller, setSavingSeller] = useState(false);
+  const [translatingIds, setTranslatingIds] = useState(new Set());
+  const [translateErrorIds, setTranslateErrorIds] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -112,6 +115,22 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
   const removeItem = (id) =>
     setForm(prev => ({ ...prev, items: prev.items.length > 1 ? prev.items.filter(it => it.id !== id) : prev.items }));
 
+  // Tự động dịch mô tả tiếng Việt → tiếng Anh khi rời khỏi ô (blur) hoặc bấm nút "Dịch" thủ công.
+  const translateItem = async (id) => {
+    const it = form.items.find(x => x.id === id);
+    if (!it || !it.vietnameseName?.trim()) return;
+    setTranslatingIds(prev => new Set(prev).add(id));
+    setTranslateErrorIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    try {
+      const en = await api.translateGoodsDescription(it.vietnameseName);
+      if (en) updateItem(id, 'descriptionEN', en);
+    } catch (e) {
+      setTranslateErrorIds(prev => new Set(prev).add(id));
+      console.error('Dịch mô tả lỗi:', e.message);
+    }
+    setTranslatingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
   const suggestContractNo = () => {
     updateField('contractNo', buildSalesContractNo({ sellerName: form.seller.name, buyerName: customer.companyName, date: form.date }));
   };
@@ -159,7 +178,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
       const data = {
         ...form,
         buyer: {
-          name: customer.companyName || '', address: customer.address || '',
+          name: customer.companyNameEN || customer.companyName || '', address: customer.address || '',
           rep: customer.representative || '', position: customer.position || 'Director',
         },
       };
@@ -307,6 +326,15 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                     options={buildCustomerOptions(customers)}
                   />
                   {form.customerId && <PartyInfoCard title="Thông tin Buyer (tự điền)" p={customer} />}
+                  {form.customerId && (
+                    customer.companyNameEN ? (
+                      <p className="text-xs text-emerald-700">✓ Tên trên Sales Contract sẽ dùng: <strong>{customer.companyNameEN}</strong></p>
+                    ) : (
+                      <p className="text-xs text-amber-600">
+                        ⚠️ Khách hàng này chưa có "Tên công ty (tiếng Anh)" — hợp đồng sẽ tạm dùng tên tiếng Việt. Vào mục Khách hàng để bổ sung tên tiếng Anh.
+                      </p>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -315,18 +343,18 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-700 mb-3">Hàng hóa - Số lượng - Đơn giá</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px] border-collapse">
+              <table className="w-full text-sm min-w-[1150px] border-collapse">
                 <thead>
                   <tr className="text-left text-xs text-gray-500">
                     <th className="pb-2 pl-1 w-8">#</th>
-                    <th className="pb-2 px-2">Description (EN) — hiện trên hợp đồng</th>
-                    <th className="pb-2 px-2">Mô tả tiếng Việt (nội bộ)</th>
-                    <th className="pb-2 px-2 w-24">Mã HS</th>
-                    <th className="pb-2 px-2 w-24">Xuất xứ</th>
-                    <th className="pb-2 px-2 w-20">SL</th>
-                    <th className="pb-2 px-2 w-20">ĐVT</th>
-                    <th className="pb-2 px-2 w-24">Đơn giá</th>
-                    <th className="pb-2 px-2 w-28 text-right">Thành tiền</th>
+                    <th className="pb-2 px-2 w-64">Description (EN) — hiện trên hợp đồng</th>
+                    <th className="pb-2 px-2 w-64">Mô tả tiếng Việt (nội bộ) — gõ xong rời ô sẽ tự dịch</th>
+                    <th className="pb-2 px-2 w-28">Mã HS</th>
+                    <th className="pb-2 px-2 w-28">Xuất xứ</th>
+                    <th className="pb-2 px-2 w-16">SL</th>
+                    <th className="pb-2 px-2 w-16">ĐVT</th>
+                    <th className="pb-2 px-2 w-28">Đơn giá</th>
+                    <th className="pb-2 px-2 w-32 text-right">Thành tiền</th>
                     <th className="pb-2 w-8"></th>
                   </tr>
                 </thead>
@@ -334,8 +362,24 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                   {items.map((it, i) => (
                     <tr key={it.id} className="border-t border-gray-100">
                       <td className="py-2 pl-1 text-xs text-gray-400">{i + 1}</td>
-                      <td className="py-2 px-2"><TextInput value={it.descriptionEN} onChange={e => updateItem(it.id, 'descriptionEN', e.target.value)} placeholder="Women's tank top, model WX307" /></td>
-                      <td className="py-2 px-2"><TextInput value={it.vietnameseName} onChange={e => updateItem(it.id, 'vietnameseName', e.target.value)} placeholder="Áo tank nữ, model WX307..." /></td>
+                      <td className="py-2 px-2">
+                        <TextInput value={it.descriptionEN} onChange={e => updateItem(it.id, 'descriptionEN', e.target.value)} placeholder="Women's tank top, model WX307" />
+                      </td>
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-1">
+                          <TextInput
+                            value={it.vietnameseName}
+                            onChange={e => updateItem(it.id, 'vietnameseName', e.target.value)}
+                            onBlur={() => translateItem(it.id)}
+                            placeholder="Áo tank nữ, model WX307..."
+                          />
+                          <button type="button" title="Dịch lại sang tiếng Anh" onClick={() => translateItem(it.id)}
+                            disabled={translatingIds.has(it.id)} className="shrink-0 text-sm disabled:opacity-40">
+                            {translatingIds.has(it.id) ? '⏳' : '🔄'}
+                          </button>
+                        </div>
+                        {translateErrorIds.has(it.id) && <p className="text-[11px] text-red-500 mt-0.5">Dịch lỗi, chị điền tay giúp em ở ô Description (EN) nhé.</p>}
+                      </td>
                       <td className="py-2 px-2"><TextInput value={it.hsCode} onChange={e => updateItem(it.id, 'hsCode', e.target.value)} placeholder="61109000" /></td>
                       <td className="py-2 px-2"><TextInput value={it.origin} onChange={e => updateItem(it.id, 'origin', e.target.value)} /></td>
                       <td className="py-2 px-2"><TextInput type="number" value={it.qty} onChange={e => updateItem(it.id, 'qty', e.target.value)} /></td>

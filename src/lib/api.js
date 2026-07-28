@@ -42,6 +42,23 @@ export const api = {
     return api._invokeReadInvoice(imageBase64, mediaType, 'goods_usd');
   },
 
+  // ───────── AI dịch mô tả sản phẩm tiếng Việt → tiếng Anh (dùng cho Sales Contract) ─────────
+  async translateGoodsDescription(vietnameseText) {
+    const { data, error } = await supabase.functions.invoke('clever-handler', {
+      body: { text: vietnameseText, mode: 'translate_en' },
+    });
+    if (error) {
+      let msg = error.message;
+      try {
+        const body = await error.context?.json();
+        if (body?.error) msg = body.error;
+      } catch { /* ignore */ }
+      throw new Error(msg || 'Lỗi gọi AI dịch mô tả.');
+    }
+    if (data?.error) throw new Error(data.error);
+    return data.en || ''; // { en: "..." }
+  },
+
   async _invokeReadInvoice(imageBase64, mediaType, mode) {
     const { data, error } = await supabase.functions.invoke('clever-handler', {
       body: { imageBase64, mediaType, mode },
