@@ -18,11 +18,29 @@ export const SalesContractPreview = ({ c }) => {
 
   return (
     <div className="contract-paper" style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
-      <h1 className="text-center text-lg font-bold tracking-wide mb-1">SALES CONTRACT</h1>
-      <div className="flex justify-between text-xs mb-6">
-        <span>No: {c.contractNo || '________'}</span>
-        <span>Date: {fmtDMY(c.date)}</span>
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+        <tbody>
+          <tr>
+            <td style={{ border: '1.5px solid #000', padding: '14px 18px', width: '62%', verticalAlign: 'middle' }}>
+              <div style={{ fontSize: '22px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SALES CONTRACT</div>
+            </td>
+            <td style={{ border: '1.5px solid #000', padding: 0, width: '38%', verticalAlign: 'top' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '8px 14px', fontWeight: 'bold', border: 'none', fontSize: '13px' }}>No:</td>
+                    <td style={{ padding: '8px 14px', fontWeight: 'bold', textAlign: 'right', border: 'none', fontSize: '13px' }}>{c.contractNo || '________'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '8px 14px', fontWeight: 'bold', border: 'none', borderTop: '1px solid #000', fontSize: '13px' }}>Date:</td>
+                    <td style={{ padding: '8px 14px', fontWeight: 'bold', textAlign: 'right', border: 'none', borderTop: '1px solid #000', fontSize: '13px' }}>{fmtDMY(c.date)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <p className="mb-4 text-xs">This agreement is drawn between the following parties:</p>
 

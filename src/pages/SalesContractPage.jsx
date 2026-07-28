@@ -255,7 +255,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
   // ───────── FORM (tạo / sửa) ─────────
   if (view === 'form' && form) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-6xl">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setView('list')} className="text-blue-600 hover:text-blue-800 text-sm">← Quay lại</button>
           <h1 className="text-2xl font-bold text-gray-800">{editingId ? '✏️ Sửa Sales Contract' : '📄 Tạo Sales Contract'}</h1>
@@ -346,12 +346,12 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-700 mb-3">Hàng hóa - Số lượng - Đơn giá</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[1150px] border-collapse">
+              <table className="w-full text-sm min-w-[1400px] border-collapse">
                 <thead>
                   <tr className="text-left text-xs text-gray-500">
                     <th className="pb-2 pl-1 w-8">#</th>
-                    <th className="pb-2 px-2 w-64">Description (EN) — hiện trên hợp đồng</th>
-                    <th className="pb-2 px-2 w-64">Mô tả tiếng Việt (nội bộ) — gõ xong rời ô sẽ tự dịch</th>
+                    <th className="pb-2 px-2 w-80">Description (EN) — hiện trên hợp đồng</th>
+                    <th className="pb-2 px-2 w-80">Mô tả tiếng Việt (nội bộ) — gõ xong rời ô sẽ tự dịch</th>
                     <th className="pb-2 px-2 w-28">Mã HS</th>
                     <th className="pb-2 px-2 w-28">Xuất xứ</th>
                     <th className="pb-2 px-2 w-16">SL</th>
@@ -364,32 +364,33 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                 <tbody>
                   {items.map((it, i) => (
                     <tr key={it.id} className="border-t border-gray-100">
-                      <td className="py-2 pl-1 text-xs text-gray-400">{i + 1}</td>
-                      <td className="py-2 px-2">
-                        <TextInput value={it.descriptionEN} onChange={e => updateItem(it.id, 'descriptionEN', e.target.value)} placeholder="Women's tank top, model WX307" />
+                      <td className="py-2 pl-1 text-xs text-gray-400 align-top">{i + 1}</td>
+                      <td className="py-2 px-2 align-top">
+                        <TextArea rows={2} value={it.descriptionEN} onChange={e => updateItem(it.id, 'descriptionEN', e.target.value)} placeholder="Women's tank top, model WX307" />
                       </td>
-                      <td className="py-2 px-2">
-                        <div className="flex items-center gap-1">
-                          <TextInput
+                      <td className="py-2 px-2 align-top">
+                        <div className="flex items-start gap-1">
+                          <TextArea
+                            rows={2}
                             value={it.vietnameseName}
                             onChange={e => updateItem(it.id, 'vietnameseName', e.target.value)}
                             onBlur={() => translateItem(it.id)}
                             placeholder="Áo tank nữ, model WX307..."
                           />
                           <button type="button" title="Dịch lại sang tiếng Anh" onClick={() => translateItem(it.id)}
-                            disabled={translatingIds.has(it.id)} className="shrink-0 text-sm disabled:opacity-40">
+                            disabled={translatingIds.has(it.id)} className="shrink-0 text-sm disabled:opacity-40 mt-1.5">
                             {translatingIds.has(it.id) ? '⏳' : '🔄'}
                           </button>
                         </div>
                         {translateErrorIds.has(it.id) && <p className="text-[11px] text-red-500 mt-0.5">Dịch lỗi, chị điền tay giúp em ở ô Description (EN) nhé.</p>}
                       </td>
-                      <td className="py-2 px-2"><TextInput value={it.hsCode} onChange={e => updateItem(it.id, 'hsCode', e.target.value)} placeholder="61109000" /></td>
-                      <td className="py-2 px-2"><TextInput value={it.origin} onChange={e => updateItem(it.id, 'origin', e.target.value)} /></td>
-                      <td className="py-2 px-2"><TextInput type="number" value={it.qty} onChange={e => updateItem(it.id, 'qty', e.target.value)} /></td>
-                      <td className="py-2 px-2"><TextInput value={it.unit} onChange={e => updateItem(it.id, 'unit', e.target.value)} /></td>
-                      <td className="py-2 px-2"><TextInput type="number" value={it.unitPrice} onChange={e => updateItem(it.id, 'unitPrice', e.target.value)} /></td>
-                      <td className="py-2 px-2 text-right font-mono text-sm">${fmtNum((Number(it.qty) || 0) * (Number(it.unitPrice) || 0))}</td>
-                      <td className="py-2 text-center">
+                      <td className="py-2 px-2 align-top"><TextInput value={it.hsCode} onChange={e => updateItem(it.id, 'hsCode', e.target.value)} placeholder="61109000" /></td>
+                      <td className="py-2 px-2 align-top"><TextInput value={it.origin} onChange={e => updateItem(it.id, 'origin', e.target.value)} /></td>
+                      <td className="py-2 px-2 align-top"><TextInput type="number" value={it.qty} onChange={e => updateItem(it.id, 'qty', e.target.value)} /></td>
+                      <td className="py-2 px-2 align-top"><TextInput value={it.unit} onChange={e => updateItem(it.id, 'unit', e.target.value)} /></td>
+                      <td className="py-2 px-2 align-top"><TextInput type="number" value={it.unitPrice} onChange={e => updateItem(it.id, 'unitPrice', e.target.value)} /></td>
+                      <td className="py-2 px-2 text-right font-mono text-sm align-top pt-3">${fmtNum((Number(it.qty) || 0) * (Number(it.unitPrice) || 0))}</td>
+                      <td className="py-2 text-center align-top pt-3">
                         <button onClick={() => removeItem(it.id)} className="text-gray-300 hover:text-red-500">✕</button>
                       </td>
                     </tr>
