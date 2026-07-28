@@ -35,8 +35,8 @@ export const deriveComputed = (r) => {
   const diffAmount = invoiceAmount - totalCustomerTransferred; // Còn lại = Tổng hóa đơn - Tổng đã thu
   const remainingDebt = diffAmount; // Công nợ còn lại = Còn lại
   // Riêng cho "Theo dõi chi tiết" của Hợp đồng ngoại thương (COLS_FX):
-  const fxAmountVnd = num(r.exchange_rate) * num(r.customer_paid_total); // Tổng tiền Việt = Tỉ giá $ × Tiền hàng ($)
-  const fxRemaining = num(r.amount_cny) - num(r.customer_paid_total); // Còn lại = Số tệ (Tiền hàng tệ) - Tiền hàng ($)
+  const fxAmountVnd = num(r.exchange_rate) * num(r.voucher_amount_fx); // Tổng tiền Việt = Tỉ giá $ × Tiền hàng ($)
+  const fxRemaining = num(r.fx_converted_total) - num(r.amount_cny); // Còn lại = Tổng tiền tệ quy đổi (H) - Số tệ (I)
   return { amountVnd, invoiceAmount, remainingDebt, totalCustomerTransferred, diffAmount, fxAmountVnd, fxRemaining };
 };
 
@@ -106,12 +106,12 @@ const COLS_FX = [
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 80, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 160, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'exchange_rate', label: 'Tỉ giá $', type: 'number', w: 90, fromDntt: true, group1: 'Đã thu khách hàng' },
-  { key: 'customer_paid_total', label: 'Tiền hàng ($)', type: 'number', w: 110, fromDntt: true, group1: 'Đã thu khách hàng' },
+  { key: 'voucher_amount_fx', label: 'Tiền hàng ($)', type: 'number', w: 110, fromDntt: true, group1: 'Đã thu khách hàng' },
   { key: 'fxAmountVnd', label: 'Tổng tiền Việt', type: 'computed', w: 120, formula: 'E×F', group1: 'Đã thu khách hàng' },
   { key: 'fx_converted_total', label: 'Tổng tiền tệ quy đổi', type: 'number', w: 130, group1: 'Đã thu khách hàng' },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 110, fromDntt: true, group1: 'Phải thu khách hàng' },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 120, group1: 'Phải thu khách hàng' },
-  { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 110, formula: 'I-F', group1: 'Còn lại' },
+  { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 110, formula: 'H-I', group1: 'Còn lại' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 160, group1: 'Ghi chú' },
 ];
 
@@ -119,7 +119,7 @@ const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
 const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
 const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
-const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected', 'fx_converted_total'];
+const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected', 'fx_converted_total', 'voucher_amount_fx'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
 // chị sẽ nhập thẳng TỔNG ở dòng gốc, không nhập riêng từng dòng con nữa.
 const EDITABLE_SUM_KEYS = ['actual_collected', 'tax_service_fee'];
