@@ -1,6 +1,5 @@
 // File: src/previews/SalesContractPreview.jsx
 import { fmtNum, amountToWordsEN } from '../helpers';
-import { SignatureBlock } from './SignatureBlock';
 
 const fmtUSD = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDMY = (d) => {
@@ -154,7 +153,20 @@ export const SalesContractPreview = ({ c }) => {
         by all parties.
       </p>
 
-      <SignatureBlock marginTop="30px" leftTitle="SELLER/PARTY A" rightTitle="BUYER/PARTY B" />
+      <table style={{ width: '100%', marginTop: '30px', borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr>
+            <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'top', border: 'none', padding: '0 20px' }} className="text-sm">
+              <div className="font-bold uppercase">SELLER/PARTY A</div>
+              <div style={{ height: '96px' }}></div>
+            </td>
+            <td style={{ width: '50%', textAlign: 'center', verticalAlign: 'top', border: 'none', padding: '0 20px' }} className="text-sm">
+              <div className="font-bold uppercase">BUYER/PARTY B</div>
+              <div style={{ height: '96px' }}></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 };

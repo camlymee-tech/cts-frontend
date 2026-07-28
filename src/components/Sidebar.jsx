@@ -28,6 +28,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
   const top = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     ...(isAdmin ? [{ id: 'settings', icon: '⚙️', label: 'Cài đặt' }] : []),
+    { id: 'foreign_sellers', icon: '🏭', label: 'Bên bán nước ngoài' },
     { id: 'customers', icon: '👥', label: 'Khách hàng' },
     { id: 'invoice_goods', icon: '📦', label: 'Hàng hóa theo hóa đơn' },
     { id: 'my-profile', icon: '👤', label: 'Hồ sơ của tôi' },
@@ -45,8 +46,8 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
     {
       key: 'ngoai_thuong', header: '🏦 Hợp Đồng Ngoại Thương',
       items: [
-        { id: 'fx_contract', icon: '🏦', label: 'Hợp đồng ngoại thương' },
-        { id: 'fx_contract_payment_request', icon: '🧾', label: 'ĐNTT — Hợp Đồng Ngoại Thương' },
+        { id: 'fx_contract', icon: '🏦', label: 'Theo dõi tiền HĐNT' },
+        { id: 'fx_contract_payment_request', icon: '🧾', label: 'Đề nghị TT - HĐNT' },
       ],
     },
     {
@@ -77,7 +78,6 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       key: 'sales_contract', header: '📄 Sales Contract',
       items: [
         { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
-        { id: 'foreign_sellers', icon: '🏭', label: 'Bên bán nước ngoài' },
       ],
     },
   ];
