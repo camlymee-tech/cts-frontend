@@ -179,7 +179,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
         ...form,
         buyer: {
           name: customer.companyNameEN || customer.companyName || '', address: customer.addressEN || customer.address || '',
-          rep: customer.representative || '', position: customer.position || 'Director',
+          rep: customer.representativeEN || customer.representative || '', position: customer.positionEN || customer.position || 'Director',
         },
       };
       const row = await onSave(editingId, { contract_no: data.contractNo, date: data.date, buyer_customer_id: data.customerId, data });
@@ -327,14 +327,14 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
                   />
                   {form.customerId && <PartyInfoCard title="Thông tin Buyer (tự điền)" p={customer} />}
                   {form.customerId && (
-                    customer.companyNameEN && customer.addressEN ? (
+                    customer.companyNameEN && customer.addressEN && customer.representativeEN && customer.positionEN ? (
                       <p className="text-xs text-emerald-700">
-                        ✓ Trên Sales Contract sẽ dùng: <strong>{customer.companyNameEN}</strong> — {customer.addressEN}
+                        ✓ Trên Sales Contract sẽ dùng: <strong>{customer.companyNameEN}</strong> — {customer.addressEN} — {customer.representativeEN}, {customer.positionEN}
                       </p>
                     ) : (
                       <p className="text-xs text-amber-600">
-                        ⚠️ Khách hàng này chưa có đủ {!customer.companyNameEN && '"Tên công ty (tiếng Anh)"'}{!customer.companyNameEN && !customer.addressEN && ' và '}{!customer.addressEN && '"Địa chỉ (tiếng Anh)"'} —
-                        hợp đồng sẽ tạm dùng bản tiếng Việt. Vào mục Khách hàng để bổ sung (có nút dịch tự động).
+                        ⚠️ Khách hàng này chưa điền đủ 4 mục tiếng Anh (Tên công ty / Địa chỉ / Người đại diện / Chức vụ) — hợp đồng sẽ tạm dùng
+                        bản tiếng Việt cho mục còn thiếu. Vào mục Khách hàng để bổ sung (có nút tự động điền).
                       </p>
                     )
                   )}

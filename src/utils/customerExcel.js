@@ -9,6 +9,8 @@ const removeDiacritics = (str = '') =>
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D');
 
+export { removeDiacritics };
+
 const normalizeHeader = (str = '') =>
   removeDiacritics(str).toLowerCase().replace(/[^a-z0-9]/g, '');
 

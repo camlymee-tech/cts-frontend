@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Field } from '../components/Field';
 import { Select } from '../components/Select';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
-import { normalizeText } from '../utils/customerExcel';
+import { normalizeText, removeDiacritics } from '../utils/customerExcel';
 import { api } from '../lib/api';
 
 // Với khách hàng cũ chưa gắn accountId (dữ liệu nhập trước khi có dropdown), tự đối chiếu
@@ -22,10 +22,23 @@ const resolveAssignedSale = (assignedSale, saleProfiles) => {
 
 const genBranchId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+// Ánh xạ nhanh các chức vụ tiếng Việt thường gặp sang tiếng Anh (dùng cho Sales Contract) —
+// không cần gọi AI vì đây là danh sách cố định, tra không thấy thì để chị tự gõ.
+const POSITION_EN_MAP = {
+  'giam doc': 'Director', 'tong giam doc': 'General Director', 'pho giam doc': 'Deputy Director',
+  'chu ho kinh doanh': 'Owner', 'chu doanh nghiep': 'Owner', 'chu tich': 'Chairman',
+  'truong phong': 'Manager', 'pho phong': 'Deputy Manager', 'ke toan truong': 'Chief Accountant',
+  'nguoi dai dien phap luat': 'Legal Representative',
+};
+const guessPositionEN = (viText) => {
+  const key = removeDiacritics(viText || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  return POSITION_EN_MAP[key] || removeDiacritics(viText || '');
+};
+
 const blankBranch = () => ({
   id: genBranchId(), // để nhận diện đúng nhánh, không dựa vào Mã số thuế (có thể để trống/trùng nhau)
   taxCode: '', companyName: '', companyNameEN: '', address: '', addressEN: '', phone: '', email: '',
-  bankAccount: '', bankName: '', representative: '', position: '',
+  bankAccount: '', bankName: '', representative: '', representativeEN: '', position: '', positionEN: '',
 });
 // Bản cũ chỉ lưu {taxCode, name} và chưa có "id" — chuyển "name" thành "companyName", tự cấp thêm "id" ổn định
 // cho các nhánh cũ chưa có, để không mất dữ liệu đã nhập trước đó.
@@ -34,7 +47,7 @@ const migrateBranch = (b) => ({ ...blankBranch(), ...b, id: b.id || genBranchId(
 export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên công ty', withAssignment = false, withShortName = false, departments = {}, saleProfiles = [], autoSaleAssign = null }) => {
   const blank = {
     companyName: '', companyNameEN: '', address: '', addressEN: '', taxCode: '', phone: '', email: '',
-    bankAccount: '', bankName: '', representative: '', position: '',
+    bankAccount: '', bankName: '', representative: '', representativeEN: '', position: '', positionEN: '',
     branches: [], // Mã nhánh — 1 khách hàng gốc có thể có nhiều nhánh, mỗi nhánh có đủ thông tin riêng như khách hàng gốc
     ...(withShortName ? { shortName: '' } : {}),
     ...(withAssignment ? { assignedSale: autoSaleAssign || { code: '', name: '', accountId: '' }, departmentId: '' } : {}),
@@ -120,6 +133,30 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
         <Field label="Ngân hàng" value={form.bankName} onChange={upd('bankName')} cols={2} />
         <Field label="Người đại diện" value={form.representative} onChange={upd('representative')} />
         <Field label="Chức vụ" value={form.position} onChange={upd('position')} />
+        {!withShortName && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Người đại diện (không dấu) — Sales Contract</label>
+              <div className="flex gap-2">
+                <input value={form.representativeEN} onChange={e => upd('representativeEN')(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="TRINH VAN DUONG" />
+                <button type="button" onClick={() => upd('representativeEN')(removeDiacritics(form.representative).toUpperCase())}
+                  className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50">🔄</button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Chức vụ (tiếng Anh) — Sales Contract</label>
+              <div className="flex gap-2">
+                <input value={form.positionEN} onChange={e => upd('positionEN')(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Director" />
+                <button type="button" onClick={() => upd('positionEN')(guessPositionEN(form.position))}
+                  className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50">🔄</button>
+              </div>
+            </div>
+          </>
+        )}
         <div className="col-span-2 border-t border-gray-100 pt-3 mt-1">
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-gray-500 uppercase">Mã nhánh (các chi nhánh khác của cùng khách hàng này)</label>
@@ -166,6 +203,24 @@ export const CustomerForm = ({ init, onSave, onCancel, companyLabel = 'Tên côn
                         <Field label="Ngân hàng" value={b.bankName} onChange={v => updBranch(i, 'bankName', v)} cols={2} />
                         <Field label="Người đại diện" value={b.representative} onChange={v => updBranch(i, 'representative', v)} />
                         <Field label="Chức vụ" value={b.position} onChange={v => updBranch(i, 'position', v)} />
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Người đại diện (không dấu)</label>
+                          <div className="flex gap-2">
+                            <input value={b.representativeEN} onChange={e => updBranch(i, 'representativeEN', e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                            <button type="button" onClick={() => updBranch(i, 'representativeEN', removeDiacritics(b.representative).toUpperCase())}
+                              className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50">🔄</button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Chức vụ (tiếng Anh)</label>
+                          <div className="flex gap-2">
+                            <input value={b.positionEN} onChange={e => updBranch(i, 'positionEN', e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                            <button type="button" onClick={() => updBranch(i, 'positionEN', guessPositionEN(b.position))}
+                              className="shrink-0 text-xs px-3 rounded-lg border border-gray-300 hover:bg-gray-50">🔄</button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
