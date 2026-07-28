@@ -101,7 +101,7 @@ const COLS = [
 // chị Ly cung cấp: Thông tin khách hàng | Đã thu khách hàng (Tỉ giá $, Tiền hàng $, Tổng tiền Việt tự tính,
 // Tổng tiền tệ quy đổi nhập tay) | Phải thu khách hàng (Số tệ, Ngày chuyển xưởng) | Còn lại (tự tính) | Ghi chú.
 const COLS_FX = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 90, group1: 'Thông tin khách hàng' },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 70, group1: 'Thông tin khách hàng' },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 100, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 80, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 160, fromDntt: true, group1: 'Thông tin khách hàng' },
