@@ -8,7 +8,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { Alert } from '../components/Alert';
 import { SalesContractPreview } from '../previews/SalesContractPreview';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
-import { buildSalesContractNo, fmtNum, amountToWordsEN } from '../helpers';
+import { buildSalesContractNo, fmtNum, amountToWordsEN, genForeignSellerId } from '../helpers';
 import { doPrintZone, doDownloadPDFZone, doDownloadWordZone, safeFilename } from '../utils/docExport';
 
 const PRINT_STYLE = `
@@ -53,10 +53,12 @@ const inCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:
 const TextInput = (p) => <input {...p} className={inCls} />;
 const TextArea = (p) => <textarea {...p} className={inCls + ' resize-y'} />;
 
-export const SalesContractPage = ({ salesContracts, customers, onSave, onDelete, isAdmin = false }) => {
+export const SalesContractPage = ({ salesContracts, customers, foreignSellers = {}, onSaveForeignSeller, onSave, onDelete, isAdmin = false }) => {
   const [view, setView] = useState('list'); // list | form | preview
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null); // id (uuid) đang sửa, null = tạo mới
+  const [selectedForeignSellerId, setSelectedForeignSellerId] = useState('');
+  const [savingSeller, setSavingSeller] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -82,11 +84,12 @@ export const SalesContractPage = ({ salesContracts, customers, onSave, onDelete,
       });
   }, [salesContracts, search]);
 
-  const openNew = () => { setForm(blankForm()); setEditingId(null); setView('form'); };
+  const openNew = () => { setForm(blankForm()); setEditingId(null); setSelectedForeignSellerId(''); setView('form'); };
 
   const openEdit = (row) => {
     setForm({ ...blankForm(), ...row.data, customerId: row.data.customerId || '', branchIndex: row.data.branchIndex ?? null });
     setEditingId(row.id);
+    setSelectedForeignSellerId('');
     setView('form');
   };
 
@@ -111,6 +114,40 @@ export const SalesContractPage = ({ salesContracts, customers, onSave, onDelete,
 
   const suggestContractNo = () => {
     updateField('contractNo', buildSalesContractNo({ sellerName: form.seller.name, buyerName: customer.companyName, date: form.date }));
+  };
+
+  const foreignSellerOptions = Object.entries(foreignSellers).map(([id, s]) => ({ value: id, label: s.companyName }));
+
+  const applyForeignSeller = (id) => {
+    setSelectedForeignSellerId(id);
+    const s = foreignSellers[id];
+    if (!s) return;
+    setForm(prev => ({
+      ...prev,
+      seller: { name: s.companyName || '', address: s.address || '', rep: s.representative || '', position: s.position || 'Director' },
+      bankName: s.bankName || '', bankAddress: s.bankAddress || '', swiftCode: s.swiftCode || '',
+      accountNumber: s.accountNumber || '', beneficiary: s.beneficiary || '',
+    }));
+  };
+
+  const saveCurrentAsForeignSeller = async () => {
+    if (!form.seller.name.trim()) return alert('Vui lòng nhập tên Seller trước khi lưu vào danh sách.');
+    setSavingSeller(true);
+    try {
+      const payload = {
+        companyName: form.seller.name, address: form.seller.address,
+        representative: form.seller.rep, position: form.seller.position,
+        bankName: form.bankName, bankAddress: form.bankAddress, swiftCode: form.swiftCode,
+        accountNumber: form.accountNumber, beneficiary: form.beneficiary,
+      };
+      const id = selectedForeignSellerId || genForeignSellerId(foreignSellers);
+      await onSaveForeignSeller(id, payload);
+      setSelectedForeignSellerId(id);
+      alert('Đã lưu vào danh sách Bên bán nước ngoài — lần sau chọn lại là điền sẵn luôn.');
+    } catch (e) {
+      alert(e.message || 'Có lỗi khi lưu nhà máy.');
+    }
+    setSavingSeller(false);
   };
 
   const handleSave = async () => {
@@ -227,6 +264,14 @@ export const SalesContractPage = ({ salesContracts, customers, onSave, onDelete,
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-700 mb-3">Seller / Party A (nhà máy Trung Quốc)</h2>
               <div className="space-y-3">
+                {foreignSellerOptions.length > 0 && (
+                  <Field label="Chọn nhà máy đã lưu (tùy chọn)">
+                    <select className={inCls} value={selectedForeignSellerId} onChange={e => applyForeignSeller(e.target.value)}>
+                      <option value="">-- Nhập mới / không dùng danh sách --</option>
+                      {foreignSellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </Field>
+                )}
                 <Field label="Tên công ty">
                   <TextInput value={form.seller.name} onChange={e => updateField('seller.name', e.target.value)} placeholder="GUANGXI ... TRADE CO., LTD" />
                 </Field>
@@ -241,6 +286,10 @@ export const SalesContractPage = ({ salesContracts, customers, onSave, onDelete,
                     <TextInput value={form.seller.position} onChange={e => updateField('seller.position', e.target.value)} />
                   </Field>
                 </div>
+                <button type="button" disabled={savingSeller} onClick={saveCurrentAsForeignSeller}
+                  className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-50">
+                  {savingSeller ? 'Đang lưu...' : (selectedForeignSellerId ? '💾 Cập nhật nhà máy này trong danh sách' : '💾 Lưu thông tin Seller này vào danh sách (dùng lại lần sau)')}
+                </button>
               </div>
             </div>
 

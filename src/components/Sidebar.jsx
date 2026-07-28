@@ -77,6 +77,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       key: 'sales_contract', header: '📄 Sales Contract',
       items: [
         { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
+        { id: 'foreign_sellers', icon: '🏭', label: 'Bên bán nước ngoài' },
       ],
     },
   ];

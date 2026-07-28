@@ -5,6 +5,7 @@ import { api } from './lib/api';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { SellersPage } from './pages/SellersPage';
+import { ForeignSellersPage } from './pages/ForeignSellersPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
 import { CashFlowSummary } from './pages/CashFlowSummary';
@@ -54,6 +55,7 @@ export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [page, setPage] = useState('dashboard');
   const [sellers, setSellers] = useState({});
+  const [foreignSellers, setForeignSellers] = useState({});
   const [departments, setDepartments] = useState({});
   const [customers, setCustomers] = useState({});
   const [contracts, setContracts] = useState({});
@@ -89,14 +91,16 @@ export default function App() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const [sl, dp, custRows, contractRows, prof] = await Promise.all([
+      const [sl, dp, fsl, custRows, contractRows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
+        api.get('foreign_sellers'),
         api.listCustomers(),
         api.listContracts(),
         api.getMyProfile(),
       ]);
       if (dp) setDepartments(dp);
+      setForeignSellers(fsl || {});
       let sellersData = sl || {};
       // Migrate old single-seller format
       if (!sl) {
@@ -341,6 +345,16 @@ export default function App() {
     setSellers(updated); await api.set('sellers', updated);
   };
 
+  // --- Bên bán nước ngoài (nhà máy Trung Quốc...) — dữ liệu RIÊNG, chỉ dùng cho Sales Contract ---
+  const saveForeignSeller = async (id, data) => {
+    const updated = { ...foreignSellers, [id]: data };
+    setForeignSellers(updated); await api.set('foreign_sellers', updated);
+  };
+  const deleteForeignSeller = async (id) => {
+    const updated = { ...foreignSellers }; delete updated[id];
+    setForeignSellers(updated); await api.set('foreign_sellers', updated);
+  };
+
   // --- Departments ---
   const saveDepartment = async (id, data) => {
     const updated = { ...departments, [id]: data };
@@ -583,7 +597,8 @@ export default function App() {
       case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'sales_contract': return <SalesContractPage salesContracts={salesContracts} customers={customers} onSave={saveSalesContract} onDelete={deleteSalesContractRow} isAdmin={isAdmin} />;
+      case 'foreign_sellers': return <ForeignSellersPage foreignSellers={foreignSellers} onSave={saveForeignSeller} onDelete={deleteForeignSeller} />;
+      case 'sales_contract': return <SalesContractPage salesContracts={salesContracts} customers={customers} foreignSellers={foreignSellers} onSaveForeignSeller={saveForeignSeller} onSave={saveSalesContract} onDelete={deleteSalesContractRow} isAdmin={isAdmin} />;
       case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} />;
       case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
       case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;

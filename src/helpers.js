@@ -87,6 +87,14 @@ export const genSellerId = (sellers) => {
   return 'SELLER' + String(next).padStart(3, '0');
 };
 
+// Mã cho "Bên bán nước ngoài" (nhà máy Trung Quốc...) — dùng riêng cho Sales Contract, KHÔNG liên quan tới
+// "sellers" (Công ty Bên Bán = chính CTS) đang dùng cho HĐNT/ĐĐH/BBBG.
+export const genForeignSellerId = (foreignSellers) => {
+  const nums = Object.keys(foreignSellers).map(k => parseInt(k.replace('FSELLER', ''))).filter(x => !isNaN(x));
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  return 'FSELLER' + String(next).padStart(3, '0');
+};
+
 export const genDeptId = (departments) => {
   const nums = Object.keys(departments).map(k => parseInt(k.replace('DEPT', ''))).filter(x => !isNaN(x));
   const next = nums.length ? Math.max(...nums) + 1 : 1;
