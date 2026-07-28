@@ -22,7 +22,7 @@ const fmtDateVN = (d) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 };
 
-const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '' });
+const blankVoucherRow = () => ({ id: null, dienGiai: '', ctsPhaiThu: '', daThuKhach: '', tyGiaRow: '', tienHangRow: '' });
 const blankFxRow = () => ({ noiDung: '', tyGia: '', soTe: '' });
 
 // Ô nhập số hiển thị có dấu chấm phân cách hàng nghìn (VD: 1.000.000) ngay khi gõ.
@@ -97,6 +97,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
         id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
+        tyGiaRow: isFx ? (b.voucher_exchange_rate ?? '') : '', tienHangRow: isFx ? (b.voucher_amount_fx ?? '') : '',
       })));
       setFxRows(batchesOfCustomer.map(b => ({
         noiDung: '', tyGia: b.exchange_rate ?? '', soTe: b.amount_cny ?? '',
@@ -192,6 +193,10 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           exchange_rate: fx ? num(fx.tyGia) : null,
           amount_cny: fx ? num(fx.soTe) : null,
           cny_transferred: fx ? num(fx.soTe) : null,
+          ...(isFx ? {
+            voucher_exchange_rate: r && r.tyGiaRow !== '' ? num(r.tyGiaRow) : null,
+            voucher_amount_fx: r && r.tienHangRow !== '' ? num(r.tienHangRow) : null,
+          } : {}),
           payment_request_no: savedRequestNo,
           order_date: requestDate,
           note: note || null,
@@ -336,16 +341,15 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </div>
           <div className="space-y-2">
             {voucherRows.map((r, i) => {
-              const fx = fxRows[i] || {};
               return (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 {isFx ? (
                   <>
                     <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                    <MoneyInput value={fx.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
-                    <MoneyInput value={fx.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                    <MoneyInput value={r.tyGiaRow} onChange={v => setVoucherField(i, 'tyGiaRow', v)} className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                    <MoneyInput value={r.tienHangRow} onChange={v => setVoucherField(i, 'tienHangRow', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                     <div className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tỉ giá × Tiền hàng $">
-                      {fmtNum(fxThanhTien(fx))}
+                      {fmtNum(num(r.tyGiaRow) * num(r.tienHangRow))}
                     </div>
                     <div className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tổng tiền tệ thanh toán cho khách">
                       {fmtNum(ctsPhaiThuFor(r))}
@@ -457,13 +461,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tbody>
             {voucherRows.map((r, i) => {
               const ctsPhaiThu = ctsPhaiThuFor(r);
-              const fx = fxRows[i] || {};
               return (
                 <tr key={i}>
                   <td>{r.dienGiai}</td>
-                  {isFx && <td style={{ textAlign: 'right' }}>{fx.tyGia || ''}</td>}
-                  {isFx && <td style={{ textAlign: 'right' }}>{fx.soTe ? fmtNum(fx.soTe) : ''}</td>}
-                  {isFx && <td style={{ textAlign: 'right' }}>{fmtNum(fxThanhTien(fx))}</td>}
+                  {isFx && <td style={{ textAlign: 'right' }}>{r.tyGiaRow || ''}</td>}
+                  {isFx && <td style={{ textAlign: 'right' }}>{r.tienHangRow ? fmtNum(r.tienHangRow) : ''}</td>}
+                  {isFx && <td style={{ textAlign: 'right' }}>{fmtNum(num(r.tyGiaRow) * num(r.tienHangRow))}</td>}
                   <td style={{ textAlign: 'right' }}>{ctsPhaiThu ? fmtNum(ctsPhaiThu) : ''}</td>
                   <td style={{ textAlign: 'right' }}>{r.daThuKhach ? fmtNum(r.daThuKhach) : ''}</td>
                   <td style={{ textAlign: 'right' }}>{(num(r.daThuKhach) || ctsPhaiThu) ? fmtNum(num(r.daThuKhach) - ctsPhaiThu) : ''}</td>
