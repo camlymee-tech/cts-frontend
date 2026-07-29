@@ -66,14 +66,28 @@ Deno.serve(async (req) => {
     if (mode === 'translate_en') {
       if (!text || !text.trim()) return json({ error: 'Thiếu nội dung cần dịch.' }, 400);
       const prompt =
-        'Bạn là nhân viên xuất nhập khẩu lâu năm. Dựa vào mô tả tiếng Việt chi tiết sau, viết TÊN SẢN PHẨM NGẮN GỌN bằng tiếng Anh ' +
-        'dùng cho Sales Contract — không phải dịch nguyên văn toàn bộ câu. Chỉ giữ: loại sản phẩm + đặc điểm nhận diện chính (chất liệu/kích ' +
-        'thước/dung tích nếu ngắn gọn) + mã hàng/model nếu có (ghi dạng "item code: (...)" hoặc "model ..."). KHÔNG liệt kê các chi tiết phụ ' +
-        '(không có nắp, không phải pha lê chì, không dùng pin điện, v.v...). Vài ví dụ đúng phong cách cần viết:\n' +
-        '- "Cốc thủy tinh thường, không nắp, không chân, không phải pha lê chì, dung tích 250-300ml, mã hàng: (GW7701, 8597)..." → "Glass drinking cup, item code: (GW7701, 8597)"\n' +
-        '- "Nồi inox 201 đáy liền, dày 1mm, không chống dính, không dùng pin điện, dung tích 20L..." → "Inox 201 cooking pot 20L"\n' +
-        '- "Áo tank nữ, model WX307, chất liệu dệt kim 75% nylon 25% spandex..." → "Women\'s tank top, model WX307"\n' +
-        'Chỉ trả về đúng 1 dòng tiếng Anh ngắn gọn (thường dưới 10 từ), không thêm giải thích, không thêm dấu ngoặc kép.\n\n' +
+        'Bạn là nhân viên xuất nhập khẩu lâu năm. Dựa vào mô tả tiếng Việt chi tiết (dùng để khai hải quan) sau đây, ' +
+        'viết TÊN SẢN PHẨM NGẮN GỌN bằng tiếng Anh dùng cho Sales Contract — KHÔNG dịch nguyên văn toàn bộ câu.\n\n' +
+        'QUY TẮC:\n' +
+        '- BỎ: nhãn hiệu (nhãn hiệu/brand), tên nhà sản xuất (NSX), chất liệu chi tiết, thành phần vải, các đặc điểm phủ định ' +
+        '(không có nắp, không dùng pin/điện, không phải loại đúc...), "mới 100%", "không hiệu".\n' +
+        '- GIỮ: loại sản phẩm chính (kèm tiền tố phân loại nếu mô tả gốc có, vd "Đồ chơi trẻ em:" → "Children\'s toys:"), ' +
+        'dung tích/kích thước khi đó là đặc điểm nhận diện chính.\n' +
+        '- LUÔN GIỮ mã model / mã hàng / ký hiệu khi mô tả gốc có, đặt SAU tên sản phẩm ' +
+        '("model: ..." → "model: ...", "mã hàng: ..." → "item code: ...", "ký hiệu: ..." → "item code: ...").\n' +
+        '- Tên phải ngắn, thường dưới 10 từ.\n\n' +
+        'HỌC THEO ĐÚNG 10 VÍ DỤ MẪU SAU (mô tả tiếng Việt → tên tiếng Anh):\n' +
+        '1. "Đồ chơi trẻ em: Mô hình ô tô 250 chi tiết, chất liệu nhựa, không dùng (pin, điện), KT hộp: (20x13x8) cm (+/-10%), model: 3F029, NSX: Shantou Chenghai District Lele Brother Toys Co., Ltd., mới 100%" → "Children\'s toys: Car model, model: 3F029"\n' +
+        '2. "Cốc thuỷ tinh thường, loại không có nắp, không có chân (không phải pha lê chì, gốm thủy tinh), dung tích 150ml, dùng uống nước, mã hàng: 1505, NSX: Wenxi Kaili Trading Co., Ltd, mới 100%" → "Glass drinking cup 150ml, item code: 1505"\n' +
+        '3. "Dép cao gót nữ (không phải loại quai hậu), không phải loại đúc, đế ngoài bằng nhựa, mũ dép bằng da tổng hợp, size: (36-39), ký hiệu: H10, NSX: Quanzhou Shenyun Trading Co., Ltd, mới 100%" → "Women\'s high heel slippers, item code: H10"\n' +
+        '4. "Thân khoá cửa, sử dụng cho khoá cửa chính, cửa phòng, chất liệu bằng thép không gỉ, KT: (330x22x47.5) mm (+/-10%), nhãn hiệu: DOSICO, NSX: Ruian Xingguangli Hardware Products Co., Ltd, mới 100%" → "Door lock body, size: (330x22x47.5) mm"\n' +
+        '5. "Quần lót cho trẻ em bé gái (xi líp), dệt kim từ vải nhân tạo: 17% sợi tre và 83% polyester, freesize, không hiệu, mã hàng: 5418, NSX: Tongqizi Garment Store, mới 100%" → "Girls\' underwear, item code: 5418"\n' +
+        '6. "Đồ trang trí: Hình chong chóng, chất liệu bằng nhựa, kết hợp sắt, KT: đường kính 20 cm (+/-10%), model: BT8841-10, NSX: Shandong Dingxing Arts & Crafts Co., Ltd, mới 100%" → "Pinwheel-shaped decoration, model: BT8841-10"\n' +
+        '7. "Gối tựa đầu, mặt ngoài bằng vải sợi tổng hợp, ruột nhồi đệm mút xốp, dùng cho ghế ngồi trong văn phòng, KT: (18x26) cm (+/-10%), nhãn hiệu: awesome, mới 100%" → "Headrest pillow"\n' +
+        '8. "Khẩu trang chống bụi (không phải khẩu trang y tế, không có bộ lọc bụi), bằng vải sợi tổng hợp, KT: (23x25) cm (+/-10%), ký hiệu: 6039, NSX: Ruiya Clothing Co., Ltd, mới 100%" → "Face mask, item code: 6039"\n' +
+        '9. "Giá đỡ hỗ trợ chụp ảnh cho máy ảnh, loại 3 chân đế, chất liệu thép hợp kim kết hợp nhựa, độ mở rộng chân 65 cm, chiều cao tối đa 200 cm, nặng 600g/cái, NSX: Fuang Hua Trading Co., Ltd, mới 100%" → "Camera tripod stand"\n' +
+        '10. "Bình giữ nhiệt, không dùng điện, chất liệu lõi và thân bằng inox, có lớp cách nhiệt chân không ở giữa, nắp bằng nhựa PP, dung tích 2500ml, nhãn hiệu: DKADI, mới 100%" → "Vacuum bottle 2500ml"\n\n' +
+        'Chỉ trả về đúng 1 dòng tiếng Anh, không thêm giải thích, không thêm dấu ngoặc kép.\n\n' +
         'Mô tả tiếng Việt: ' + text;
       const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
