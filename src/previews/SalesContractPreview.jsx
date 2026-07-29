@@ -42,7 +42,7 @@ export const SalesContractPreview = ({ c }) => {
   const buyer = c.buyer || {};
 
   return (
-    <div className="contract-paper" style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}>
+    <div className="contract-paper">
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
         <tbody>
           <tr>

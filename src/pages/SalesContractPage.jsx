@@ -14,7 +14,7 @@ import { api } from '../lib/api';
 
 const PRINT_STYLE = `
   @page { size: A4 portrait; margin: 18mm; }
-  body { font-family: Georgia, 'Times New Roman', serif; font-size: 12px; color: #000; background: #fff; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12px; color: #000; background: #fff; }
   table { border-collapse: collapse; width: 100%; }
 `;
 
