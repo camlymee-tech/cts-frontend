@@ -10,17 +10,93 @@ import { api } from '../lib/api';
 const num = (v) => Number(v) || 0;
 const EMPTY_SET = new Set();
 
+// Input số có dấu phân cách hàng nghìn, hiện định dạng NGAY KHI GÕ mà KHÔNG làm nhảy/lệch con trỏ
+// (bug cũ: gõ "5000" bị nhảy thành "5500" do React đặt lại value đã format nhưng không tính lại vị trí
+// con trỏ theo số chữ số đã gõ trước đó — dẫn đến chữ số tiếp theo bị chèn sai chỗ).
+// Cách sửa: đếm số CHỮ SỐ đứng trước con trỏ ở giá trị cũ, sau khi format lại thì đặt con trỏ ngay sau
+// đúng số chữ số đó trong chuỗi mới.
+const FormattedNumberInput = ({ value, onChange, onBlur, disabled, className }) => {
+  const ref = useRef(null);
+  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : Number(raw).toLocaleString('vi-VN'));
+  const [text, setText] = useState(fmt(value));
+
+  useEffect(() => {
+    // Chỉ đồng bộ lại khi input KHÔNG đang được gõ (mất focus), tránh đè lên lúc đang nhập
+    if (document.activeElement !== ref.current) setText(fmt(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const handleChange = (e) => {
+    const input = e.target;
+    const caret = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = input.value.slice(0, caret).replace(/[^\d]/g, '').length;
+    const raw = input.value.replace(/[^\d]/g, '');
+    const formatted = fmt(raw);
+    setText(formatted);
+    onChange(raw === '' ? '' : raw);
+    requestAnimationFrame(() => {
+      if (!ref.current) return;
+      let seen = 0, pos = formatted.length;
+      if (digitsBeforeCaret === 0) {
+        pos = 0;
+      } else {
+        for (let i = 0; i < formatted.length; i++) {
+          if (/\d/.test(formatted[i])) {
+            seen++;
+            if (seen === digitsBeforeCaret) { pos = i + 1; break; }
+          }
+        }
+      }
+      ref.current.setSelectionRange(pos, pos);
+    });
+  };
+
+  return (
+    <input
+      ref={ref}
+      type="text" inputMode="decimal" value={text} disabled={disabled}
+      onChange={handleChange} onBlur={onBlur}
+      className={className}
+    />
+  );
+};
+
 // Ô nhập tổng ở dòng gốc (Phải trả cho CTS / Khách chuyển tiền lần 2 / Giá trị xuất hóa đơn) — hiện dấu chấm
 // phân cách hàng nghìn NGAY KHI GÕ (không phải chỉ sau khi rời khỏi ô), rồi lưu khi rời khỏi ô (onBlur).
 const GroupSumInput = ({ initial, onCommit }) => {
-  const [text, setText] = useState(initial ? fmtNum(initial) : '');
+  const ref = useRef(null);
+  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : Number(raw).toLocaleString('vi-VN'));
+  const [text, setText] = useState(initial ? fmt(initial) : '');
+
+  const handleChange = (e) => {
+    const input = e.target;
+    const caret = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = input.value.slice(0, caret).replace(/[^\d]/g, '').length;
+    const raw = input.value.replace(/[^\d]/g, '');
+    const formatted = raw === '' ? '' : fmt(raw);
+    setText(formatted);
+    requestAnimationFrame(() => {
+      if (!ref.current) return;
+      let seen = 0, pos = formatted.length;
+      if (digitsBeforeCaret === 0) {
+        pos = 0;
+      } else {
+        for (let i = 0; i < formatted.length; i++) {
+          if (/\d/.test(formatted[i])) {
+            seen++;
+            if (seen === digitsBeforeCaret) { pos = i + 1; break; }
+          }
+        }
+      }
+      ref.current.setSelectionRange(pos, pos);
+    });
+  };
+
   return (
     <input
+      ref={ref}
       type="text" inputMode="numeric" value={text}
-      onChange={(e) => {
-        const raw = e.target.value.replace(/\D/g, '');
-        setText(raw === '' ? '' : Number(raw).toLocaleString('vi-VN'));
-      }}
+      onChange={handleChange}
       onBlur={() => onCommit(text.replace(/\D/g, ''))}
       className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
     />
@@ -113,11 +189,14 @@ const COLS_FX = [
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 125, group1: 'Phải thu khách hàng' },
   { key: 'fxRemaining', label: 'Còn lại', type: 'computed', w: 80, formula: 'H-I', group1: 'Còn lại' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 100, group1: 'Ghi chú' },
+  { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
+  { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
 ];
 
-const NUMBER_KEYS = COLS.filter(c => c.type === 'number').map(c => c.key);
-const DATE_KEYS = COLS.filter(c => c.type === 'date').map(c => c.key);
-const CHECKBOX_KEYS = COLS.filter(c => c.type === 'checkbox').map(c => c.key);
+const ALL_COLS_FOR_TYPES = [...COLS, ...COLS_FX];
+const NUMBER_KEYS = ALL_COLS_FOR_TYPES.filter(c => c.type === 'number').map(c => c.key);
+const DATE_KEYS = ALL_COLS_FOR_TYPES.filter(c => c.type === 'date').map(c => c.key);
+const CHECKBOX_KEYS = ALL_COLS_FOR_TYPES.filter(c => c.type === 'checkbox').map(c => c.key);
 // Các cột tiền/số lượng sẽ CỘNG DỒN lên dòng gốc khi gộp theo Mã lô (Tỷ giá không cộng vì là đơn giá, không phải tổng)
 const SUM_KEYS = ['deposit_vnd', 'customer_paid_total', 'amount_cny', 'tax_service_fee', 'actual_collected', 'fx_converted_total', 'voucher_amount_fx'];
 // Trong số các cột trên, đây là các cột NHẬP TAY (không khoá từ Đề Nghị Thanh Toán) — khi đã gộp nhóm,
@@ -204,12 +283,11 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
     return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
   }
   if (col.type === 'number') {
-    const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
     return (
-      <input
-        type="text" inputMode="decimal" value={display} disabled={disabled}
-        onChange={e => { const raw = e.target.value.replace(/[^\d]/g, ''); onChange(raw === '' ? '' : raw); }}
-        onBlur={onBlur} className={common + ' text-right'}
+      <FormattedNumberInput
+        value={value} disabled={disabled}
+        onChange={onChange} onBlur={onBlur}
+        className={common + ' text-right'}
       />
     );
   }

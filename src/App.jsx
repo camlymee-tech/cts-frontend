@@ -186,7 +186,7 @@ export default function App() {
   }, [session, page, cashFlowLoaded]);
 
   // Hợp đồng ngoại thương — dữ liệu HOÀN TOÀN riêng, không liên quan gì tới Theo dõi dòng tiền/Tổng hợp công nợ
-  const FX_CONTRACT_PAGES = ['fx_contract', 'fx_contract_payment_request'];
+  const FX_CONTRACT_PAGES = ['fx_contract', 'fx_contract_payment_request', 'fx_daily_payment_requests'];
   useEffect(() => {
     if (!session || fxContractLoaded || !FX_CONTRACT_PAGES.includes(page)) return;
     (async () => {
@@ -580,6 +580,12 @@ export default function App() {
           myName={profile?.full_name || ''} myPhone={profile?.phone || ''}
           onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow} onSelectCustomer={setFxPaymentRequestCustomerId}
           onClose={() => setPage('fx_contract')} />;
+      case 'fx_daily_payment_requests': return <CashFlowPage
+          isFxContract
+          batches={fxContractBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} saleProfiles={saleProfiles}
+          onSave={saveFxContractBatch} onDelete={deleteFxContractBatchRow}
+          initialCustomerFilter="" onBack={() => setPage('fx_contract')}
+          onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setFxPaymentRequestCustomerId(customerId); setFxPaymentRequestReqNo(reqNo ?? null); setFxPaymentRequestBatchIds(batchIds || null); setPage('fx_contract_payment_request'); }} />;
       case 'cny_fund': return <CnyFundPage
           transactions={cnyFundTransactions} batches={cashFlowBatches} customers={customers} sellers={sellers}
           onSave={saveCnyFundTransaction} onDelete={deleteCnyFundTransactionRow} />;
