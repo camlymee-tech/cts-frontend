@@ -31,16 +31,24 @@ const blankForm = () => ({
   buyer: { name: '', address: '', rep: '', position: 'Director' },
   items: [blankItem()],
   quality: "First class and 100% brand new, conformed to manufacturer's specification.",
+  incotermsRef: 'Incoterms 2000',
   shippingMethod: 'By Truck',
   incoterms: 'DAF - Huu Nghi Border Gate',
   portLoading: 'Pingxiang, China',
   portDischarge: 'Huu Nghi, Lang Son, Vietnam',
+  partialShipment: 'Allowed',
+  earlyShipment: 'Allowed',
   latestShipment: 'Within 30 days from the sales contract date.',
   noticeShipment: 'Within 03 working days after loading the cargo, the seller should inform the buyer of particulars of the shipment.',
+  defectiveGoodsNote: "Wrong or defective goods will be returned to the seller for replacement or refunds. All charges associated with return of the defective or wrong goods to be delivered the new one to buyer. All charges shall be at seller's account.",
+  packingStandard: 'Manufactures standard packing.',
   packing: 'By international standard for export packing to ensure safety of the goods from damages and corrosion during transportation. The seller shall be fully responsible for loss, damage, breakage of the goods and/or rusting/corrosion resulting from defective or inadequate packing.',
   paymentTerm: 'The buyer shall pay 100% of the total contract value by Telegraphic Transfer before shipment',
+  telegraphicTransfer: 'T/T',
   bankName: '', bankAddress: '', swiftCode: '', accountNumber: '', beneficiary: '',
   feesNote: "All fees inside Vietnam is at the Buyer's account. All fees outside Vietnam is at the Seller's account.",
+  artworkCommitment: 'The Seller will commit to make mass production completely 100% similar to the artwork that is approved by the Buyer.',
+  artworkFailureNote: "If the seller fails to make products according to the buyer's sample or artwork, seller must bear all arising costs such as remake or correct products.",
   penalty: 'Penalty for failed products or late delivery will be counted 0.1% value contract per each day delayed.',
 });
 
@@ -413,18 +421,27 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
               <h2 className="font-semibold text-gray-700 mb-3">Chất lượng &amp; Đóng gói</h2>
               <div className="space-y-3">
                 <Field label="Quality"><TextArea value={form.quality} onChange={e => updateField('quality', e.target.value)} /></Field>
-                <Field label="Packing"><TextArea value={form.packing} onChange={e => updateField('packing', e.target.value)} /></Field>
+                <Field label="Packing — tiêu chuẩn (hiện cạnh mục 3)"><TextInput value={form.packingStandard} onChange={e => updateField('packingStandard', e.target.value)} /></Field>
+                <Field label="Packing — nội dung chi tiết"><TextArea value={form.packing} onChange={e => updateField('packing', e.target.value)} /></Field>
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="font-semibold text-gray-700 mb-3">Vận chuyển (Shipping)</h2>
               <div className="grid grid-cols-2 gap-3">
+                <Field label="Bộ quy tắc Incoterms (dùng ở mục 1 &amp; 2)"><TextInput value={form.incotermsRef} onChange={e => updateField('incotermsRef', e.target.value)} /></Field>
                 <Field label="Phương thức vận chuyển"><TextInput value={form.shippingMethod} onChange={e => updateField('shippingMethod', e.target.value)} /></Field>
-                <Field label="Điều kiện Incoterms"><TextInput value={form.incoterms} onChange={e => updateField('incoterms', e.target.value)} /></Field>
+                <Field label="Điều kiện giao hàng"><TextInput value={form.incoterms} onChange={e => updateField('incoterms', e.target.value)} /></Field>
+                <Field label="Thời gian giao hàng"><TextInput value={form.latestShipment} onChange={e => updateField('latestShipment', e.target.value)} /></Field>
                 <Field label="Cảng xuất"><TextInput value={form.portLoading} onChange={e => updateField('portLoading', e.target.value)} /></Field>
                 <Field label="Cảng nhập"><TextInput value={form.portDischarge} onChange={e => updateField('portDischarge', e.target.value)} /></Field>
-                <Field label="Thời gian giao hàng"><TextInput value={form.latestShipment} onChange={e => updateField('latestShipment', e.target.value)} /></Field>
-                <Field label="Thông báo giao hàng"><TextInput value={form.noticeShipment} onChange={e => updateField('noticeShipment', e.target.value)} /></Field>
+                <Field label="Giao hàng từng phần (Partial shipment)"><TextInput value={form.partialShipment} onChange={e => updateField('partialShipment', e.target.value)} /></Field>
+                <Field label="Giao hàng sớm (Early shipment)"><TextInput value={form.earlyShipment} onChange={e => updateField('earlyShipment', e.target.value)} /></Field>
+                <div className="col-span-2">
+                  <Field label="Thông báo giao hàng"><TextInput value={form.noticeShipment} onChange={e => updateField('noticeShipment', e.target.value)} /></Field>
+                </div>
+                <div className="col-span-2">
+                  <Field label="Điều khoản hàng lỗi / giao sai"><TextArea rows={3} value={form.defectiveGoodsNote} onChange={e => updateField('defectiveGoodsNote', e.target.value)} /></Field>
+                </div>
               </div>
             </div>
           </div>
@@ -434,6 +451,7 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Điều khoản thanh toán"><TextArea rows={2} value={form.paymentTerm} onChange={e => updateField('paymentTerm', e.target.value)} /></Field>
               <Field label="Ghi chú phí"><TextInput value={form.feesNote} onChange={e => updateField('feesNote', e.target.value)} /></Field>
+              <Field label="Telegraphic transfer"><TextInput value={form.telegraphicTransfer} onChange={e => updateField('telegraphicTransfer', e.target.value)} /></Field>
               <Field label="Tên ngân hàng"><TextInput value={form.bankName} onChange={e => updateField('bankName', e.target.value)} placeholder="INDUSTRIAL AND COMMERCIAL BANK OF CHINA" /></Field>
               <Field label="Swift code"><TextInput value={form.swiftCode} onChange={e => updateField('swiftCode', e.target.value)} placeholder="ICBKCNBJGSI" /></Field>
               <Field label="Địa chỉ ngân hàng"><TextInput value={form.bankAddress} onChange={e => updateField('bankAddress', e.target.value)} /></Field>
@@ -444,7 +462,11 @@ export const SalesContractPage = ({ salesContracts, customers, foreignSellers = 
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="font-semibold text-gray-700 mb-3">Phạt vi phạm (Penalty)</h2>
-            <Field label="Điều khoản phạt"><TextArea value={form.penalty} onChange={e => updateField('penalty', e.target.value)} /></Field>
+            <div className="space-y-3">
+              <Field label="Cam kết sản xuất đúng mẫu/artwork"><TextArea rows={2} value={form.artworkCommitment} onChange={e => updateField('artworkCommitment', e.target.value)} /></Field>
+              <Field label="Trách nhiệm nếu sản xuất sai mẫu"><TextArea rows={2} value={form.artworkFailureNote} onChange={e => updateField('artworkFailureNote', e.target.value)} /></Field>
+              <Field label="Điều khoản phạt"><TextArea value={form.penalty} onChange={e => updateField('penalty', e.target.value)} /></Field>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pb-8">

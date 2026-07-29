@@ -76,7 +76,8 @@ export const SalesContractPreview = ({ c }) => {
         In accordance with the seller's quotation, we are mutually agreed between two parties to sign this sales contract on the terms and conditions as following:
       </p>
 
-      <p className="font-bold text-xs mb-2">1. Commodity - Specification - Quantity - Price:</p>
+      <p className="font-bold text-xs mb-1">1. Commodity - Specification - Quantity - Price:</p>
+      <p className="text-xs mb-2">The seller undertakes to supply to the buyer equipments with specification and quantity as bellow:</p>
       <table className="w-full text-xs mb-2 border-collapse">
         <thead>
           <tr className="border-b border-t" style={{ borderColor: '#333' }}>
@@ -85,8 +86,8 @@ export const SalesContractPreview = ({ c }) => {
             <th className="py-1.5 text-left font-semibold">Origin</th>
             <th className="py-1.5 text-right font-semibold">Quantity</th>
             <th className="py-1.5 text-left font-semibold pl-2">Unit</th>
-            <th className="py-1.5 text-right font-semibold">Unit price</th>
-            <th className="py-1.5 text-right font-semibold">Amount</th>
+            <th className="py-1.5 text-right font-semibold">Unit price (USD)</th>
+            <th className="py-1.5 text-right font-semibold">Amount (USD)</th>
           </tr>
         </thead>
         <tbody>
@@ -102,27 +103,35 @@ export const SalesContractPreview = ({ c }) => {
             </tr>
           ))}
           <tr>
-            <td colSpan={6} className="py-1.5 text-right font-semibold">Total amount (USD)</td>
+            <td colSpan={6} className="py-1.5 text-right font-semibold">
+              Total amount ({c.incotermsRef || 'Incoterms 2000'}) in currency: USD
+            </td>
             <td className="py-1.5 text-right font-semibold">${fmtUSD(total)}</td>
           </tr>
         </tbody>
       </table>
-      <p className="text-xs mb-4">Say: {amountToWordsEN(total)}</p>
+      <p className="text-xs mb-2">Say: {amountToWordsEN(total)}</p>
+      <p className="text-xs mb-2">Manufacture's name in physical product must be in compliance with the contract.</p>
 
       <p className="text-xs mb-4">Quality: {c.quality}</p>
 
       <div className="grid grid-cols-2 gap-6 mb-4">
         <div>
-          <p className="font-bold text-xs mb-1">2. Shipping terms:</p>
+          <p className="font-bold text-xs mb-1">2. Shipping terms: {c.incotermsRef || 'Incoterms 2000'} to be referred</p>
           <p className="text-xs mb-0.5">Shipping method: {c.shippingMethod}</p>
+          <p className="text-xs mb-0.5">Latest shipment date: {c.latestShipment}</p>
           <p className="text-xs mb-0.5">Shipping terms: {c.incoterms}</p>
           <p className="text-xs mb-0.5">Port of loading: {c.portLoading}</p>
           <p className="text-xs mb-0.5">Port of discharge: {c.portDischarge}</p>
-          <p className="text-xs mb-0.5">Latest shipment date: {c.latestShipment}</p>
-          <p className="text-xs">Notice of shipment: {c.noticeShipment}</p>
+          <p className="text-xs mb-0.5">Partial shipment: {c.partialShipment || 'Allowed'}</p>
+          <p className="text-xs mb-0.5">Early shipment: {c.earlyShipment || 'Allowed'}</p>
+          <p className="text-xs mb-1.5">Notice of shipment: {c.noticeShipment}</p>
+          <p className="text-xs">
+            {c.defectiveGoodsNote || "Wrong or defective goods will be returned to the seller for replacement or refunds. All charges associated with return of the defective or wrong goods to be delivered the new one to buyer. All charges shall be at seller's account."}
+          </p>
         </div>
         <div>
-          <p className="font-bold text-xs mb-1">3. Packing:</p>
+          <p className="font-bold text-xs mb-1">3. Packing: {c.packingStandard || 'Manufactures standard packing.'}</p>
           <p className="text-xs">{c.packing}</p>
         </div>
       </div>
@@ -131,6 +140,7 @@ export const SalesContractPreview = ({ c }) => {
         <div>
           <p className="font-bold text-xs mb-1">4. Payments:</p>
           <p className="text-xs mb-1">{c.paymentTerm}</p>
+          <p className="text-xs mb-0.5">Telegraphic transfer: {c.telegraphicTransfer || 'T/T'}</p>
           <p className="text-xs mb-0.5">Bank: {c.bankName}</p>
           <p className="text-xs mb-0.5">Bank address: {c.bankAddress}</p>
           <p className="text-xs mb-0.5">Swift code: {c.swiftCode}</p>
@@ -146,11 +156,17 @@ export const SalesContractPreview = ({ c }) => {
       </div>
 
       <p className="font-bold text-xs mb-1">6. Penalty - Arbitration:</p>
+      <p className="text-xs mb-1">
+        {c.artworkCommitment || 'The Seller will commit to make mass production completely 100% similar to the artwork that is approved by the Buyer.'}
+      </p>
+      <p className="text-xs mb-1">
+        {c.artworkFailureNote || "If the seller fails to make products according to the buyer's sample or artwork, seller must bear all arising costs such as remake or correct products."}
+      </p>
       <p className="text-xs mb-2">
         {c.penalty} Any dispute arising out of this contract shall be first amicably settled by parties. If agreeable result
         cannot be reached it shall be finally settled by the Vietnam International Arbitration Center at the Chamber of
         Commerce and Industry of Vietnam (VCCI). Decision reached by this arbitration shall be final and promptly accepted
-        by all parties.
+        by all parties. The jurisdiction fees will be of the failing party.
       </p>
 
       <table style={{ width: '100%', marginTop: '30px', borderCollapse: 'collapse' }}>
