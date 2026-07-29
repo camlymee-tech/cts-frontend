@@ -48,7 +48,7 @@ export const Sidebar = ({ page, setPage, counts, onLogout, isAdmin }) => {
       items: [
         { id: 'fx_contract', icon: '🏦', label: 'Theo dõi tiền HĐNT' },
         { id: 'fx_contract_payment_request', icon: '🧾', label: 'Đề nghị TT - HĐNT' },
-        { id: 'sales_contract', icon: '📄', label: 'Hợp đồng bán hàng (EN)' },
+        { id: 'sales_contract', icon: '📄', label: 'Sales Contract' },
       ],
     },
     {
