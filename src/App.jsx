@@ -29,6 +29,7 @@ import { CreateHDNTUT } from './pages/CreateHDNTUT';
 import { CreateDDHUT } from './pages/CreateDDHUT';
 import { CreateBBBGUT } from './pages/CreateBBBGUT';
 import { LoginPage } from './pages/LoginPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
 import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
 import { CompleteProfilePage } from './pages/CompleteProfilePage';
@@ -81,9 +82,15 @@ export default function App() {
   const [salesContractsLoaded, setSalesContractsLoaded] = useState(false);
 
   // Supabase auth
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      // Khi người dùng bấm link "đặt lại mật khẩu" trong email, Supabase tạo 1 session tạm và bắn
+      // event này — bắt lại để hiện trang đặt mật khẩu mới thay vì cho vào thẳng app.
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -527,6 +534,10 @@ export default function App() {
   }
 
   if (!session) return <LoginPage />;
+
+  // Dù đã có session (do Supabase tạo tạm khi bấm link email), vẫn phải đặt mật khẩu mới xong
+  // mới cho vào app — tránh trường hợp ai nhặt được link email cũ cũng vào thẳng được tài khoản.
+  if (isPasswordRecovery) return <ResetPasswordPage onDone={() => setIsPasswordRecovery(false)} />;
 
   if (!dataReady) {
     return (
