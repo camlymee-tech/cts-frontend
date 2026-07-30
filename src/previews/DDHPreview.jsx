@@ -21,21 +21,21 @@ export const DDHPreview = ({ c, seller, customer }) => {
       </div>
 
       <div className="mb-3 text-sm">
-        <div><strong>Kính gửi:</strong> {ben_B.companyName}</div>
-        <div>Địa chỉ: {ben_B.address}</div>
-        <div>Mã số thuế: {ben_B.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_B.phone}</div>
-        <div>Email: {ben_B.email}</div>
-        <div>Số tài khoản: {ben_B.bankAccount}{ben_B.bankName ? ` tại ${ben_B.bankName}` : ''}</div>
-        <div>Người đại diện: <strong>{ben_B.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_B.position}</div>
-      </div>
-
-      <div className="mb-3 text-sm">
         <div className="font-bold">BÊN MUA (BÊN A): <strong>{ben_A.companyName}</strong></div>
         <div>Địa chỉ: {ben_A.address}</div>
         <div>Mã số thuế: {ben_A.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_A.phone}</div>
         <div>Email: {ben_A.email}</div>
         <div>Số tài khoản: {ben_A.bankAccount}{ben_A.bankName ? ` tại ${ben_A.bankName}` : ''}</div>
         <div>Người đại diện: <strong>{ben_A.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_A.position}</div>
+      </div>
+
+      <div className="mb-3 text-sm">
+        <div className="font-bold">BÊN BÁN (BÊN B): <strong>{ben_B.companyName}</strong></div>
+        <div>Địa chỉ: {ben_B.address}</div>
+        <div>Mã số thuế: {ben_B.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_B.phone}</div>
+        <div>Email: {ben_B.email}</div>
+        <div>Số tài khoản: {ben_B.bankAccount}{ben_B.bankName ? ` tại ${ben_B.bankName}` : ''}</div>
+        <div>Người đại diện: <strong>{ben_B.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_B.position}</div>
       </div>
 
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>
