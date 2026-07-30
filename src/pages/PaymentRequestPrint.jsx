@@ -7,12 +7,18 @@ import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
 
 const PRINT_STYLE = `
-  @page { size: A4 portrait; margin: 15mm; }
-  body { font-family: 'Times New Roman', serif; font-size: 13px; line-height: 1.5; background: #fff; color: #000; margin: 0; padding: 0; }
+  @page { size: A4 portrait; margin: 20mm 20mm 20mm 30mm; }
+  body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; background: #fff; color: #000; margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
-  td, th { border: 1px solid #555; padding: 4px 6px; }
+  td, th { border: 1px solid #000; padding: 4px 6px; }
+  th { text-align: center; font-weight: bold; }
   .no-print { display: none !important; }
   .no-border td, .no-border { border: none !important; padding: 2px 0 !important; }
+  .quoc-hieu { font-size: 12pt; font-weight: bold; text-align: center; }
+  .tieu-ngu { font-size: 13pt; font-weight: bold; text-align: center; }
+  .doc-title { font-size: 16pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+  thead { display: table-header-group; }
 `;
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -414,12 +420,16 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       {/* Vùng xem trước / dùng để in */}
       {customerId && (
       <div id="dntt-print-zone" className="bg-white border border-gray-200 rounded-xl p-8 mt-6" style={{ fontFamily: "'Times New Roman', serif" }}>
-        <table className="no-border" style={{ marginBottom: 12 }}><tbody>
-          <tr className="no-border"><td className="no-border" style={{ textAlign: 'center', fontWeight: 'bold' }}>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</td></tr>
-          <tr className="no-border"><td className="no-border" style={{ textAlign: 'center', fontWeight: 'bold' }}>Độc lập - Tự do - Hạnh phúc</td></tr>
-        </tbody></table>
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+          <div className="quoc-hieu" style={{ fontSize: '13pt', fontWeight: 'bold' }}>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+          <div className="tieu-ngu" style={{ fontSize: '14pt', fontWeight: 'bold', display: 'inline-block', borderBottom: '1px solid #000', paddingBottom: 2, marginTop: 2 }}>
+            Độc lập - Tự do - Hạnh phúc
+          </div>
+        </div>
 
-        <h2 style={{ textAlign: 'center', margin: '10px 0 2px' }}>GIẤY ĐỀ NGHỊ THANH TOÁN{docLabel ? ` (${docLabel.toUpperCase()})` : ''}</h2>
+        <h2 className="doc-title" style={{ textAlign: 'center', margin: '16px 0 12px', fontSize: '17pt', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          GIẤY ĐỀ NGHỊ THANH TOÁN{docLabel ? ` (${docLabel.toUpperCase()})` : ''}
+        </h2>
 
         <table className="no-border"><tbody>
           <tr className="no-border">
@@ -477,12 +487,12 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </tbody>
         </table>
 
-        <table className="no-border"><tbody>
-          <tr className="no-border"><td className="no-border">I - Tổng cộng số tiền phải thu</td><td className="no-border" style={{ textAlign: 'right', width: 140 }}>{fmtNum(totalPhaiThu)}</td></tr>
-          <tr className="no-border"><td className="no-border">II - Tổng số tiền thu khách</td><td className="no-border" style={{ textAlign: 'right' }}>{fmtNum(totalThuKhach)}</td></tr>
-          <tr className="no-border"><td className="no-border">III - Chênh lệch</td><td className="no-border" style={{ textAlign: 'right' }}>{fmtNum(chenhLech)}</td></tr>
-          <tr className="no-border"><td className="no-border">1 - Công ty phải thu khách (I &gt; II)</td><td className="no-border" style={{ textAlign: 'right' }}>{fmtNum(phaiThuKhach)}</td></tr>
-          <tr className="no-border"><td className="no-border">2 - Công ty còn phải trả khách (I &lt; II)</td><td className="no-border" style={{ textAlign: 'right' }}>{fmtNum(phaiTraKhach)}</td></tr>
+        <table style={{ marginBottom: 8 }}><tbody>
+          <tr><td style={{ fontWeight: 'bold' }}>I - Tổng cộng số tiền phải thu</td><td style={{ textAlign: 'right', width: 140, fontWeight: 'bold' }}>{fmtNum(totalPhaiThu)}</td></tr>
+          <tr><td style={{ fontWeight: 'bold' }}>II - Tổng số tiền thu khách</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalThuKhach)}</td></tr>
+          <tr><td style={{ fontWeight: 'bold' }}>III - Chênh lệch</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(chenhLech)}</td></tr>
+          <tr><td>1 - Công ty phải thu khách (I &gt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiThuKhach)}</td></tr>
+          <tr><td>2 - Công ty còn phải trả khách (I &lt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiTraKhach)}</td></tr>
         </tbody></table>
 
         <p style={{ fontWeight: 'bold', marginTop: 12, marginBottom: 4 }}>THANH TOÁN NGOẠI TỆ CHO KHÁCH</p>
