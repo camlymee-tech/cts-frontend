@@ -5,7 +5,7 @@ export const HDNT_ARTICLES = [
   { title: 'ĐỐI TƯỢNG CỦA HỢP ĐỒNG', clauses: [
     'Hàng hóa trong phạm vi Hợp đồng này được hiểu là toàn bộ sản phẩm trong Báo giá/Đơn đặt hàng kèm theo;',
     'Bên A đồng ý mua, Bên B đồng ý bán hàng hóa; chi tiết về chủng loại, số lượng, quy cách và giá cả hàng hóa sẽ được Các Bên thống nhất cụ thể trong Đơn đặt hàng kèm theo;',
-    'Đơn đặt dịch vụ được coi là có hiệu lực khi Bên B xác nhận chấp thuận thông qua email, tin nhắn hoặc hình thức điện tử tương đương; trường hợp trong vòng 02 (hai) ngày làm việc kể từ ngày Bên B nhận được Đơn đặt dịch vụ được gửi đến đúng địa chỉ email/fax được chỉ định tại hợp đồng mà không có ý kiến phản hồi bằng văn bản thì được hiểu là Bên B đã chấp thuận toàn bộ nội dung của Đơn đặt dịch vụ đó; Email/fax gửi ngoài giờ làm việc được xem là nhận vào ngày làm việc tiếp theo.',
+    'Đơn đặt hàng được coi là có hiệu lực khi Bên B xác nhận chấp thuận thông qua email, tin nhắn, bản gốc hoặc hình thức điện tử tương đương; trường hợp trong vòng 02 (hai) ngày làm việc kể từ ngày Bên B nhận được Đơn đặt hàng được gửi đến đúng địa chỉ email/fax được chỉ định tại hợp đồng mà không có ý kiến phản hồi bằng văn bản thì được hiểu là Bên B đã chấp thuận toàn bộ nội dung của Đơn đặt hàng đó; Email/fax gửi ngoài giờ làm việc được xem là nhận vào ngày làm việc tiếp theo.',
     'Giá trị Hợp đồng được xác định theo từng đơn hàng cụ thể và thể hiện tại Đơn đặt hàng do hai bên xác nhận. Giá trị ghi tại Đơn đặt hàng là giá tạm tính (đã bao gồm: các loại thuế theo quy định pháp luật, chi phí vận chuyển, chi phí khác có liên quan nhưng không bao gồm phí lưu kho, lưu xe do A chậm trễ trong việc nhận hàng). Trường hợp có sự thay đổi (tăng hoặc giảm về giá,…) Bên B có trách nhiệm thông báo bằng văn bản và/hoặc qua thư điện tử (Email, Zalo,…) cho Bên A; nếu Bên A không có ý kiến phản hồi trong vòng 1 (một) ngày làm việc kể từ khi nhận thông báo, nội dung điều chỉnh được coi là được chấp thuận. Hai bên ký biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế. Bên B lập hóa đơn GTGT theo giá trị quyết toán thực tế.',
     'Giá trị hóa đơn do Bên B lập là giá trị cuối cùng làm căn cứ thanh toán giữa các bên.',
   ]},
@@ -63,9 +63,9 @@ export const HDNT_ARTICLES = [
   ]},
   { title: 'HIỆU LỰC, GIA HẠN, CHUYỂN GIAO VÀ THANH LÝ HỢP ĐỒNG', clauses: [
     'Hợp đồng có hiệu lực 01 (một) năm kể từ ngày ký kết Hợp đồng này.',
+    'Hợp đồng này sẽ tự động gia hạn nếu trong vòng 30 (ba mươi) ngày trước khi hết thời hạn nhưng không có bất kỳ thỏa thuận chấm dứt hoặc thay đổi nào được Các Bên xác nhận bằng văn bản. Hết thời hạn gia hạn Hợp đồng nêu trên, Các Bên thỏa thuận với nhau về việc gia hạn tiếp hoặc thay đổi, chấm dứt Hợp đồng.',
     'Không Bên nào được chuyển giao quyền, nghĩa vụ theo Hợp đồng cho Bên thứ ba nếu không có sự đồng ý bằng văn bản của Bên còn lại, trừ trường hợp chia, tách, hợp nhất hoặc sáp nhập doanh nghiệp; mọi nghĩa vụ phát sinh phải được quyết toán đầy đủ trước khi chuyển giao.',
-    'Hợp đồng được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo Hợp đồng này.',
-    'Hợp đồng này sẽ tự động gia hạn tiếp nếu trong vòng ba mươi (30) ngày trước khi hết thời hạn nhưng không có bất kỳ thỏa thuận chấm dứt hoặc thay đổi nào được Các Bên xác nhận bằng văn bản. Hết thời hạn gia hạn Hợp đồng nêu trên, các Bên thoả thuận với nhau về việc gia hạn tiếp hoặc thay đổi, chấm dứt Hợp đồng. Tự động được thanh lý sau khi các bên hoàn thành trách nhiệm của hợp đồng.',
+    'Hợp đồng được tự động thanh lý khi các Bên đã hoàn thành toàn bộ nghĩa vụ theo Hợp đồng này.',
     { text: 'Hợp đồng chỉ được chấm dứt trước thời hạn khi:', sub: [
       'Các Bên thỏa thuận hoặc một Bên vi phạm nghiêm trọng nghĩa vụ;',
       'Xảy ra sự kiện bất khả kháng;',

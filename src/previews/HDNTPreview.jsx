@@ -29,11 +29,11 @@ export const HDNTPreview = ({ c, seller, customer }) => {
       </div>
 
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>
-        HỢP ĐỒNG NGUYÊN TẮC VỀ VIỆC MUA BÁN HÀNG HÓA (sau đây gọi là "Hợp đồng"), được lập {fmtDate(c.date)}, tại Hà Nội giữa Các Bên sau đây:
+        Hôm nay, {fmtDate(c.date)}, tại văn phòng <strong>{ben_B.companyName}</strong>, chúng tôi gồm có:
       </p>
 
-      <PartyBlock heading="BÊN MUA (BÊN A)" p={ben_A} />
-      <PartyBlock heading="BÊN BÁN (BÊN B)" p={ben_B} />
+      <PartyBlock heading="BÊN MUA (BÊN A)" p={ben_A} emailLabel="Email" />
+      <PartyBlock heading="BÊN BÁN (BÊN B)" p={ben_B} emailLabel="Email" />
 
       <p className="mb-1 text-sm italic">Bên A và Bên B sau đây được gọi riêng là "mỗi Bên" và gọi chung là "các Bên".</p>
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>Sau khi thỏa thuận, các Bên thống nhất ký kết Hợp đồng mua bán hàng hóa (sau đây gọi là "Hợp đồng") với các điều khoản và điều kiện như sau:</p>

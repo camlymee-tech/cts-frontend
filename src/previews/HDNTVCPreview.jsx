@@ -31,7 +31,7 @@ export const HDNTVCPreview = ({ c, seller, customer }) => {
       </div>
 
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>
-        HỢP ĐỒNG NGUYÊN TẮC (CUNG CẤP DỊCH VỤ LOGISTICS) (sau đây gọi là "Hợp đồng"), được lập {fmtDate(c.date)}, tại Hà Nội giữa Các Bên sau đây:
+        Hôm nay, {fmtDate(c.date)}, tại văn phòng <strong>{ben_B.companyName}</strong>, chúng tôi gồm có:
       </p>
 
       <PartyBlock heading="BÊN THUÊ DỊCH VỤ (BÊN A)" p={ben_A} />

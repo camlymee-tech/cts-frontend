@@ -27,10 +27,12 @@ export const DDHVCPreview = ({ c, seller, customer }) => {
       </div>
 
       <div className="mb-3 text-sm">
-        <div className="font-bold">Thông tin liên hệ bên đặt dịch vụ (Bên A):</div>
-        <div>Công ty / HKD: <strong>{ben_A.companyName}</strong> &nbsp;|&nbsp; MST: {ben_A.taxCode}</div>
-        <div>Người đại diện: {ben_A.representative}{ben_A.position ? ` – ${ben_A.position}` : ''}</div>
-        <div>Số điện thoại: {ben_A.phone} &nbsp;|&nbsp; Email nhận hồ sơ: {ben_A.email}</div>
+        <div className="font-bold">BÊN THUÊ DỊCH VỤ (BÊN A): <strong>{ben_A.companyName}</strong></div>
+        <div>Địa chỉ: {ben_A.address}</div>
+        <div>Mã số thuế: {ben_A.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_A.phone}</div>
+        <div>Email nhận hồ sơ: {ben_A.email}</div>
+        <div>Số tài khoản: {ben_A.bankAccount}{ben_A.bankName ? ` tại ${ben_A.bankName}` : ''}</div>
+        <div>Người đại diện: <strong>{ben_A.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_A.position}</div>
       </div>
 
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>
@@ -61,7 +63,7 @@ export const DDHVCPreview = ({ c, seller, customer }) => {
         <div style={{ textAlign: 'justify' }}>Đơn đặt dịch vụ này là một phần không tách rời Hợp đồng nguyên tắc hai bên đã ký. Các điều khoản của đơn đặt dịch vụ này được áp dụng theo điều khoản trong hợp đồng nguyên tắc, có hiệu lực từ ngày ký. Đơn đặt dịch vụ được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo đơn đặt dịch vụ này.</div>
       </div>
 
-      <SignatureBlock marginTop="32px" rightTitle="Đại diện Bên Đặt Dịch Vụ" />
+      <SignatureBlock marginTop="32px" leftTitle="Đại diện Bên A" leftSub="(Bên Thuê Dịch Vụ)" rightTitle="Đại diện Bên B" rightSub="(Bên Nhận Dịch Vụ)" />
     </div>
   );
 };

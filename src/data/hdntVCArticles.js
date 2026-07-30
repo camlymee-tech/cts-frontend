@@ -87,7 +87,7 @@ export const HDNT_VC_ARTICLES = [
   ]},
   { title: 'HIỆU LỰC, GIA HẠN, CHUYỂN GIAO VÀ THANH LÝ HỢP ĐỒNG', clauses: [
     'Hợp đồng có hiệu lực 01 (một) năm kể từ ngày ký kết Hợp đồng này;',
-    'Hợp đồng này sẽ tự động gia hạn tiếp nếu trong vòng ba mươi (30) ngày trước khi hết thời hạn nhưng không có bất kỳ thỏa thuận chấm dứt hoặc thay đổi nào được Các Bên xác nhận bằng văn bản. Hết thời hạn gia hạn Hợp đồng nêu trên, các Bên thoả thuận với nhau về việc gia hạn tiếp hoặc thay đổi, chấm dứt Hợp đồng. Tự động được thanh lý sau khi các bên hoàn thành trách nhiệm của hợp đồng;',
+    'Hợp đồng này sẽ tự động gia hạn nếu trong vòng 30 (ba mươi) ngày trước khi hết thời hạn nhưng không có bất kỳ thỏa thuận chấm dứt hoặc thay đổi nào được Các Bên xác nhận bằng văn bản. Hết thời hạn gia hạn Hợp đồng nêu trên, Các Bên thỏa thuận với nhau về việc gia hạn tiếp hoặc thay đổi, chấm dứt Hợp đồng;',
     'Hợp đồng được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo Hợp đồng này;',
     'Không Bên nào được chuyển nhượng bất kỳ quyền và/hoặc nghĩa vụ nào tại Hợp đồng cho bất kỳ Bên thứ ba nào khác nếu không được sự đồng ý của Bên còn lại, trừ trường hợp việc chuyển nhượng là hệ quả của việc chia tách, hợp nhất, sáp nhập doanh nghiệp. Trong trường hợp một Bên chuyển giao quyền và nghĩa vụ cho Bên thứ ba theo trường hợp nêu trên, Bên có nghĩa vụ phải thực hiện nghĩa vụ của mình đối với Bên còn lại trước khi thực hiện việc chuyển giao hợp đồng;',
     { text: 'Không Bên nào được đơn phương chấm dứt hợp đồng trước thời hạn, trừ các trường hợp sau:', sub: [

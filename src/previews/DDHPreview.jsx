@@ -6,7 +6,9 @@ import { GoodsTablePrint } from './GoodsTablePrint';
 export const DDHPreview = ({ c, seller, customer }) => {
   // BÊN A = Bên đặt hàng (Khách hàng) | BÊN B = Bên nhận đơn / bán (CTS)
   const ben_A = customer || {}, ben_B = seller || {};
-  const { total } = calcTotals(c.goods);
+  // Giá trị lúc đặt hàng là TẠM TÍNH, CHƯA gồm thuế (VAT tính sau ở Biên Bản Bàn Giao khi quyết toán
+  // thực tế) — nên dùng subtotal (chưa thuế), không dùng total (đã cộng VAT) như bên BBBG.
+  const { subtotal } = calcTotals(c.goods);
   return (
     <div className="contract-paper">
       <div className="text-center mb-5">
@@ -22,16 +24,18 @@ export const DDHPreview = ({ c, seller, customer }) => {
         <div><strong>Kính gửi:</strong> {ben_B.companyName}</div>
         <div>Địa chỉ: {ben_B.address}</div>
         <div>Mã số thuế: {ben_B.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_B.phone}</div>
-        <div>Email nhận hồ sơ: {ben_B.email}</div>
+        <div>Email: {ben_B.email}</div>
         <div>Số tài khoản: {ben_B.bankAccount}{ben_B.bankName ? ` tại ${ben_B.bankName}` : ''}</div>
         <div>Người đại diện: <strong>{ben_B.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_B.position}</div>
       </div>
 
       <div className="mb-3 text-sm">
-        <div className="font-bold">Thông tin bên đặt hàng (Bên A):</div>
-        <div>Công ty / HKD: <strong>{ben_A.companyName}</strong> &nbsp;|&nbsp; MST: {ben_A.taxCode}</div>
-        <div>Người đại diện: {ben_A.representative}{ben_A.position ? ` – ${ben_A.position}` : ''}</div>
-        <div>Số điện thoại: {ben_A.phone} &nbsp;|&nbsp; Email nhận hồ sơ: {ben_A.email}</div>
+        <div className="font-bold">BÊN MUA (BÊN A): <strong>{ben_A.companyName}</strong></div>
+        <div>Địa chỉ: {ben_A.address}</div>
+        <div>Mã số thuế: {ben_A.taxCode} &nbsp;|&nbsp; Điện thoại: {ben_A.phone}</div>
+        <div>Email: {ben_A.email}</div>
+        <div>Số tài khoản: {ben_A.bankAccount}{ben_A.bankName ? ` tại ${ben_A.bankName}` : ''}</div>
+        <div>Người đại diện: <strong>{ben_A.representative}</strong> &nbsp;–&nbsp; Chức vụ: {ben_A.position}</div>
       </div>
 
       <p className="mb-4 text-sm" style={{ textAlign: 'justify' }}>
@@ -41,9 +45,9 @@ export const DDHPreview = ({ c, seller, customer }) => {
       <div className="mb-3 text-sm">
         <div className="font-bold uppercase">Điều 1: Đối tượng hàng hóa</div>
         <div className="mb-2">Bên B cung cấp cho Bên A các loại hàng hóa chi tiết với những thông tin như sau:</div>
-        <GoodsTablePrint goods={c.goods} finalLabel="Tổng cộng giá trị sau thuế:" />
-        <div className="mb-2"><strong>Bằng chữ:</strong> {numberToWords(total)}</div>
-        <div style={{ textAlign: 'justify' }}>Giá trên là giá trị tạm tính. Trong quá trình triển khai đơn đặt hàng, nếu có phát sinh tăng hay giảm giá trị theo đơn đặt hàng thì hai bên ký biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế. Bên B lập hóa đơn GTGT theo giá trị quyết toán thực tế.</div>
+        <GoodsTablePrint goods={c.goods} finalLabel="Cộng tiền hàng" hideVat />
+        <div className="mb-2"><strong>Bằng chữ:</strong> {numberToWords(subtotal)}</div>
+        <div style={{ textAlign: 'justify' }}>Giá trên là giá trị tạm tính chưa bao gồm thuế, tiền thuế theo quy định thuế hiện hành. Trong quá trình triển khai đơn đặt hàng, nếu có phát sinh tăng hay giảm giá trị theo đơn đặt hàng thì hai bên ký biên bản bàn giao, nghiệm thu và quyết toán giá trị thực tế. Bên B lập hóa đơn GTGT theo giá trị quyết toán thực tế.</div>
       </div>
 
       <div className="mb-3 text-sm">
@@ -64,7 +68,7 @@ export const DDHPreview = ({ c, seller, customer }) => {
         <div style={{ textAlign: 'justify' }}>Đơn đặt hàng này là một phần không tách rời Hợp đồng nguyên tắc hai bên đã ký. Các điều khoản của đơn đặt hàng này được áp dụng theo điều khoản trong hợp đồng nguyên tắc, có hiệu lực từ ngày ký. Đơn đặt hàng được tự động thanh lý khi các bên đã hoàn thành toàn bộ nghĩa vụ theo đơn đặt hàng này.</div>
       </div>
 
-      <SignatureBlock marginTop="32px" rightTitle="Đại diện Bên Đặt Hàng" />
+      <SignatureBlock marginTop="32px" leftTitle="Đại diện Bên A" leftSub="(Bên Mua)" rightTitle="Đại diện Bên B" rightSub="(Bên Bán)" />
     </div>
   );
 };
