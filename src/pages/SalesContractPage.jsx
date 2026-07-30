@@ -13,8 +13,16 @@ import { doPrintZone, doDownloadPDFZone, doDownloadWordZone, safeFilename } from
 import { api } from '../lib/api';
 
 const PRINT_STYLE = `
-  @page { size: A4 portrait; margin: 18mm; }
-  body { font-family: 'Times New Roman', Times, serif; font-size: 12px; color: #000; background: #fff; }
+  @page {
+    size: A4 portrait;
+    /* Chuẩn thể thức: lề trên 2cm, phải 2cm, dưới 2cm, trái 3cm */
+    margin: 20mm 20mm 20mm 30mm;
+  }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 13pt; line-height: 1.5; color: #000; background: #fff; }
+  .contract-paper { font-size: 13pt; line-height: 1.5; }
+  .contract-paper .text-sm { font-size: 13pt !important; }
+  .contract-paper .text-base { font-size: 14pt !important; }
+  .contract-paper .text-xs { font-size: 11pt !important; }
   table { border-collapse: collapse; width: 100%; }
 `;
 

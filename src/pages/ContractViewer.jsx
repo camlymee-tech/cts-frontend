@@ -31,18 +31,25 @@ const safeFilename = (name, ext) =>
 const PRINT_STYLE = `
   @page {
     size: A4 portrait;
-    margin: 25mm 20mm 25mm 35mm; /* top right bottom left — áp dụng cho MỌI trang khi in */
+    /* Chuẩn thể thức văn bản hành chính: lề trên 2cm, phải 2cm, dưới 2cm, trái 3cm */
+    margin: 20mm 20mm 20mm 30mm; /* top right bottom left — áp dụng cho MỌI trang khi in */
   }
   body {
     font-family: 'Times New Roman', serif;
-    font-size: 13px;
-    line-height: 1.8;
+    font-size: 13pt;
+    line-height: 1.5;
     background: #fff;
     color: #000;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
+  /* Ép đúng cỡ chữ chuẩn khi in — ghi đè các lớp cỡ chữ của giao diện web (vốn tính bằng px, nhỏ hơn chuẩn) */
+  .contract-paper { font-size: 13pt; line-height: 1.5; }
+  .contract-paper .text-sm { font-size: 13pt !important; }
+  .contract-paper .text-base { font-size: 14pt !important; }
+  .contract-paper .text-xs { font-size: 11pt !important; }
+  .contract-paper table .text-xs, .contract-paper table { line-height: 1.3; }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid #555; padding: 4px 8px; }
   tr { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -99,7 +106,7 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, sal
       await loadScriptOnce(HTML2PDF_SRC);
       const element = document.getElementById('contract-print-zone');
       await window.html2pdf().set({
-        margin: [25, 35, 25, 20], // [top, left, bottom, right] mm
+        margin: [20, 30, 20, 20], // [top, left, bottom, right] mm — chuẩn thể thức: trên 2, trái 3, dưới 2, phải 2 cm
         filename: safeFilename(contract.contractId, '.pdf'),
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
@@ -121,7 +128,7 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, sal
       const html = getFullHtml(element.innerHTML);
       const blob = window.htmlDocx.asBlob(html, {
         orientation: 'portrait',
-        margins: { top: 1417, right: 1134, bottom: 1417, left: 1984 }, // twip: 2.5/2.0/2.5/3.5 cm
+        margins: { top: 1134, right: 1134, bottom: 1134, left: 1701 }, // twip: trên 2 / phải 2 / dưới 2 / trái 3 cm
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

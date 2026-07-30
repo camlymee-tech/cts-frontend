@@ -46,7 +46,7 @@ export const doDownloadPDFZone = async (zoneId, filename) => {
   await loadScriptOnce(HTML2PDF_SRC);
   const element = document.getElementById(zoneId);
   await window.html2pdf().set({
-    margin: [15, 15, 15, 15],
+    margin: [20, 30, 20, 20], // [top, left, bottom, right] mm — chuẩn thể thức: trên 2, trái 3, dưới 2, phải 2 cm
     filename,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
@@ -61,7 +61,7 @@ export const doDownloadWordZone = async (zoneId, filename, printStyle) => {
   const html = getFullHtml(element.innerHTML, printStyle);
   const blob = window.htmlDocx.asBlob(html, {
     orientation: 'portrait',
-    margins: { top: 850, right: 850, bottom: 850, left: 850 }, // ~1.5cm mỗi bên
+    margins: { top: 1134, right: 1134, bottom: 1134, left: 1701 }, // twip: trên 2 / phải 2 / dưới 2 / trái 3 cm
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
