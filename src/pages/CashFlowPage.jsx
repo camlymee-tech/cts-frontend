@@ -143,13 +143,13 @@ const excelColLetter = (n) => {
 // trọn chiều cao 2 hàng dưới nếu group1 có group2 ở cột khác cùng nhóm).
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 90, group1: 'Thông tin khách hàng' },
+  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 180, group1: 'Thông tin khách hàng' },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 170, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 180, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true, group1: 'Công ty bán hàng' },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 200, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 180, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'goods_desc', label: 'Diễn giải', type: 'text', w: 170, fromDntt: true, group1: 'Phải thu khách hàng' },
   { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 125, formula: 'J×K', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
   { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 85, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
