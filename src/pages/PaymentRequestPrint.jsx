@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 
 const PRINT_STYLE = `
   @page { size: A4 portrait; margin: 12mm 15mm 12mm 25mm; }
-  body { font-family: 'Times New Roman', serif; font-size: 12.5pt; line-height: 1.3; background: #fff; color: #000; margin: 0; padding: 0; }
+  body { font-family: 'Times New Roman', serif; font-size: 11.5pt; line-height: 1.3; background: #fff; color: #000; margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid #000; padding: 2px 5px; }
   th { text-align: center; font-weight: bold; }
@@ -127,6 +127,28 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const num = (v) => Number(v) || 0;
 
+  // Gợi ý Số đề nghị TT theo định dạng: DDMMYY - Mã khách - STT / mã Cty bán
+  // (STT = số thứ tự đề nghị của khách này trong cùng ngày, đếm từ các lô đã lưu + 1).
+  const suggestRequestNo = () => {
+    if (!customerId) return alert('Vui lòng chọn khách hàng trước.');
+    const d = new Date((requestDate || todayISO()) + 'T00:00:00');
+    const ddmmyy = String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + String(d.getFullYear()).slice(2);
+    // Đếm số đề nghị đã có của khách này trong đúng ngày đó (dựa trên các lô đã lưu), để ra STT tiếp theo
+    const sameDayNos = new Set(
+      (initialBatches || [])
+        .filter(b => b.customer_id === customerId && (b.order_date === requestDate || b.customer_paid_date === requestDate) && b.payment_request_no)
+        .map(b => String(b.payment_request_no))
+    );
+    const stt = String(sameDayNos.size + 1).padStart(2, '0');
+    // Mã công ty bán: lấy shortName nếu có, nếu không lấy mã seller
+    const seller = sellers[sellerId] || {};
+    const sellerCode = seller.shortName || (sellerId ? sellerId : '');
+    const parts = [ddmmyy, customerId, stt];
+    let no = parts.join('/');
+    if (sellerCode) no += `/${sellerCode}`;
+    setRequestNoInput(no);
+  };
+
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
@@ -167,18 +189,42 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     if (sellers[id]) { setReceiveAccount(sellers[id].bankAccount || ''); setBankName(sellers[id].bankName || ''); }
   };
 
-  // Lưu lại bảng chứng từ: dòng nào đã có sẵn (mở ra để sửa) thì CẬP NHẬT đúng lô đó, giữ nguyên —
-  // không tạo thêm lô mới trùng lặp. Chỉ những dòng mới thêm (bấm "+ Thêm dòng") mới tạo lô mới.
   const handleSaveToSystem = async () => {
+    const ok = await saveToSystemCore();
+    if (ok) resetAfterSave();
+  };
+
+  // Lưu và In cùng lúc: in ra trước (khi dữ liệu còn trên màn), lưu vào hệ thống, rồi mới reset về trống.
+  const handleSaveAndPrint = async () => {
     if (!customerId) return alert('Vui lòng chọn khách hàng trước khi lưu.');
     if (!requestNoInput.trim()) return alert('Vui lòng nhập Số đề nghị TT trước khi lưu.');
+    doPrint();
+    const ok = await saveToSystemCore();
+    if (ok) resetAfterSave();
+  };
+
+  const resetAfterSave = () => {
+    if (onSelectCustomer) { setCustomerId(''); onSelectCustomer(''); }
+    setSellerId('');
+    setReceiveAccount('');
+    setBankName('');
+    setNote('');
+    setRemovedIds([]);
+    setRequestNoInput('');
+    setVoucherRows([blankVoucherRow()]);
+    setFxRows([blankFxRow()]);
+    setRequestDate(todayISO());
+  };
+
+  // Trả về true nếu lưu thành công (KHÔNG tự reset — để caller quyết định)
+  const saveToSystemCore = async () => {
+    if (!customerId) { alert('Vui lòng chọn khách hàng trước khi lưu.'); return false; }
+    if (!requestNoInput.trim()) { alert('Vui lòng nhập Số đề nghị TT trước khi lưu.'); return false; }
     const rowsToSave = voucherRows.filter(r => num(r.ctsPhaiThu) || num(r.daThuKhach) || r.dienGiai.trim() || r.id);
     const fxCheck = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
-    if (rowsToSave.length === 0 && fxCheck.length === 0) return alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.');
+    if (rowsToSave.length === 0 && fxCheck.length === 0) { alert('Chưa có dòng chứng từ hoặc dòng ngoại tệ nào để lưu.'); return false; }
     setSaving(true);
     const savedRequestNo = requestNoInput.trim();
-    // Ghép mỗi dòng "Chứng từ" (VNĐ) với đúng 1 dòng "Ngoại tệ" tương ứng theo thứ tự vào CHUNG 1 lô —
-    // 1 ô tiền Việt luôn đi cùng 1 ô tiền tệ quy đổi, không tách rời, không gộp thành 1 tổng.
     const fxWithData = fxRows.filter(r => num(r.tyGia) || num(r.soTe));
     const rowCount = Math.max(rowsToSave.length, fxWithData.length, 1);
     try {
@@ -210,24 +256,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           note: note || null,
         });
       }
-      // Xoá thật các lô đã bị bấm ✕ khỏi bảng chứng từ trong lần sửa này
       if (removedIds.length > 0 && onDelete) {
         for (const id of removedIds) { await onDelete(id); }
       }
-      alert(`Đã lưu ${rowCount} dòng vào bảng theo dõi dòng tiền của khách hàng này.`);
-      // Sau khi lưu xong, reset về trống để làm tiếp đề nghị thanh toán mới
-      if (onSelectCustomer) { setCustomerId(''); onSelectCustomer(''); }
-      setSellerId('');
-      setReceiveAccount('');
-      setBankName('');
-      setNote('');
-      setRemovedIds([]);
-      setRequestNoInput('');
-      setVoucherRows([blankVoucherRow()]);
-      setFxRows([blankFxRow()]);
-      setRequestDate(todayISO());
+      return true;
     } catch (err) {
       alert('Có lỗi khi lưu: ' + err.message);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -260,11 +295,15 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <h1 className="text-xl font-bold text-gray-800">🧾 Giấy Đề Nghị Thanh Toán{docLabel ? ` (${docLabel})` : ''} {customerId && requestNoInput ? `#${requestNoInput}` : ''}{customer ? ` — ${displayCustomerName}` : ''}</h1>
         </div>
         <div className="flex gap-2">
+          <button onClick={handleSaveAndPrint} disabled={saving || !customerId}
+            className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 font-medium">
+            {saving ? '⏳ Đang lưu...' : '💾🖨️ Lưu và In'}
+          </button>
           <button onClick={handleSaveToSystem} disabled={saving || !customerId}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            {saving ? '⏳ Đang lưu...' : '💾 Lưu vào hệ thống'}
+            {saving ? '⏳ Đang lưu...' : '💾 Chỉ lưu'}
           </button>
-          <button onClick={doPrint} disabled={!customerId} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50">🖨️ In / Xuất PDF</button>
+          <button onClick={doPrint} disabled={!customerId} className="bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">🖨️ Chỉ in</button>
         </div>
       </div>
 
@@ -281,9 +320,13 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-5 gap-4'}>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
-              <input type="text" value={requestNoInput}
-                onChange={e => setRequestNoInput(e.target.value)}
-                placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+              <div className="flex gap-1">
+                <input type="text" value={requestNoInput}
+                  onChange={e => setRequestNoInput(e.target.value)}
+                  placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                <button type="button" onClick={suggestRequestNo} title="Gợi ý số theo định dạng chuẩn"
+                  className="shrink-0 text-xs px-2 rounded-lg border border-gray-300 hover:bg-gray-50">Gợi ý</button>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>
@@ -492,16 +535,15 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 </tr>
               );
             })}
+            {/* Gộp phần tổng cộng vào CHUNG bảng chứng từ để khung viền liền mạch, không bị tách rời 2 bảng.
+                Nhãn trải hết các cột bên trái, số tiền nằm ở cột cuối (cột Chênh lệch). */}
+            <tr><td colSpan={isFx ? 6 : 3} style={{ fontWeight: 'bold' }}>I - Tổng cộng số tiền phải thu</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalPhaiThu)}</td></tr>
+            <tr><td colSpan={isFx ? 6 : 3} style={{ fontWeight: 'bold' }}>II - Tổng số tiền thu khách</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalThuKhach)}</td></tr>
+            <tr><td colSpan={isFx ? 6 : 3} style={{ fontWeight: 'bold' }}>III - Chênh lệch</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(chenhLech)}</td></tr>
+            <tr><td colSpan={isFx ? 6 : 3}>1 - Công ty phải thu khách (I &gt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiThuKhach)}</td></tr>
+            <tr><td colSpan={isFx ? 6 : 3}>2 - Công ty còn phải trả khách (I &lt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiTraKhach)}</td></tr>
           </tbody>
         </table>
-
-        <table style={{ marginBottom: 8 }}><tbody>
-          <tr><td style={{ fontWeight: 'bold' }}>I - Tổng cộng số tiền phải thu</td><td style={{ textAlign: 'right', width: 140, fontWeight: 'bold' }}>{fmtNum(totalPhaiThu)}</td></tr>
-          <tr><td style={{ fontWeight: 'bold' }}>II - Tổng số tiền thu khách</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(totalThuKhach)}</td></tr>
-          <tr><td style={{ fontWeight: 'bold' }}>III - Chênh lệch</td><td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmtNum(chenhLech)}</td></tr>
-          <tr><td>1 - Công ty phải thu khách (I &gt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiThuKhach)}</td></tr>
-          <tr><td>2 - Công ty còn phải trả khách (I &lt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiTraKhach)}</td></tr>
-        </tbody></table>
 
         <p style={{ fontWeight: 'bold', marginTop: 6, marginBottom: 3 }}>THANH TOÁN NGOẠI TỆ CHO KHÁCH</p>
         <table style={{ marginBottom: 4 }}>
