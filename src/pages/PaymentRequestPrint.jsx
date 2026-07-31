@@ -292,7 +292,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         {customerId && (
           <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-5 gap-4'}>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
+              <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT (DDMMYY - Mã khách - STT / Cty bán)</label>
               <input type="text" value={requestNoInput}
                 onChange={e => setRequestNoInput(e.target.value)}
                 placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
