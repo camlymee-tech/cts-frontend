@@ -127,28 +127,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
 
   const num = (v) => Number(v) || 0;
 
-  // Gợi ý Số đề nghị TT theo định dạng: DDMMYY - Mã khách - STT / mã Cty bán
-  // (STT = số thứ tự đề nghị của khách này trong cùng ngày, đếm từ các lô đã lưu + 1).
-  const suggestRequestNo = () => {
-    if (!customerId) return alert('Vui lòng chọn khách hàng trước.');
-    const d = new Date((requestDate || todayISO()) + 'T00:00:00');
-    const ddmmyy = String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + String(d.getFullYear()).slice(2);
-    // Đếm số đề nghị đã có của khách này trong đúng ngày đó (dựa trên các lô đã lưu), để ra STT tiếp theo
-    const sameDayNos = new Set(
-      (initialBatches || [])
-        .filter(b => b.customer_id === customerId && (b.order_date === requestDate || b.customer_paid_date === requestDate) && b.payment_request_no)
-        .map(b => String(b.payment_request_no))
-    );
-    const stt = String(sameDayNos.size + 1).padStart(2, '0');
-    // Mã công ty bán: lấy shortName nếu có, nếu không lấy mã seller
-    const seller = sellers[sellerId] || {};
-    const sellerCode = seller.shortName || (sellerId ? sellerId : '');
-    const parts = [ddmmyy, customerId, stt];
-    let no = parts.join('/');
-    if (sellerCode) no += `/${sellerCode}`;
-    setRequestNoInput(no);
-  };
-
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
   const totalTienChuyen = fxRows.reduce((s, r) => s + fxThanhTien(r), 0);
@@ -299,11 +277,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 font-medium">
             {saving ? '⏳ Đang lưu...' : '💾🖨️ Lưu và In'}
           </button>
-          <button onClick={handleSaveToSystem} disabled={saving || !customerId}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            {saving ? '⏳ Đang lưu...' : '💾 Chỉ lưu'}
-          </button>
-          <button onClick={doPrint} disabled={!customerId} className="bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50">🖨️ Chỉ in</button>
         </div>
       </div>
 
@@ -320,13 +293,9 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-5 gap-4'}>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT</label>
-              <div className="flex gap-1">
-                <input type="text" value={requestNoInput}
-                  onChange={e => setRequestNoInput(e.target.value)}
-                  placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                <button type="button" onClick={suggestRequestNo} title="Gợi ý số theo định dạng chuẩn"
-                  className="shrink-0 text-xs px-2 rounded-lg border border-gray-300 hover:bg-gray-50">Gợi ý</button>
-              </div>
+              <input type="text" value={requestNoInput}
+                onChange={e => setRequestNoInput(e.target.value)}
+                placeholder="Nhập số đề nghị" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Ngày làm đề nghị</label>

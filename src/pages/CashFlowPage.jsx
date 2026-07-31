@@ -146,11 +146,11 @@ const COLS = [
   { key: 'batch_code', label: 'Mã lô', type: 'text', w: 90, group1: 'Thông tin khách hàng' },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 170, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
-  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 220, fromDntt: true, group1: 'Thông tin khách hàng' },
-  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 220, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 180, fromDntt: true, group1: 'Thông tin khách hàng' },
+  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 180, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true, group1: 'Công ty bán hàng' },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 220, fromDntt: true, group1: 'Công ty bán hàng' },
-  { key: 'goods_desc', label: 'Diễn giải', type: 'text', w: 200, fromDntt: true, group1: 'Phải thu khách hàng' },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 170, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'goods_desc', label: 'Diễn giải', type: 'text', w: 170, fromDntt: true, group1: 'Phải thu khách hàng' },
   { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 170, formula: 'I×J', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
   { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 110, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
@@ -164,7 +164,7 @@ const COLS = [
   { key: 'actual_collected', label: 'Số tiền chuyển', type: 'number', w: 180, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
   { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 180, formula: 'O+P+R', group1: 'Đã thu khách hàng' },
   { key: 'diffAmount', label: 'Còn lại', type: 'computed', w: 150, formula: 'M-S', group1: 'Còn lại' },
-  { key: 'note', label: 'Ghi chú', type: 'text', w: 220, group1: 'Ghi chú' },
+  { key: 'note', label: 'Ghi chú', type: 'text', w: 160, group1: 'Ghi chú' },
   { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
   { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
 ];
@@ -682,7 +682,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             else content = <span className={col.type === 'number' ? 'block text-right' : ''}>{col.type === 'number' ? fmtNum(same) : same}</span>;
           }
           return (
-            <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm align-top">
+            <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm align-top">
               {content}
             </td>
           );
@@ -718,13 +718,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         {cols.map(col => {
           if (isChild && commonKeys.has(col.key)) {
             // Thông tin này giống nhau cho cả nhóm (kể cả cột định danh nhóm) — đã hiện 1 lần ở dòng gốc rồi, dòng con để trống.
-            return <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
+            return <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
           if (col.key === 'batch_code' && !isChild) {
             // Dòng đơn lẻ/chưa gộp — ô Mã lô style giống hệt ô "gõ được ở dòng gốc" (viền xanh) để nhất quán,
             // gõ trùng mã ở 2 dòng sẽ tự gộp lại thành nhóm.
             return (
-              <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-1">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-1">
                 <input
                   type="text" defaultValue={row.batch_code || ''} key={`${row.id || 'new'}-batch-${row.batch_code || ''}`}
                   onBlur={(e) => {
@@ -745,13 +745,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             if (disabled) {
               const label = sellers[row.seller_id] ? (sellers[row.seller_id].shortName ? `[${sellers[row.seller_id].shortName}] ${sellers[row.seller_id].companyName}` : sellers[row.seller_id].companyName) : '';
               return (
-                <td key={col.key} rowSpan={rowSpan} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
                   {label}
                 </td>
               );
             }
             return (
-              <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={row.seller_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
                   onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
@@ -764,7 +764,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           }
           if (col.type === 'customerCode') {
             return (
-              <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
                 {row.customer_id || '—'}
               </td>
             );
@@ -773,7 +773,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const info = saleInfoByUuid[row.created_by];
             const val = col.key === 'sale_code_display' ? info?.code : info?.name;
             return (
-              <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 px-2 py-1.5 text-sm text-gray-500">
                 {val || '—'}
               </td>
             );
@@ -785,13 +785,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
             if (disabled) {
               return (
-                <td key={col.key} rowSpan={rowSpan} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
                   {customerDisplayLabel(row)}
                 </td>
               );
             }
             return (
-              <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
                 <select value={(() => {
                     const idx = row.branch_tax_code ? (customers[row.customer_id]?.branches || []).findIndex(b => b.id === row.branch_tax_code) : -1;
                     return encodeCustomerOptionValue(row.customer_id || '', idx >= 0 ? idx : null);
@@ -819,15 +819,15 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             // vẫn hiện chi tiết từng dòng con — các cột tự tính còn lại chỉ hiện tổng ở dòng gốc như trước.
             const SHOW_DETAIL_AT_CHILD = ['amountVnd', 'invoice_amount', 'fxAmountVnd', 'fxRemaining'];
             const blankAtChild = isChild && !SHOW_DETAIL_AT_CHILD.includes(col.key);
-            return <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
+            return <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100"><Cell col={col} value={blankAtChild ? '' : map[col.key]} /></td>;
           }
           if (isChild && col.key === 'customer_final_payment_date') {
             // Ngày khách thanh toán lần 2 chỉ cần lấy/hiện ở dòng gốc — dòng con để trống.
-            return <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
+            return <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Đã hiện ở dòng gốc phía trên">🔒</td>;
           }
           if (isChild && EDITABLE_SUM_KEYS.includes(col.key)) {
             // Đã gộp nhóm — số tổng nhập ở dòng gốc phía trên, dòng con không nhập riêng nữa.
-            return <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Nhập ở dòng gốc phía trên">🔒</td>;
+            return <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 bg-white text-center text-gray-300 text-xs" title="Nhập ở dòng gốc phía trên">🔒</td>;
           }
           const disabled = (col.fromDntt && !isNew) || (col.adminOnly && disabledAdminOnly);
           const merging = disabled && MERGEABLE_KEYS.includes(col.key);
@@ -835,7 +835,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
           if (col.key === 'payment_request_no' && !isNew && row.payment_request_no != null) {
             return (
-              <td key={col.key} rowSpan={rowSpan} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-right">
+              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-right">
                 <button type="button" onClick={() => onOpenPaymentRequest?.(row.customer_id, row.payment_request_no, [row.id])}
                   className="text-blue-600 hover:text-blue-800 underline font-medium" title="Bấm để sửa lại ở Đề Nghị Thanh Toán">
                   {row.payment_request_no}
@@ -847,13 +847,13 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             let display = row[col.key] ?? '';
             if (col.type === 'number' && display !== '') display = fmtNum(display);
             return (
-              <td key={col.key} rowSpan={rowSpan} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
+              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
                 {display}
               </td>
             );
           }
           return (
-            <td key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
+            <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-gray-100 p-0">
               <Cell col={col} value={row[col.key]} disabled={disabled}
                 onChange={(v) => isNew ? editNew(col.key, v) : editExisting(row, col.key, v)}
                 onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }} />
@@ -954,7 +954,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       </div>
 
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
-        <table className="text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
+        <table className="text-sm border-collapse" style={{ tableLayout: 'auto', width: 'max-content' }}>
           <thead className="sticky top-0 z-10">
             {(() => {
               const buildSpanRow = (getKey, getLabel) => {
@@ -1023,7 +1023,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             })()}
             <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
               {cols.map((col, i) => (
-                <th key={col.key} style={{ width: col.w, minWidth: col.w, maxWidth: col.w }}
+                <th key={col.key} style={{ minWidth: col.w, maxWidth: col.w }}
                   className={`text-left align-bottom px-2 py-2 border-r border-gray-100 font-medium leading-snug ${col.fromDntt ? 'text-amber-700 bg-amber-50/60' : ''} ${col.type === 'computed' ? 'text-emerald-700 bg-emerald-50' : ''}`}>
                   <div>{col.label}</div>
                   <div className="normal-case font-mono opacity-70">{excelColLetter(i)}{col.formula ? ` = ${col.formula}` : ''}</div>
