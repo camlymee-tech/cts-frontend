@@ -147,16 +147,16 @@ const COLS = [
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 170, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 180, fromDntt: true, group1: 'Thông tin khách hàng' },
-  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 180, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'seller_id', label: 'Cty thu tiền (bên bán)', type: 'seller', w: 200, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true, group1: 'Công ty bán hàng' },
-  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 170, fromDntt: true, group1: 'Công ty bán hàng' },
+  { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 200, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'goods_desc', label: 'Diễn giải', type: 'text', w: 170, fromDntt: true, group1: 'Phải thu khách hàng' },
   { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 125, formula: 'J×K', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
   { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 85, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
   { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 120, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150, group1: 'Phải thu khách hàng', group2: 'Tệ' },
   { key: 'tax_service_fee', label: 'Thuế + phí dịch vụ', type: 'number', w: 125, group1: 'Phải thu khách hàng' },
-  { key: 'invoice_amount', label: 'Tổng (= giá trị xuất hóa đơn)', type: 'computed', w: 130, formula: 'I+M', group1: 'Phải thu khách hàng' },
+  { key: 'invoice_amount', label: 'Tổng (= giá trị xuất hóa đơn)', type: 'computed', w: 200, formula: 'I+M', group1: 'Phải thu khách hàng' },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
   { key: 'customer_paid_total', label: 'Tiền hàng', type: 'number', w: 125, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
   { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 125, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
@@ -745,7 +745,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             if (disabled) {
               const label = sellers[row.seller_id] ? (sellers[row.seller_id].shortName ? `[${sellers[row.seller_id].shortName}] ${sellers[row.seller_id].companyName}` : sellers[row.seller_id].companyName) : '';
               return (
-                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w * 1.6 }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
                   {label}
                 </td>
               );
@@ -785,7 +785,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             const rowSpan = merging && groupSize > 1 ? groupSize : undefined;
             if (disabled) {
               return (
-                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w * 1.6 }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
+                <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, maxWidth: col.w }} className="border-r border-b border-gray-100 px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 whitespace-normal break-words leading-snug align-top">
                   {customerDisplayLabel(row)}
                 </td>
               );
@@ -847,7 +847,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             let display = row[col.key] ?? '';
             if (col.type === 'number' && display !== '') display = fmtNum(display);
             return (
-              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, ...(col.type==='number'||col.type==='computed'||col.type==='date' ? { whiteSpace: 'nowrap' } : { maxWidth: col.w * 1.6 }) }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 ${col.type==='number'||col.type==='computed'||col.type==='date' ? '' : 'whitespace-normal break-words'} leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
+              <td key={col.key} rowSpan={rowSpan} style={{ minWidth: col.w, ...(col.type==='number'||col.type==='computed'||col.type==='date' ? { whiteSpace: 'nowrap' } : { maxWidth: col.w }) }} className={`border-r border-b border-gray-100 align-top px-2 py-1.5 text-sm bg-amber-50/60 text-gray-600 ${col.type==='number'||col.type==='computed'||col.type==='date' ? '' : 'whitespace-normal break-words'} leading-snug ${col.type === 'number' ? 'text-right' : ''}`}>
                 {display}
               </td>
             );
