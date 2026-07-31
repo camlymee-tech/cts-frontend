@@ -98,7 +98,7 @@ const GroupSumInput = ({ initial, onCommit }) => {
       type="text" inputMode="numeric" value={text}
       onChange={handleChange}
       onBlur={() => onCommit(text.replace(/\D/g, ''))}
-      className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
+      className="w-full min-w-0 box-border border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
     />
   );
 };
@@ -151,19 +151,19 @@ const COLS = [
   { key: 'bank_account', label: 'Số tài khoản', type: 'text', w: 160, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'bank_name', label: 'Ngân hàng', type: 'text', w: 170, fromDntt: true, group1: 'Công ty bán hàng' },
   { key: 'goods_desc', label: 'Diễn giải', type: 'text', w: 170, fromDntt: true, group1: 'Phải thu khách hàng' },
-  { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 170, formula: 'I×J', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
-  { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 110, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
-  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 160, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
+  { key: 'amountVnd', label: 'Tiền hàng', type: 'computed', w: 130, formula: 'J×K', group1: 'Phải thu khách hàng', group2: 'VNĐ' },
+  { key: 'exchange_rate', label: 'Tỉ giá', type: 'number', w: 85, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
+  { key: 'amount_cny', label: 'Số tệ (Tiền hàng tệ)', type: 'number', w: 120, fromDntt: true, group1: 'Phải thu khách hàng', group2: 'Tệ' },
   { key: 'factory_paid_date', label: 'Ngày chuyển xưởng', type: 'date', w: 150, group1: 'Phải thu khách hàng', group2: 'Tệ' },
-  { key: 'tax_service_fee', label: 'Thuế + phí dịch vụ', type: 'number', w: 170, group1: 'Phải thu khách hàng' },
-  { key: 'invoice_amount', label: 'Tổng (= giá trị xuất hóa đơn)', type: 'computed', w: 190, formula: 'H+L', group1: 'Phải thu khách hàng' },
+  { key: 'tax_service_fee', label: 'Thuế + phí dịch vụ', type: 'number', w: 130, group1: 'Phải thu khách hàng' },
+  { key: 'invoice_amount', label: 'Tổng (= giá trị xuất hóa đơn)', type: 'computed', w: 150, formula: 'I+M', group1: 'Phải thu khách hàng' },
   { key: 'customer_paid_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 150, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
-  { key: 'customer_paid_total', label: 'Tiền hàng', type: 'number', w: 180, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
-  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 160, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
+  { key: 'customer_paid_total', label: 'Tiền hàng', type: 'number', w: 130, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
+  { key: 'deposit_vnd', label: 'Tiền cọc (VNĐ)', type: 'number', w: 120, fromDntt: true, group1: 'Đã thu khách hàng', group2: 'Lần 1' },
   { key: 'customer_final_payment_date', label: 'Ngày KH chuyển tiền', type: 'date', w: 170, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
-  { key: 'actual_collected', label: 'Số tiền chuyển', type: 'number', w: 180, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
-  { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 180, formula: 'O+P+R', group1: 'Đã thu khách hàng' },
-  { key: 'diffAmount', label: 'Còn lại', type: 'computed', w: 150, formula: 'M-S', group1: 'Còn lại' },
+  { key: 'actual_collected', label: 'Số tiền chuyển', type: 'number', w: 130, group1: 'Đã thu khách hàng', group2: 'Lần 2' },
+  { key: 'totalCustomerTransferred', label: 'Tổng', type: 'computed', w: 140, formula: 'P+Q+S', group1: 'Đã thu khách hàng' },
+  { key: 'diffAmount', label: 'Còn lại', type: 'computed', w: 120, formula: 'N-T', group1: 'Còn lại' },
   { key: 'note', label: 'Ghi chú', type: 'text', w: 160, group1: 'Ghi chú' },
   { key: 'sale_code_display', label: 'Mã Sale', type: 'saleInfo', w: 110 },
   { key: 'sale_name_display', label: 'Tên Sale', type: 'saleInfo', w: 160 },
@@ -279,7 +279,7 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
       </div>
     );
   }
-  const common = `w-full border focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60 border-transparent' : 'bg-white border-gray-200 hover:border-gray-300'}`;
+  const common = `w-full min-w-0 box-border border focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 rounded px-2 py-1.5 text-sm disabled:text-gray-500 ${disabled ? 'bg-amber-50/60 border-transparent' : 'bg-white border-gray-200 hover:border-gray-300'}`;
   if (col.type === 'date') {
     return <input type="date" value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common + ' text-right'} />;
   }
@@ -616,7 +616,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                     type="text" defaultValue={label} key={`${groupKey}-code-${label}`}
                     onBlur={(e) => renameGroupCode(items, e.target.value)}
                     title="Gõ để đổi tên Mã lô cho cả nhóm"
-                    className="border-2 border-blue-300 rounded px-1.5 py-0.5 text-sm text-blue-600 font-medium bg-blue-50/40"
+                    className="w-full min-w-0 box-border border-2 border-blue-300 rounded px-1.5 py-0.5 text-sm text-blue-600 font-medium bg-blue-50/40"
                   />
                 )}
                 <button type="button" onClick={() => handleUngroup(items)} className="text-xs text-red-400 hover:text-red-600 underline" title="Bỏ gộp — tách các dòng con ra hiện riêng lại">
@@ -630,7 +630,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               <input
                 type="date" defaultValue={same || ''} key={`${groupKey}-cfpd-${same}`}
                 onBlur={(e) => setGroupField(rows, 'customer_final_payment_date', e.target.value || null)}
-                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
+                className="w-full min-w-0 box-border border-2 border-blue-300 rounded px-1.5 py-1 text-sm text-right bg-blue-50/40"
               />
             );
           } else if (col.key === 'note') {
@@ -639,7 +639,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               <input
                 type="text" defaultValue={same || ''} key={`${groupKey}-note-${same}`}
                 onBlur={(e) => setGroupField(rows, 'note', e.target.value || null)}
-                className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
+                className="w-full min-w-0 box-border border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
               />
             );
           } else if (EDITABLE_SUM_KEYS.includes(col.key)) {
@@ -732,7 +732,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
                     if (isNew) { editNew('batch_code', v); if (row.customer_id) commitRow(null, { ...row, batch_code: v }); }
                     else commitRow(row.id, { ...row, batch_code: v });
                   }}
-                  className="w-full border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
+                  className="w-full min-w-0 box-border border-2 border-blue-300 rounded px-1.5 py-1 text-sm bg-blue-50/40"
                 />
               </td>
             );
@@ -954,7 +954,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       </div>
 
       <div className="bg-white border-y border-gray-200 overflow-auto" style={{ maxHeight: '75vh' }}>
-        <table className="text-sm border-collapse" style={{ tableLayout: 'auto', width: 'max-content' }}>
+        <table className="text-sm border-collapse w-full" style={{ tableLayout: 'fixed' }}>
           <thead className="sticky top-0 z-10">
             {(() => {
               const buildSpanRow = (getKey, getLabel) => {
