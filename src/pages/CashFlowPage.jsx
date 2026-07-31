@@ -294,7 +294,7 @@ const Cell = ({ col, value, onChange, onBlur, disabled }) => {
   }
   // Ô chữ đã khóa (lấy từ ĐNTT): hiện dạng chữ xuống dòng đầy đủ, không cắt bớt như ô input 1 dòng
   if (col.type === 'text' && disabled) {
-    return <div className={`px-2 py-1.5 text-sm text-gray-600 bg-amber-50/60 whitespace-normal break-words leading-snug`}>{value || ''}</div>;
+    return <div className="w-full px-2 py-1.5 text-sm text-gray-600 bg-amber-50/60 leading-snug" style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{value || ''}</div>;
   }
   return <input type="text" value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} onBlur={onBlur} className={common} />;
 };
@@ -751,7 +751,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               );
             }
             return (
-              <td key={col.key} style={{ minWidth: col.w, whiteSpace: "nowrap" }} className="border-r border-gray-100 p-0">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w, ...(col.type === "text" ? {} : { whiteSpace: "nowrap" }) }} className="border-r border-gray-100 p-0">
                 <select value={row.seller_id || ''} disabled={disabled}
                   onChange={e => isNew ? editNew('seller_id', e.target.value) : editExisting(row, 'seller_id', e.target.value)}
                   onBlur={() => !isNew && drafts[row.id] && commitRow(row.id, row)}
@@ -791,7 +791,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
               );
             }
             return (
-              <td key={col.key} style={{ minWidth: col.w, whiteSpace: "nowrap" }} className="border-r border-gray-100 p-0">
+              <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w, ...(col.type === "text" ? {} : { whiteSpace: "nowrap" }) }} className="border-r border-gray-100 p-0">
                 <select value={(() => {
                     const idx = row.branch_tax_code ? (customers[row.customer_id]?.branches || []).findIndex(b => b.id === row.branch_tax_code) : -1;
                     return encodeCustomerOptionValue(row.customer_id || '', idx >= 0 ? idx : null);
@@ -853,7 +853,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             );
           }
           return (
-            <td key={col.key} style={{ minWidth: col.w, whiteSpace: "nowrap" }} className="border-r border-gray-100 p-0">
+            <td key={col.key} style={{ minWidth: col.w, maxWidth: col.w, ...(col.type === "text" ? {} : { whiteSpace: "nowrap" }) }} className="border-r border-gray-100 p-0">
               <Cell col={col} value={row[col.key]} disabled={disabled}
                 onChange={(v) => isNew ? editNew(col.key, v) : editExisting(row, col.key, v)}
                 onBlur={() => { if (isNew) { if (row.customer_id) commitRow(null, row); } else if (drafts[row.id]) commitRow(row.id, row); }} />
