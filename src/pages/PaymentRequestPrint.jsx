@@ -7,16 +7,17 @@ import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
 
 const PRINT_STYLE = `
-  @page { size: A4 portrait; margin: 20mm 20mm 20mm 30mm; }
-  body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; background: #fff; color: #000; margin: 0; padding: 0; }
+  @page { size: A4 portrait; margin: 12mm 15mm 12mm 25mm; }
+  body { font-family: 'Times New Roman', serif; font-size: 12.5pt; line-height: 1.3; background: #fff; color: #000; margin: 0; padding: 0; }
   table { border-collapse: collapse; width: 100%; }
-  td, th { border: 1px solid #000; padding: 4px 6px; }
+  td, th { border: 1px solid #000; padding: 2px 5px; }
   th { text-align: center; font-weight: bold; }
   .no-print { display: none !important; }
-  .no-border td, .no-border { border: none !important; padding: 2px 0 !important; }
+  .no-border td, .no-border { border: none !important; padding: 1px 0 !important; }
   .quoc-hieu { font-size: 12pt; font-weight: bold; text-align: center; }
   .tieu-ngu { font-size: 13pt; font-weight: bold; text-align: center; }
-  .doc-title { font-size: 16pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+  .doc-title { font-size: 15pt; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; }
+  p { margin: 4px 0; }
   tr { page-break-inside: avoid !important; break-inside: avoid !important; }
   thead { display: table-header-group; }
 `;
@@ -420,25 +421,32 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
       {/* Vùng xem trước / dùng để in */}
       {customerId && (
       <div id="dntt-print-zone" className="bg-white border border-gray-200 rounded-xl p-8 mt-6" style={{ fontFamily: "'Times New Roman', serif" }}>
-        <div style={{ textAlign: 'center', marginBottom: 4 }}>
-          <div className="quoc-hieu" style={{ fontSize: '13pt', fontWeight: 'bold' }}>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-          <div className="tieu-ngu" style={{ fontSize: '14pt', fontWeight: 'bold', display: 'inline-block', borderBottom: '1px solid #000', paddingBottom: 2, marginTop: 2 }}>
+        <div style={{ textAlign: 'center', marginBottom: 2 }}>
+          <div className="quoc-hieu" style={{ fontSize: '12.5pt', fontWeight: 'bold' }}>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+          <div className="tieu-ngu" style={{ fontSize: '13pt', fontWeight: 'bold', display: 'inline-block', borderBottom: '1px solid #000', paddingBottom: 1, marginTop: 1 }}>
             Độc lập - Tự do - Hạnh phúc
           </div>
         </div>
 
-        <h2 className="doc-title" style={{ textAlign: 'center', margin: '16px 0 12px', fontSize: '17pt', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          GIẤY ĐỀ NGHỊ THANH TOÁN{docLabel ? ` (${docLabel.toUpperCase()})` : ''}
+        <h2 className="doc-title" style={{ textAlign: 'center', margin: '8px 0 6px', fontSize: '15pt', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          GIẤY ĐỀ NGHỊ THANH TOÁN
+          {docLabel && (
+            <div style={{ fontSize: '12.5pt', fontWeight: 'bold', letterSpacing: 0, marginTop: 1 }}>
+              ({docLabel.toUpperCase()})
+            </div>
+          )}
         </h2>
 
         <table className="no-border"><tbody>
           <tr className="no-border">
-            <td className="no-border">Số đề nghị: <b>{requestNoInput}</b></td>
-            <td className="no-border">Ngày đề nghị: <b>{fmtDateVN(requestDate)}</b></td>
+            <td className="no-border" colSpan={2}>Số đề nghị: <b>{requestNoInput}</b></td>
           </tr>
           <tr className="no-border">
+            <td className="no-border">Ngày đề nghị: <b>{fmtDateVN(requestDate)}</b></td>
             <td className="no-border">Mã khách hàng: <b>{customerId}</b></td>
-            <td className="no-border">Tên xuất hóa đơn: <b>{displayCustomerName}</b></td>
+          </tr>
+          <tr className="no-border">
+            <td className="no-border" colSpan={2}>Tên xuất hóa đơn: <b>{displayCustomerName}</b></td>
           </tr>
           {!isFx && (
             <tr className="no-border">
@@ -456,7 +464,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </tr>
         </tbody></table>
 
-        <p style={{ marginTop: 10, marginBottom: 4 }}>Đề nghị thanh toán theo bảng kê sau:</p>
+        <p style={{ marginTop: 6, marginBottom: 3 }}>Đề nghị thanh toán theo bảng kê sau:</p>
         <table style={{ marginBottom: 8 }}>
           <thead>
             <tr>
@@ -470,7 +478,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             </tr>
           </thead>
           <tbody>
-            {voucherRows.map((r, i) => {
+            {voucherRows.filter(r => r.dienGiai || r.ctsPhaiThu || r.daThuKhach || r.tyGiaRow || r.tienHangRow).map((r, i) => {
               const ctsPhaiThu = ctsPhaiThuFor(r);
               return (
                 <tr key={i}>
@@ -495,7 +503,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           <tr><td>2 - Công ty còn phải trả khách (I &lt; II)</td><td style={{ textAlign: 'right' }}>{fmtNum(phaiTraKhach)}</td></tr>
         </tbody></table>
 
-        <p style={{ fontWeight: 'bold', marginTop: 12, marginBottom: 4 }}>THANH TOÁN NGOẠI TỆ CHO KHÁCH</p>
+        <p style={{ fontWeight: 'bold', marginTop: 6, marginBottom: 3 }}>THANH TOÁN NGOẠI TỆ CHO KHÁCH</p>
         <table style={{ marginBottom: 4 }}>
           <thead><tr>
             <th>Nội dung</th>
@@ -504,7 +512,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             <th style={{ width: 130 }}>Thành tiền</th>
           </tr></thead>
           <tbody>
-            {fxRows.map((r, i) => (
+            {fxRows.filter(r => r.noiDung || r.tyGia || r.soTe).map((r, i) => (
               <tr key={i}>
                 <td style={{ whiteSpace: 'pre-line' }}>{r.noiDung}</td>
                 <td style={{ textAlign: 'right' }}>{r.tyGia}</td>
@@ -521,30 +529,30 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           </tbody>
         </table>
 
-        <p style={{ marginTop: 8 }}>Bằng chữ: <i>{soTienBangChu}</i></p>
+        <p style={{ marginTop: 4 }}>Bằng chữ: <i>{soTienBangChu}</i></p>
         <p>Ghi chú: {note}</p>
 
-        <table className="no-border" style={{ marginTop: 20 }}><tbody>
+        <table className="no-border" style={{ marginTop: 10 }}><tbody>
           <tr className="no-border"><td className="no-border" colSpan={4} style={{ textAlign: 'right' }}>Ngày {new Date(requestDate).getDate()} tháng {new Date(requestDate).getMonth() + 1} năm {new Date(requestDate).getFullYear()}</td></tr>
         </tbody></table>
-        <table className="no-border" style={{ marginTop: 6 }}>
+        <table className="no-border" style={{ marginTop: 4 }}>
           <tbody>
             <tr className="no-border">
               <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
                 <div>Người đề nghị</div>
-                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+                <div style={{ fontStyle: 'italic', marginTop: 2 }}>(Ký, họ tên)</div>
               </td>
               <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
                 <div>Trưởng phòng</div>
-                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+                <div style={{ fontStyle: 'italic', marginTop: 2 }}>(Ký, họ tên)</div>
               </td>
               <td className="no-border" style={{ textAlign: 'center', width: '26%', padding: '2px 6px' }}>
                 <div>Kế toán trưởng</div>
-                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, họ tên)</div>
+                <div style={{ fontStyle: 'italic', marginTop: 2 }}>(Ký, họ tên)</div>
               </td>
               <td className="no-border" style={{ textAlign: 'center', width: '22%', padding: '2px 6px' }}>
                 <div>Giám Đốc</div>
-                <div style={{ fontStyle: 'italic', marginTop: 4 }}>(Ký, đóng dấu)</div>
+                <div style={{ fontStyle: 'italic', marginTop: 2 }}>(Ký, đóng dấu)</div>
               </td>
             </tr>
           </tbody>
