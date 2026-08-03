@@ -1,7 +1,14 @@
 // File: src/previews/SalesContractPreview.jsx
 import { fmtNum, amountToWordsEN } from '../helpers';
 
-const fmtUSD = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Định dạng USD (dấu phẩy nghìn, 2 số thập phân) — tự viết, không phụ thuộc locale máy
+const fmtUSD = (n) => {
+  const num = Number(n) || 0;
+  const fixed = Math.abs(num).toFixed(2);
+  const [intPart, decPart] = fixed.split('.');
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (num < 0 ? '-' : '') + withCommas + '.' + decPart;
+};
 const fmtDMY = (d) => {
   if (!d) return '';
   const [y, m, day] = d.split('-');

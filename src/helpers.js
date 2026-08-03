@@ -21,7 +21,21 @@ export const fmtDate = (d) => {
   return `ngày ${dt.getDate()} tháng ${dt.getMonth() + 1} năm ${dt.getFullYear()}`;
 };
 
-export const fmtNum = (n) => Number(n || 0).toLocaleString('vi-VN');
+// Định dạng số có dấu CHẤM phân cách hàng nghìn — TỰ VIẾT, KHÔNG dùng toLocaleString('vi-VN')
+// vì toLocaleString phụ thuộc vào bộ ngôn ngữ cài trên từng máy/trình duyệt: máy có locale vi-VN thì
+// hiện "5.000.000" (dấu chấm), máy thiếu locale lại hiện "5,000,000" (dấu phẩy) hoặc "5000000" —
+// gây ra tình trạng "mỗi máy hiển thị một khác". Hàm này cho kết quả GIỐNG NHAU trên mọi máy.
+export const formatThousands = (raw) => {
+  if (raw === '' || raw === null || raw === undefined) return '';
+  const n = Number(raw);
+  if (!isFinite(n)) return '';
+  const neg = n < 0;
+  const [intPart, decPart] = Math.abs(n).toString().split('.');
+  const withDots = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg ? '-' : '') + withDots + (decPart ? ',' + decPart : '');
+};
+
+export const fmtNum = (n) => formatThousands(Number(n || 0));
 
 export const calcTotals = (goods) => {
   let subtotal = 0, vat = 0;

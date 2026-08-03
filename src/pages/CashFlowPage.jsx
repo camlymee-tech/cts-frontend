@@ -1,7 +1,7 @@
 // File: src/pages/CashFlowPage.jsx
 // Bảng theo dõi dòng tiền dạng nhập liệu trực tiếp kiểu Excel (mỗi dòng = 1 lô hàng).
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
-import { fmtNum } from '../helpers';
+import { fmtNum, formatThousands } from '../helpers';
 import * as XLSX from 'xlsx';
 import { buildCustomerOptions, resolveCustomerId, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
@@ -17,7 +17,7 @@ const EMPTY_SET = new Set();
 // đúng số chữ số đó trong chuỗi mới.
 const FormattedNumberInput = ({ value, onChange, onBlur, disabled, className }) => {
   const ref = useRef(null);
-  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : Number(raw).toLocaleString('vi-VN'));
+  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : formatThousands(raw));
   const [text, setText] = useState(fmt(value));
 
   useEffect(() => {
@@ -65,7 +65,7 @@ const FormattedNumberInput = ({ value, onChange, onBlur, disabled, className }) 
 // phân cách hàng nghìn NGAY KHI GÕ (không phải chỉ sau khi rời khỏi ô), rồi lưu khi rời khỏi ô (onBlur).
 const GroupSumInput = ({ initial, onCommit }) => {
   const ref = useRef(null);
-  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : Number(raw).toLocaleString('vi-VN'));
+  const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : formatThousands(raw));
   const [text, setText] = useState(initial ? fmt(initial) : '');
 
   const handleChange = (e) => {

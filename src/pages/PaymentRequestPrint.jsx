@@ -1,7 +1,7 @@
 // File: src/pages/PaymentRequestPrint.jsx
 // Giấy Đề Nghị Thanh Toán — vừa là màn nhập liệu thật (lưu ngược vào bảng lô hàng), vừa in ra giấy.
 import { useState, useEffect } from 'react';
-import { fmtNum, numberToWords } from '../helpers';
+import { fmtNum, numberToWords, formatThousands } from '../helpers';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { api } from '../lib/api';
@@ -41,7 +41,7 @@ const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
     const display = (() => {
       if (value === '' || value === null || value === undefined) return '';
       const [intPart, decPart] = String(value).split('.');
-      const withThousands = intPart === '' ? '' : Number(intPart).toLocaleString('vi-VN');
+      const withThousands = intPart === '' ? '' : formatThousands(intPart);
       return decPart !== undefined ? `${withThousands},${decPart}` : withThousands;
     })();
     return (
@@ -58,7 +58,7 @@ const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
       />
     );
   }
-  const display = value === '' || value === null || value === undefined ? '' : Number(value).toLocaleString('vi-VN');
+  const display = value === '' || value === null || value === undefined ? '' : formatThousands(value);
   return (
     <input
       type="text" inputMode="numeric" value={display}
