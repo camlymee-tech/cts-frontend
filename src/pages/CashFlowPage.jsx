@@ -17,12 +17,17 @@ const EMPTY_SET = new Set();
 // đúng số chữ số đó trong chuỗi mới.
 const FormattedNumberInput = ({ value, onChange, onBlur, disabled, className }) => {
   const ref = useRef(null);
+  const focusedRef = useRef(false);
   const fmt = (raw) => (raw === '' || raw === null || raw === undefined ? '' : formatThousands(raw));
   const [text, setText] = useState(fmt(value));
 
+  // Chỉ đồng bộ text theo value từ ngoài KHI ô KHÔNG đang được gõ, VÀ số thực sự khác nhau.
+  // So sánh theo phần chữ số thuần (bỏ dấu chấm) để không bị lệch khi format đổi dấu phân cách.
   useEffect(() => {
-    // Chỉ đồng bộ lại khi input KHÔNG đang được gõ (mất focus), tránh đè lên lúc đang nhập
-    if (document.activeElement !== ref.current) setText(fmt(value));
+    if (focusedRef.current) return; // đang gõ thì tuyệt đối không đè
+    const incoming = (value === '' || value === null || value === undefined) ? '' : String(value).replace(/[^\d]/g, '');
+    const current = text.replace(/[^\d]/g, '');
+    if (incoming !== current) setText(fmt(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
@@ -54,8 +59,10 @@ const FormattedNumberInput = ({ value, onChange, onBlur, disabled, className }) 
   return (
     <input
       ref={ref}
-      type="text" inputMode="decimal" value={text} disabled={disabled}
-      onChange={handleChange} onBlur={onBlur}
+      type="text" inputMode="numeric" value={text} disabled={disabled}
+      onFocus={() => { focusedRef.current = true; }}
+      onBlur={(e) => { focusedRef.current = false; setText(fmt(value)); onBlur && onBlur(e); }}
+      onChange={handleChange}
       className={className}
     />
   );
