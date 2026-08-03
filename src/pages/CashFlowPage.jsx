@@ -904,7 +904,8 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     ws['!cols'] = cols.map(() => ({ wch: 20 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Theo doi dong tien');
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     XLSX.writeFile(wb, `Theo_doi_dong_tien_CTS_${today}.xlsx`);
   };
 

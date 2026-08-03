@@ -22,7 +22,12 @@ const PRINT_STYLE = `
   thead { display: table-header-group; }
 `;
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// Lấy ngày hôm nay theo GIỜ ĐỊA PHƯƠNG (VN), KHÔNG dùng toISOString() vì hàm đó trả giờ UTC —
+// làm việc sau 17h giờ VN thì UTC vẫn là hôm trước, gây lùi 1 ngày.
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const fmtDateVN = (d) => {
   if (!d) return '';
   const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -290,8 +295,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
         )}
 
         {customerId && (
-          <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-5 gap-4'}>
-            <div>
+          <div className={isFx ? 'grid grid-cols-2 gap-4' : 'grid grid-cols-6 gap-4'}>
+            <div className={isFx ? '' : 'col-span-2'}>
               <label className="block text-xs text-gray-500 mb-1">Số đề nghị TT (DDMMYY - Mã khách - STT / Cty bán)</label>
               <input type="text" value={requestNoInput}
                 onChange={e => setRequestNoInput(e.target.value)}
