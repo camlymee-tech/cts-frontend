@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { fmtNum, formatThousands } from '../helpers';
 import * as XLSX from 'xlsx';
+import { Pagination } from '../components/Pagination';
 import { buildCustomerOptions, resolveCustomerId, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 import { PaymentRequestPrint } from './PaymentRequestPrint';
 import { api } from '../lib/api';
@@ -321,7 +322,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const [collapsedBatches, setCollapsedBatches] = useState(new Set()); // các Mã lô đang thu gọn (ẩn dòng con)
   const [grouping, setGrouping] = useState(false); // đang gán Mã lô chung cho các dòng đã chọn
   const [page, setPage] = useState(1);
-  const [gotoPage, setGotoPage] = useState('');
   const PAGE_SIZE = 50; // số nhóm/dòng hiển thị mỗi trang
 
   const customerLabel = (id) => customers[id] ? `${customers[id].companyName} (${id})` : (id || '—');
@@ -557,23 +557,6 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
   // Về trang 1 khi đổi bộ lọc/tìm kiếm
   useEffect(() => { setPage(1); }, [search, customerFilter, sellerFilter, dateFilter]);
-
-  // Danh sách số trang hiển thị (1 2 3 ... N kiểu rút gọn)
-  const pageNumbers = (() => {
-    const nums = [];
-    const add = (n) => { if (!nums.includes(n) && n >= 1 && n <= totalPages) nums.push(n); };
-    add(1); add(2); add(3);
-    add(safePage - 1); add(safePage); add(safePage + 1);
-    add(totalPages);
-    nums.sort((a, b) => a - b);
-    const out = [];
-    let prev = 0;
-    for (const n of nums) {
-      if (n - prev > 1) out.push('...');
-      out.push(n); prev = n;
-    }
-    return out;
-  })();
 
   // Dòng "gốc" của 1 nhóm Mã lô: tổng cộng dồn các cột tiền
   // (SUM_KEYS + các cột tự tính), các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
@@ -1084,26 +1067,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 py-4 flex-wrap text-sm">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
-            className="px-2 py-1 text-blue-600 disabled:text-gray-300 hover:underline">← Trước</button>
-          {pageNumbers.map((n, i) => n === '...'
-            ? <span key={`dots-${i}`} className="px-2 text-gray-400">…</span>
-            : <button key={n} onClick={() => setPage(n)}
-                className={`min-w-[36px] px-2 py-1 rounded-lg ${n === safePage ? 'bg-blue-600 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}`}>{n}</button>
-          )}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
-            className="px-2 py-1 text-blue-600 disabled:text-gray-300 hover:underline">Sau →</button>
-          <span className="ml-3 text-gray-400">Tới trang</span>
-          <input type="number" min={1} max={totalPages} value={gotoPage}
-            onChange={e => setGotoPage(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { const n = Number(gotoPage); if (n >= 1 && n <= totalPages) { setPage(n); setGotoPage(''); } } }}
-            className="w-16 border border-gray-300 rounded-lg px-2 py-1 text-center" />
-          <button onClick={() => { const n = Number(gotoPage); if (n >= 1 && n <= totalPages) { setPage(n); setGotoPage(''); } }}
-            className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Đi</button>
-        </div>
-      )}
+      <Pagination page={safePage} maxPage={totalPages} onChange={setPage} />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Badge } from '../components/Badge';
 import { calcTotals, fmtNum } from '../helpers';
 import { BulkContractViewer } from './BulkContractViewer';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
+import { Pagination } from '../components/Pagination';
 
 const FEE_TYPES = ['DDH', 'BBBG', 'DDH_VC', 'BBBG_VC', 'DDH_UT', 'BBBG_UT'];
 const INVOICE_NO_TYPES = ['DDH', 'BBBG']; // chỉ loại Mua bán mới có tính năng chọn số hóa đơn có sẵn
@@ -17,7 +18,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
   const [sellerFilter, setSellerFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [pageNum, setPageNum] = useState(1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -57,10 +58,12 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
     });
   }, [allOfType, search, sellerFilter, fromDate, toDate, customers]);
 
-  const list = filtered.slice(0, visibleCount);
+  const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePageNum = Math.min(pageNum, maxPage);
+  const list = filtered.slice((safePageNum - 1) * PAGE_SIZE, safePageNum * PAGE_SIZE);
   const hasFilter = search || sellerFilter || fromDate || toDate;
 
-  const resetFilters = () => { setSearch(''); setSellerFilter(''); setFromDate(''); setToDate(''); setVisibleCount(PAGE_SIZE); setSelectedIds(new Set()); };
+  const resetFilters = () => { setSearch(''); setSellerFilter(''); setFromDate(''); setToDate(''); setPageNum(1); setSelectedIds(new Set()); };
 
   const toggleOne = (id) => {
     setSelectedIds(prev => {
@@ -121,20 +124,20 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input value={search} onChange={e => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }}
+        <input value={search} onChange={e => { setSearch(e.target.value); setPageNum(1); }}
           placeholder="🔍 Tìm theo số hợp đồng hoặc tên khách hàng..."
           className="flex-1 min-w-48 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-        <select value={sellerFilter} onChange={e => { setSellerFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}
+        <select value={sellerFilter} onChange={e => { setSellerFilter(e.target.value); setPageNum(1); }}
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
           <option value="">Tất cả bên bán</option>
           {sellerOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <div className="flex items-center gap-1.5 text-sm text-gray-500">
           <span>Từ</span>
-          <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
+          <input type="date" value={fromDate} onChange={e => { setFromDate(e.target.value); setPageNum(1); }}
             className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
           <span>đến</span>
-          <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
+          <input type="date" value={toDate} onChange={e => { setToDate(e.target.value); setPageNum(1); }}
             className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         </div>
         {hasFilter && (
@@ -143,7 +146,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
       </div>
 
       {hasFilter && (
-        <div className="text-xs text-gray-400 mb-2">Tìm thấy {filtered.length} / {allOfType.length} {labels[type]}</div>
+        <div className="text-xs text-gray-400 mb-2">Tìm thấy {filtered.length} / {allOfType.length} {labels[type]}{maxPage > 1 ? ` — Trang ${safePageNum}/${maxPage}` : ''}</div>
       )}
 
       {selectedIds.size > 0 && (
@@ -236,13 +239,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
             </tbody>
           </table>
         )}
-        {filtered.length > visibleCount && (
-          <div className="p-4 text-center border-t border-gray-100">
-            <button onClick={() => setVisibleCount(v => v + PAGE_SIZE)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-              Xem thêm {Math.min(PAGE_SIZE, filtered.length - visibleCount)} hợp đồng (còn {filtered.length - visibleCount})
-            </button>
-          </div>
-        )}
+        <Pagination page={safePageNum} maxPage={maxPage} onChange={setPageNum} />
       </div>
 
       {bulkOpen && (
