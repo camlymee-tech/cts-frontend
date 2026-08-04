@@ -97,9 +97,20 @@ export const api = {
   async listContracts() {
     // Dùng RPC slim để bỏ vatInvoiceImage khỏi danh sách (ảnh base64 làm payload nặng → timeout).
     // Ảnh chỉ được load khi xem hợp đồng cụ thể (getContractFull).
-    const { data, error } = await supabase.rpc('list_contracts_slim');
-    if (error) throw new Error(error.message);
-    return data || [];
+    // Supabase mặc định chỉ trả tối đa 1000 dòng/lần (kể cả với RPC) — phải tự phân trang để lấy đủ,
+    // giống hệt listCustomers(). Thiếu vòng lặp này từng khiến admin chỉ thấy ~1000/6437 hợp đồng thật
+    // (phát hiện 2026-08-05 khi đối chiếu số liệu "total" mới thêm — xem thêm ghi chú trong list_contracts_slim).
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase.rpc('list_contracts_slim').range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
   },
 
   async getContractFull(dbId) {

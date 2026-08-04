@@ -2,10 +2,13 @@
 import { Badge } from '../components/Badge';
 import { TYPE_COLOR } from '../helpers';
 
-export const Dashboard = ({ customers, contracts, setPage }) => {
+export const Dashboard = ({ customers, contracts, contractsLoaded = true, contractsError = null, setPage }) => {
   const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
   Object.values(contracts).forEach(c => { if (counts[c.type] !== undefined) counts[c.type]++; });
   const recent = Object.values(contracts).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8);
+  // contracts tải nền sau khi vào Dashboard (xem App.jsx) — hiện "…" trong lúc chờ, "—" nếu tải lỗi,
+  // tránh số liệu nhảy từ 0 lên số thật gây hiểu nhầm, và tránh hiện "0" giả khi thực ra là lỗi.
+  const cv = (n) => (contractsError ? '—' : contractsLoaded ? n : '…');
 
   const Stat = ({ label, value, color, sub }) => (
     <div className={`rounded-xl p-5 ${color}`}>
@@ -30,20 +33,20 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Tổng quan</div>
       <div className="grid grid-cols-4 gap-4 mb-5">
         <Stat label="Khách hàng" value={Object.keys(customers).length} color="bg-blue-50 text-blue-700 border border-blue-200" />
-        <Stat label="HĐNT mua bán" value={counts.HDNT} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐĐH mua bán" value={counts.DDH} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG mua bán" value={counts.BBBG} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="HĐNT mua bán" value={cv(counts.HDNT)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐĐH mua bán" value={cv(counts.DDH)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG mua bán" value={cv(counts.BBBG)} color="bg-purple-50 text-purple-700 border border-purple-200" />
       </div>
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <Stat label="HĐNT vận chuyển" value={counts.HDNT_VC} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐHVC" value={counts.DDH_VC} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG vận chuyển" value={counts.BBBG_VC} color="bg-purple-50 text-purple-700 border border-purple-200" />
-        <Stat label="Tổng số hợp đồng" value={Object.values(counts).reduce((a, b) => a + b, 0)} color="bg-blue-50 text-blue-700 border border-blue-200" />
+        <Stat label="HĐNT vận chuyển" value={cv(counts.HDNT_VC)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐHVC" value={cv(counts.DDH_VC)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG vận chuyển" value={cv(counts.BBBG_VC)} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="Tổng số hợp đồng" value={cv(Object.values(counts).reduce((a, b) => a + b, 0))} color="bg-blue-50 text-blue-700 border border-blue-200" />
       </div>
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Stat label="HĐNT ủy thác" value={counts.HDNT_UT} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐH ủy thác" value={counts.DDH_UT} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG ủy thác" value={counts.BBBG_UT} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="HĐNT ủy thác" value={cv(counts.HDNT_UT)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐH ủy thác" value={cv(counts.DDH_UT)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG ủy thác" value={cv(counts.BBBG_UT)} color="bg-purple-50 text-purple-700 border border-purple-200" />
       </div>
 
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">🛍️ Tạo nhanh — Hợp đồng mua bán</div>
@@ -70,7 +73,14 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-4 border-b border-gray-100 font-semibold text-gray-700">🕐 Hợp đồng gần đây</div>
-        {recent.length === 0 ? (
+        {contractsError ? (
+          <div className="p-10 text-center text-gray-400">
+            <div className="mb-2">⚠️ Không tải được hợp đồng gần đây</div>
+            <button onClick={() => window.location.reload()} className="text-blue-600 hover:text-blue-800 text-sm font-medium">🔄 Thử lại</button>
+          </div>
+        ) : !contractsLoaded ? (
+          <div className="p-10 text-center text-gray-400">Đang tải hợp đồng gần đây...</div>
+        ) : recent.length === 0 ? (
           <div className="p-10 text-center text-gray-400">Chưa có hợp đồng nào. Bắt đầu tạo mới!</div>
         ) : (
           <table className="w-full text-sm">

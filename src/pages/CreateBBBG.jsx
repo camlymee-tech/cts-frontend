@@ -7,7 +7,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
-import { normalizeText } from '../utils/customerExcel';
+import { normalizeText } from '../utils/textNormalize';
 import { CustomerForm } from './CustomerForm';
 import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';

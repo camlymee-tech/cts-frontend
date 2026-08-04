@@ -1,38 +1,51 @@
 // File: src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 import { api } from './lib/api';
 import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './pages/Dashboard';
-import { SellersPage } from './pages/SellersPage';
-import { ForeignSellersPage } from './pages/ForeignSellersPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
-import { CashFlowSummary } from './pages/CashFlowSummary';
-import { CashFlowPage } from './pages/CashFlowPage';
-import { DailyPaymentRequestsPage } from './pages/DailyPaymentRequestsPage';
-import { FxContractSummary } from './pages/FxContractSummary';
-import { SalesContractPage } from './pages/SalesContractPage';
-import { CnyFundPage } from './pages/CnyFundPage';
-import { PaymentRequestPrint } from './pages/PaymentRequestPrint';
-import { ApiKeyManager } from './pages/ApiKeyManager';
-import { DepartmentsManager } from './pages/DepartmentsManager';
-import { ContractListPage } from './pages/ContractListPage';
-import { ContractViewer } from './pages/ContractViewer';
-import { CreateHDNT } from './pages/CreateHDNT';
-import { CreateDDH } from './pages/CreateDDH';
-import { CreateBBBG } from './pages/CreateBBBG';
-import { CreateHDNTVC } from './pages/CreateHDNTVC';
-import { CreateDDHVC } from './pages/CreateDDHVC';
-import { CreateBBBGVC } from './pages/CreateBBBGVC';
-import { CreateHDNTUT } from './pages/CreateHDNTUT';
-import { CreateDDHUT } from './pages/CreateDDHUT';
-import { CreateBBBGUT } from './pages/CreateBBBGUT';
-import { LoginPage } from './pages/LoginPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { AdminUsersPage } from './pages/AdminUsersPage';
-import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
-import { CompleteProfilePage } from './pages/CompleteProfilePage';
+
+// Mỗi trang được tải riêng (dynamic import) thay vì gộp chung 1 file JS —
+// trước đây toàn bộ ~30 trang (kể cả các trang rất nặng như CashFlowPage,
+// PaymentRequestPrint, SalesContractPage...) bị gộp vào 1 bundle ~1.2MB,
+// khiến người dùng phải tải hết dù chỉ đứng ở màn Đăng nhập. Nay trình duyệt
+// chỉ tải trang nào người dùng thực sự bấm vào.
+const lazyNamed = (loader, name) => lazy(() => loader().then(m => ({ default: m[name] })));
+
+const Dashboard = lazyNamed(() => import('./pages/Dashboard'), 'Dashboard');
+const SellersPage = lazyNamed(() => import('./pages/SellersPage'), 'SellersPage');
+const ForeignSellersPage = lazyNamed(() => import('./pages/ForeignSellersPage'), 'ForeignSellersPage');
+const CustomersPage = lazyNamed(() => import('./pages/CustomersPage'), 'CustomersPage');
+const InvoiceGoodsPage = lazyNamed(() => import('./pages/InvoiceGoodsPage'), 'InvoiceGoodsPage');
+const CashFlowSummary = lazyNamed(() => import('./pages/CashFlowSummary'), 'CashFlowSummary');
+const CashFlowPage = lazyNamed(() => import('./pages/CashFlowPage'), 'CashFlowPage');
+const DailyPaymentRequestsPage = lazyNamed(() => import('./pages/DailyPaymentRequestsPage'), 'DailyPaymentRequestsPage');
+const FxContractSummary = lazyNamed(() => import('./pages/FxContractSummary'), 'FxContractSummary');
+const SalesContractPage = lazyNamed(() => import('./pages/SalesContractPage'), 'SalesContractPage');
+const CnyFundPage = lazyNamed(() => import('./pages/CnyFundPage'), 'CnyFundPage');
+const PaymentRequestPrint = lazyNamed(() => import('./pages/PaymentRequestPrint'), 'PaymentRequestPrint');
+const ApiKeyManager = lazyNamed(() => import('./pages/ApiKeyManager'), 'ApiKeyManager');
+const DepartmentsManager = lazyNamed(() => import('./pages/DepartmentsManager'), 'DepartmentsManager');
+const ContractListPage = lazyNamed(() => import('./pages/ContractListPage'), 'ContractListPage');
+const ContractViewer = lazyNamed(() => import('./pages/ContractViewer'), 'ContractViewer');
+const CreateHDNT = lazyNamed(() => import('./pages/CreateHDNT'), 'CreateHDNT');
+const CreateDDH = lazyNamed(() => import('./pages/CreateDDH'), 'CreateDDH');
+const CreateBBBG = lazyNamed(() => import('./pages/CreateBBBG'), 'CreateBBBG');
+const CreateHDNTVC = lazyNamed(() => import('./pages/CreateHDNTVC'), 'CreateHDNTVC');
+const CreateDDHVC = lazyNamed(() => import('./pages/CreateDDHVC'), 'CreateDDHVC');
+const CreateBBBGVC = lazyNamed(() => import('./pages/CreateBBBGVC'), 'CreateBBBGVC');
+const CreateHDNTUT = lazyNamed(() => import('./pages/CreateHDNTUT'), 'CreateHDNTUT');
+const CreateDDHUT = lazyNamed(() => import('./pages/CreateDDHUT'), 'CreateDDHUT');
+const CreateBBBGUT = lazyNamed(() => import('./pages/CreateBBBGUT'), 'CreateBBBGUT');
+const LoginPage = lazyNamed(() => import('./pages/LoginPage'), 'LoginPage');
+const ResetPasswordPage = lazyNamed(() => import('./pages/ResetPasswordPage'), 'ResetPasswordPage');
+const AdminUsersPage = lazyNamed(() => import('./pages/AdminUsersPage'), 'AdminUsersPage');
+const CompleteProfilePage = lazyNamed(() => import('./pages/CompleteProfilePage'), 'CompleteProfilePage');
+
+const PageLoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen text-gray-400">
+    <div className="text-center"><div className="text-4xl mb-3">📋</div><div>Đang tải...</div></div>
+  </div>
+);
 
 const DOC_TYPE_MAP = {
   HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg',
@@ -51,6 +64,14 @@ const REFERENCED_AS = {
   HDNT: 'hdnt', HDNT_VC: 'hdnt_vc', HDNT_UT: 'hdnt_ut',
   DDH: 'ddh', DDH_VC: 'ddh_vc', DDH_UT: 'ddh_ut',
 };
+// Các trang cần đợi contractsLoaded (xem effect tải contracts riêng trong App) trước khi hiển thị.
+const CONTRACT_DEPENDENT_PAGES = new Set([
+  'hdnt', 'ddh', 'bbbg', 'hdnt_vc', 'ddh_vc', 'bbbg_vc', 'hdnt_ut', 'ddh_ut', 'bbbg_ut',
+  'create-hdnt', 'create-ddh', 'create-bbbg', 'create-hdnt_vc', 'create-ddh_vc', 'create-bbbg_vc',
+  'create-hdnt_ut', 'create-ddh_ut', 'create-bbbg_ut',
+  'edit-hdnt', 'edit-ddh', 'edit-bbbg', 'edit-hdnt_vc', 'edit-ddh_vc', 'edit-bbbg_vc',
+  'edit-hdnt_ut', 'edit-ddh_ut', 'edit-bbbg_ut',
+]);
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
@@ -60,12 +81,19 @@ export default function App() {
   const [departments, setDepartments] = useState({});
   const [customers, setCustomers] = useState({});
   const [contracts, setContracts] = useState({});
+  // Tải riêng, không nằm trong màn "Đang tải dữ liệu..." — đây là phần dữ liệu NẶNG NHẤT lúc đăng nhập
+  // (đặc biệt với admin, thấy hợp đồng của mọi sale, có thể vài MB). Tải nền ngay sau khi có session,
+  // không chặn Dashboard/các trang khác hiển thị. Trang nào thật sự cần (danh sách/tạo/sửa hợp đồng) tự
+  // đợi contractsLoaded — xem CONTRACT_DEPENDENT_PAGES bên dưới.
+  const [contractsLoaded, setContractsLoaded] = useState(false);
+  const [contractsError, setContractsError] = useState(null);
   const [viewContract, setViewContract] = useState(null);
   const [editContractData, setEditContractData] = useState(null);
   const [paymentRequestCustomerId, setPaymentRequestCustomerId] = useState('');
   const [paymentRequestReqNo, setPaymentRequestReqNo] = useState(null);
   const [paymentRequestBatchIds, setPaymentRequestBatchIds] = useState(null);
   const [dataReady, setDataReady] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
@@ -97,13 +125,14 @@ export default function App() {
   // Load data once logged in
   useEffect(() => {
     if (!session) return;
+    setLoadError(null);
     (async () => {
-      const [sl, dp, fsl, custRows, contractRows, prof] = await Promise.all([
+      try {
+      const [sl, dp, fsl, custRows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
         api.get('foreign_sellers'),
         api.listCustomers(),
-        api.listContracts(),
         api.getMyProfile(),
       ]);
       if (dp) setDepartments(dp);
@@ -144,12 +173,6 @@ export default function App() {
         })();
       }
 
-      const contractsMap = {};
-      contractRows.forEach(r => {
-        contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
-      });
-      setContracts(contractsMap);
-
       // Build saleMap + saleProfiles để hiện tên + phòng ban và dropdown giao sale (admin dùng)
       if (prof?.role === 'admin') {
         try {
@@ -171,6 +194,38 @@ export default function App() {
       }
 
       setDataReady(true);
+      } catch (e) {
+        // Lỗi có thể xảy ra nếu database chậm/timeout (đã gặp thật lúc kiểm thử: "canceling statement
+        // due to statement timeout") — trước đây không bắt lỗi này, màn hình sẽ đứng yên ở "Đang tải dữ
+        // liệu..." mãi mãi vì dataReady không bao giờ được set true. Nay báo lỗi rõ + cho thử lại.
+        console.error('Không tải được dữ liệu ban đầu:', e.message);
+        setLoadError(e.message || 'Có lỗi không xác định.');
+      }
+    })();
+  }, [session]);
+
+  // Danh sách hợp đồng (list_contracts_slim) — tách khỏi effect trên vì đây là phần nặng nhất lúc
+  // đăng nhập (đo thực tế: admin thấy hết hợp đồng mọi sale, ~2MB, 3-4 giây). Tải song song, không
+  // chặn Dashboard/Khách hàng/Hàng hóa hiển thị trước.
+  useEffect(() => {
+    if (!session) return;
+    setContractsError(null);
+    (async () => {
+      try {
+        const contractRows = await api.listContracts();
+        const contractsMap = {};
+        contractRows.forEach(r => {
+          contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by, total: r.total };
+        });
+        setContracts(contractsMap);
+        setContractsLoaded(true);
+      } catch (e) {
+        // KHÔNG set contractsLoaded=true ở đây — nếu không, các trang danh sách/tạo/sửa hợp đồng sẽ
+        // hiển thị như thể đã tải xong nhưng thực ra rỗng, dễ dẫn tới trùng số hợp đồng (xem
+        // CONTRACT_DEPENDENT_PAGES). Báo lỗi rõ + cho thử lại thay vì âm thầm coi như "tải xong, rỗng".
+        console.error('Không tải được danh sách hợp đồng:', e.message);
+        setContractsError(e.message || 'Có lỗi không xác định.');
+      }
     })();
   }, [session]);
 
@@ -488,8 +543,17 @@ export default function App() {
     }
     return true;
   };
-  const handleEditContract = (contract) => {
-    setEditContractData(contract);
+  // Load đủ dữ liệu (kể cả goods) trước khi vào form Sửa — danh sách chỉ giữ bản nhẹ (không có goods)
+  // từ sau khi list_contracts_slim bỏ goods ra khỏi payload để giảm dung lượng lúc đăng nhập.
+  const handleEditContract = async (contract) => {
+    let full = contract;
+    if (contract._dbId) {
+      try {
+        const res = await api.getContractFull(contract._dbId);
+        full = { ...res.data, _dbId: res.id, _maSale: res.ma_sale, _createdBy: res.created_by };
+      } catch { /* dùng tạm bản nhẹ nếu lỗi */ }
+    }
+    setEditContractData(full);
     setViewContract(null);
     setPage('edit-' + contract.type.toLowerCase());
   };
@@ -533,11 +597,27 @@ export default function App() {
     );
   }
 
-  if (!session) return <LoginPage />;
+  if (!session) return <Suspense fallback={<PageLoadingFallback />}><LoginPage /></Suspense>;
 
   // Dù đã có session (do Supabase tạo tạm khi bấm link email), vẫn phải đặt mật khẩu mới xong
   // mới cho vào app — tránh trường hợp ai nhặt được link email cũ cũng vào thẳng được tài khoản.
-  if (isPasswordRecovery) return <ResetPasswordPage onDone={() => setIsPasswordRecovery(false)} />;
+  if (isPasswordRecovery) return <Suspense fallback={<PageLoadingFallback />}><ResetPasswordPage onDone={() => setIsPasswordRecovery(false)} /></Suspense>;
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-400">
+        <div className="text-center max-w-sm px-4">
+          <div className="text-4xl mb-3">⚠️</div>
+          <div className="text-gray-700 font-medium mb-1">Không tải được dữ liệu</div>
+          <div className="text-sm text-gray-500 mb-4">{loadError}</div>
+          <button onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">
+            🔄 Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!dataReady) {
     return (
@@ -551,8 +631,10 @@ export default function App() {
   // Chưa điền đủ thông tin (tên + phòng ban + mã sale) → yêu cầu tự điền trước khi vào app
   const isAdmin = profile?.role === 'admin';
   if (profile && profile.role !== 'admin' && (!profile.full_name || !profile.department_id || !profile.ma_sale)) {
-    return <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
-      onDone={(updated) => setProfile(updated)} />;
+    return <Suspense fallback={<PageLoadingFallback />}>
+      <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
+        onDone={(updated) => setProfile(updated)} />
+    </Suspense>;
   }
 
   const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
@@ -560,15 +642,40 @@ export default function App() {
   const noSellers = Object.keys(sellers).length === 0;
 
   const renderPage = () => {
+    // Các trang danh sách/tạo/sửa hợp đồng cần dữ liệu contracts ĐẦY ĐỦ (kiểm tra trùng số HĐ, tìm
+    // HĐNT liên quan...) — trong lúc contracts vẫn đang tải nền ở phía trên, hiện tạm loading thay vì
+    // vào thẳng với dữ liệu rỗng/thiếu (dễ gây trùng số HĐ hoặc thiếu lựa chọn liên kết).
+    if (CONTRACT_DEPENDENT_PAGES.has(page) && contractsError) {
+      return (
+        <div className="flex items-center justify-center py-24 text-gray-400">
+          <div className="text-center max-w-sm px-4">
+            <div className="text-4xl mb-3">⚠️</div>
+            <div className="text-gray-700 font-medium mb-1">Không tải được danh sách hợp đồng</div>
+            <div className="text-sm text-gray-500 mb-4">{contractsError}</div>
+            <button onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">
+              🔄 Thử lại
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (CONTRACT_DEPENDENT_PAGES.has(page) && !contractsLoaded) {
+      return (
+        <div className="flex items-center justify-center py-24 text-gray-400">
+          <div className="text-center"><div className="text-4xl mb-3">📋</div><div>Đang tải danh sách hợp đồng...</div></div>
+        </div>
+      );
+    }
     switch (page) {
-      case 'dashboard': return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
+      case 'dashboard': return <Dashboard customers={customers} contracts={contracts} contractsLoaded={contractsLoaded} contractsError={contractsError} setPage={setPage} />;
       case 'settings':  return isAdmin ? (
         <div className="space-y-6">
           <SellersPage sellers={sellers} onSave={saveSeller} onDelete={deleteSeller} />
           <ApiKeyManager />
           <DepartmentsManager departments={departments} onSave={saveDepartment} onDelete={deleteDepartment} />
         </div>
-      ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
+      ) : <Dashboard customers={customers} contracts={contracts} contractsLoaded={contractsLoaded} contractsError={contractsError} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} isAdmin={isAdmin} />;
       case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} saleProfiles={saleProfiles} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
@@ -655,9 +762,10 @@ export default function App() {
             {isAdmin && <button onClick={() => setPage('settings')} className="ml-4 underline font-medium hover:text-amber-900">Thêm ngay →</button>}
           </div>
         )}
-        {renderPage()}
+        <Suspense fallback={<PageLoadingFallback />}>{renderPage()}</Suspense>
       </main>
       {viewContract && (
+        <Suspense fallback={<PageLoadingFallback />}>
         <ContractViewer
           contract={viewContract}
           sellers={sellers}
@@ -670,6 +778,7 @@ export default function App() {
           onDelete={deleteContract}
           onEdit={handleEditContract}
         />
+        </Suspense>
       )}
     </div>
   );

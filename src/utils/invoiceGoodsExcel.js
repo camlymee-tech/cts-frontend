@@ -2,7 +2,7 @@
 // Đọc file Excel "Thông tin hàng hóa" — mỗi dòng là 1 mặt hàng, các dòng cùng
 // Số hóa đơn sẽ được gộp lại thành 1 hóa đơn với danh sách hàng hóa bên trong.
 import * as XLSX from 'xlsx';
-import { normalizeText } from './customerExcel';
+import { normalizeText } from './textNormalize';
 
 // Các biến thể tiêu đề cột (đã chuẩn hoá bỏ dấu, bỏ khoảng trắng) ứng với từng field
 const HEADER_ALIASES = {

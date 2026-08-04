@@ -2,7 +2,8 @@
 import { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Badge } from '../components/Badge';
-import { calcTotals, fmtNum } from '../helpers';
+import { fmtNum } from '../helpers';
+import { api } from '../lib/api';
 import { BulkContractViewer } from './BulkContractViewer';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
 import { Pagination } from '../components/Pagination';
@@ -21,6 +22,8 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
   const [pageNum, setPageNum] = useState(1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkFullContracts, setBulkFullContracts] = useState([]);
 
   const labels = {
     HDNT: 'Hợp Đồng Nguyên Tắc', DDH: 'Đơn Đặt Hàng', BBBG: 'Biên Bản Bàn Giao',
@@ -88,6 +91,25 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
 
   const selectedContracts = allOfType.filter(c => selectedIds.has(c.contractId));
 
+  // "In / Tải gộp" cần đủ dữ liệu (kể cả goods) cho từng hợp đồng được chọn — danh sách chỉ giữ bản
+  // nhẹ (không có goods) từ sau khi list_contracts_slim bỏ goods ra khỏi payload lúc đăng nhập.
+  const openBulkView = async () => {
+    setBulkLoading(true);
+    try {
+      const fulls = await Promise.all(selectedContracts.map(async (c) => {
+        if (!c._dbId) return c;
+        try {
+          const res = await api.getContractFull(c._dbId);
+          return { ...res.data, _dbId: res.id, _maSale: res.ma_sale, _createdBy: res.created_by };
+        } catch { return c; } // dùng tạm bản nhẹ nếu 1 hợp đồng nào đó lỗi
+      }));
+      setBulkFullContracts(fulls);
+      setBulkOpen(true);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const exportToExcel = () => {
     const data = filtered.map(c => {
       const sale = saleMap[c._createdBy] || saleMap[c._maSale];
@@ -98,7 +120,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
         'Ngày': c.date || '',
       };
       if (showInvoiceNo) row['Số hóa đơn'] = c.invoiceNo || '';
-      if (showTotal) row['Tổng tiền'] = calcTotals(c.goods).total || 0;
+      if (showTotal) row['Tổng tiền'] = c.total || 0;
       row['Sale'] = sale?.name || c._maSale || '';
       row['Phòng ban'] = sale?.deptName || '';
       row['Trạng thái'] = c.status || '';
@@ -153,8 +175,8 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
         <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-3">
           <div className="text-sm text-blue-800 font-medium">✓ Đã chọn {selectedIds.size} hợp đồng</div>
           <div className="flex gap-2">
-            <button onClick={() => setBulkOpen(true)} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700">
-              🖨️ In / Tải gộp
+            <button onClick={openBulkView} disabled={bulkLoading} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+              {bulkLoading ? '⏳ Đang tải...' : '🖨️ In / Tải gộp'}
             </button>
             <button
               onClick={async () => { const ok = await onDeleteMany(Array.from(selectedIds)); if (ok) setSelectedIds(new Set()); }}
@@ -191,7 +213,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
             </tr></thead>
             <tbody>
               {list.map(c => {
-                const total = calcTotals(c.goods).total;
+                const total = c.total;
                 return (
                   <tr key={c.contractId} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3">
@@ -244,7 +266,7 @@ export const ContractListPage = ({ type, contracts, customers, sellers, saleMap 
 
       {bulkOpen && (
         <BulkContractViewer
-          contracts={selectedContracts}
+          contracts={bulkFullContracts}
           sellers={sellers}
           customers={customers}
           onClose={() => setBulkOpen(false)}
