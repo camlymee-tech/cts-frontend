@@ -25,17 +25,24 @@ export const fmtDate = (d) => {
 // vì toLocaleString phụ thuộc vào bộ ngôn ngữ cài trên từng máy/trình duyệt: máy có locale vi-VN thì
 // hiện "5.000.000" (dấu chấm), máy thiếu locale lại hiện "5,000,000" (dấu phẩy) hoặc "5000000" —
 // gây ra tình trạng "mỗi máy hiển thị một khác". Hàm này cho kết quả GIỐNG NHAU trên mọi máy.
-export const formatThousands = (raw) => {
+// maxDecimals: số chữ số thập phân tối đa (mặc định 0 = làm tròn về số nguyên). Việc làm tròn này
+// khử luôn phần thập phân rác kiểu "32.886.216,000000004" — do sai số dấu phẩy động khi máy tính
+// nhân/cộng số thực (vd 0.1+0.2 = 0.30000000000000004).
+export const formatThousands = (raw, maxDecimals = 0) => {
   if (raw === '' || raw === null || raw === undefined) return '';
-  const n = Number(raw);
+  let n = Number(raw);
   if (!isFinite(n)) return '';
+  // Làm tròn tới maxDecimals chữ số thập phân để bỏ phần rác do sai số dấu phẩy động
+  const factor = Math.pow(10, maxDecimals);
+  n = Math.round(n * factor) / factor;
   const neg = n < 0;
   const [intPart, decPart] = Math.abs(n).toString().split('.');
   const withDots = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return (neg ? '-' : '') + withDots + (decPart ? ',' + decPart : '');
 };
 
-export const fmtNum = (n) => formatThousands(Number(n || 0));
+// Tiền VNĐ: luôn là số nguyên (không có xu lẻ), làm tròn để khử phần thập phân rác.
+export const fmtNum = (n) => formatThousands(Number(n || 0), 0);
 
 export const calcTotals = (goods) => {
   let subtotal = 0, vat = 0;
