@@ -108,7 +108,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   useEffect(() => {
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
-        id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: b.deposit_vnd ?? '', daThuKhach: b.customer_paid_total ?? '',
+        id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: isFx ? (b.deposit_vnd ?? '') : '', daThuKhach: b.customer_paid_total ?? '',
         tyGiaRow: isFx ? (b.voucher_exchange_rate ?? '') : '', tienHangRow: isFx ? (b.voucher_amount_fx ?? '') : '',
       })));
       setFxRows(batchesOfCustomer.map(b => ({
@@ -221,8 +221,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
-          deposit_vnd: !isFx ? (r ? chenhLech : null) : (r ? totalSoTe : null),
-          customer_paid_total: !isFx ? (r ? ctsPhaiThuFor(r) : null) : (r && r.daThuKhach !== '' ? num(r.daThuKhach) : null),
+          deposit_vnd: !isFx ? 0 : (r ? totalSoTe : null),
+          customer_paid_total: !isFx ? (r ? num(r.daThuKhach) : null) : (r && r.daThuKhach !== '' ? num(r.daThuKhach) : null),
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
