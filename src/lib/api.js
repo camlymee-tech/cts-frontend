@@ -285,6 +285,22 @@ export const api = {
     if (error) throw new Error(error.message);
   },
 
+  // Cập nhật trạng thái "Hoàn thành hồ sơ" (chỉ admin) — dùng cột dossier_completed trên bảng invoice_goods
+  async updateInvoiceGoodsCompleted(id, completed) {
+    const { error } = await supabase.from('invoice_goods').update({ dossier_completed: completed }).eq('id', id);
+    if (error) throw new Error(error.message);
+  },
+
+  // Lấy trạng thái hoàn thành hồ sơ cho 1 loạt id → trả về { [id]: true/false }
+  async getInvoiceGoodsCompletedMap(ids) {
+    if (!ids || ids.length === 0) return {};
+    const { data, error } = await supabase.from('invoice_goods').select('id, dossier_completed').in('id', ids);
+    if (error) throw new Error(error.message);
+    const map = {};
+    (data || []).forEach(r => { map[r.id] = r.dossier_completed; });
+    return map;
+  },
+
   // Lấy số đề nghị thanh toán kế tiếp — do Supabase cấp phát (sequence), đảm bảo luôn tăng dần
   // và không bao giờ trùng, không phụ thuộc vào dữ liệu đã tải sẵn ở trình duyệt.
   async getNextPaymentRequestNo() {

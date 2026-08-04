@@ -59,6 +59,17 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
       setRows(newRows);
       setTotalCount(tc);
       setPage(pageToLoad);
+      // Lấy riêng trạng thái "Hoàn thành hồ sơ" cho các dòng vừa tải (không phụ thuộc hàm RPC).
+      // Nếu cột chưa tồn tại trên DB thì bỏ qua, không làm hỏng danh sách.
+      const ids = newRows.map(r => r.id).filter(Boolean);
+      if (ids.length > 0) {
+        try {
+          const doneMap = await api.getInvoiceGoodsCompletedMap(ids);
+          if (myRequestId === requestIdRef.current) {
+            setRows(prev => prev.map(r => ({ ...r, dossier_completed: !!doneMap[r.id] })));
+          }
+        } catch { /* cột chưa có hoặc lỗi nhẹ — bỏ qua */ }
+      }
     } catch (e) {
       console.error('Không tải được danh sách hóa đơn:', e.message);
     } finally {
@@ -164,6 +175,19 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
     }
   };
 
+  // Tích "Hoàn thành hồ sơ" — chỉ admin. Cập nhật ngay trên giao diện rồi lưu xuống Supabase.
+  const toggleCompleted = async (id, current) => {
+    const next = !current;
+    setRows(prev => prev.map(r => r.id === id ? { ...r, dossier_completed: next } : r));
+    try {
+      await api.updateInvoiceGoodsCompleted(id, next);
+    } catch (e) {
+      // Lỗi thì hoàn lại trạng thái cũ để không hiển thị sai
+      setRows(prev => prev.map(r => r.id === id ? { ...r, dossier_completed: current } : r));
+      alert('Không lưu được trạng thái hoàn thành: ' + e.message);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -262,6 +286,7 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
               <th className="text-left px-5 py-3">Sale</th>
               <th className="text-left px-5 py-3">Số mặt hàng</th>
               <th className="text-right px-5 py-3">Tổng tiền</th>
+              <th className="text-center px-5 py-3">Hoàn thành hồ sơ</th>
               <th className="text-left px-5 py-3">Ghi chú</th>
               <th className="px-5 py-3"></th>
             </tr></thead>
@@ -293,6 +318,17 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
                   <td className="px-5 py-3 text-gray-600">{inv.sale_name || <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3 text-gray-600">{inv.goods?.length || 0}</td>
                   <td className="px-5 py-3 text-right font-medium">{fmtNum(inv.total || 0)}</td>
+                  <td className="px-5 py-3 text-center">
+                    {isAdmin ? (
+                      <input type="checkbox" checked={!!inv.dossier_completed}
+                        onChange={() => toggleCompleted(inv.id, !!inv.dossier_completed)}
+                        className="cursor-pointer w-4 h-4 accent-green-600" title="Tích khi hồ sơ đã hoàn thành" />
+                    ) : (
+                      inv.dossier_completed
+                        ? <span className="text-green-600 font-medium" title="Hồ sơ đã hoàn thành">✓ Đã xong</span>
+                        : <span className="text-gray-300">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-gray-600 min-w-[180px]">
                     {isAdmin ? (
                       <input
