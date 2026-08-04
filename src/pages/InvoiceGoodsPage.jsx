@@ -5,6 +5,7 @@ import { fmtNum } from '../helpers';
 import { api } from '../lib/api';
 import { Pagination } from '../components/Pagination';
 import { InvoiceGoodsBulkViewer } from './InvoiceGoodsBulkViewer';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 const PAGE_SIZE = 50;
 
@@ -212,22 +213,16 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Tìm theo số hóa đơn, mã/tên khách hàng..."
           className="flex-1 min-w-[220px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
 
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Công ty bán</label>
-          <select value={sellerFilter} onChange={(e) => setSellerFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
-            <option value="">Tất cả bên bán</option>
-            {sellerOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className="min-w-[200px]">
+          <SearchableSelect label="Công ty bán" value={sellerFilter} onChange={setSellerFilter}
+            placeholder="Tất cả bên bán"
+            options={[{ value: '', label: 'Tất cả bên bán' }, ...sellerOptions.map(s => ({ value: s, label: s }))]} />
         </div>
 
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Sale phụ trách</label>
-          <select value={saleFilter} onChange={(e) => setSaleFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-300">
-            <option value="">Tất cả Sale</option>
-            {saleOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className="min-w-[200px]">
+          <SearchableSelect label="Sale phụ trách" value={saleFilter} onChange={setSaleFilter}
+            placeholder="Tất cả Sale"
+            options={[{ value: '', label: 'Tất cả Sale' }, ...saleOptions.map(s => ({ value: s, label: s }))]} />
         </div>
 
         <div>
