@@ -111,14 +111,15 @@ const GroupSumInput = ({ initial, onCommit }) => {
 };
 
 // Tính các cột suy ra (không lưu riêng, luôn tính lại từ dữ liệu gốc để không bị lệch)
+// Math.round các kết quả tiền VNĐ để khử sai số dấu phẩy động (vd 32886216.000000004 → 32886216).
 export const deriveComputed = (r) => {
-  const amountVnd = num(r.exchange_rate) * num(r.amount_cny); // Tiền hàng (VNĐ) = Tỷ giá x Số tệ
-  const invoiceAmount = amountVnd + num(r.tax_service_fee); // Tổng (= giá trị xuất hóa đơn) = Tiền hàng + Thuế + phí dịch vụ
-  const totalCustomerTransferred = num(r.customer_paid_total) + num(r.deposit_vnd) + num(r.actual_collected); // Tổng đã thu = Lần 1 (Tiền hàng + Tiền cọc) + Lần 2 (Số tiền chuyển)
-  const diffAmount = invoiceAmount - totalCustomerTransferred; // Còn lại = Tổng hóa đơn - Tổng đã thu
+  const amountVnd = Math.round(num(r.exchange_rate) * num(r.amount_cny)); // Tiền hàng (VNĐ) = Tỷ giá x Số tệ
+  const invoiceAmount = Math.round(amountVnd + num(r.tax_service_fee)); // Tổng (= giá trị xuất hóa đơn) = Tiền hàng + Thuế + phí dịch vụ
+  const totalCustomerTransferred = Math.round(num(r.customer_paid_total) + num(r.deposit_vnd) + num(r.actual_collected)); // Tổng đã thu = Lần 1 (Tiền hàng + Tiền cọc) + Lần 2 (Số tiền chuyển)
+  const diffAmount = Math.round(invoiceAmount - totalCustomerTransferred); // Còn lại = Tổng hóa đơn - Tổng đã thu
   const remainingDebt = diffAmount; // Công nợ còn lại = Còn lại
   // Riêng cho "Theo dõi chi tiết" của Hợp đồng ngoại thương (COLS_FX):
-  const fxAmountVnd = num(r.exchange_rate) * num(r.voucher_amount_fx); // Tổng tiền Việt = Tỉ giá $ × Tiền hàng ($)
+  const fxAmountVnd = Math.round(num(r.exchange_rate) * num(r.voucher_amount_fx)); // Tổng tiền Việt = Tỉ giá $ × Tiền hàng ($)
   const fxRemaining = num(r.fx_converted_total) - num(r.amount_cny); // Còn lại = Tổng tiền tệ quy đổi (H) - Số tệ (I)
   return { amountVnd, invoiceAmount, remainingDebt, totalCustomerTransferred, diffAmount, fxAmountVnd, fxRemaining };
 };
@@ -150,7 +151,7 @@ const excelColLetter = (n) => {
 // trọn chiều cao 2 hàng dưới nếu group1 có group2 ở cột khác cùng nhóm).
 // formula: ký hiệu công thức hiển thị ở tiêu đề cho cột tự động tính (dùng chữ cái cột theo thứ tự bên dưới)
 const COLS = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 180, group1: 'Thông tin khách hàng' },
+  { key: 'batch_code', label: 'Báo giá', type: 'text', w: 180, group1: 'Thông tin khách hàng' },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 170, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 100, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 180, fromDntt: true, group1: 'Thông tin khách hàng' },
@@ -185,7 +186,7 @@ const COLS = [
 // chị Ly cung cấp: Thông tin khách hàng | Đã thu khách hàng (Tỉ giá $, Tiền hàng $, Tổng tiền Việt tự tính,
 // Tổng tiền tệ quy đổi nhập tay) | Phải thu khách hàng (Số tệ, Ngày chuyển xưởng) | Còn lại (tự tính) | Ghi chú.
 const COLS_FX = [
-  { key: 'batch_code', label: 'Mã lô', type: 'text', w: 65, group1: 'Thông tin khách hàng' },
+  { key: 'batch_code', label: 'Báo giá', type: 'text', w: 65, group1: 'Thông tin khách hàng' },
   { key: 'payment_request_no', label: 'Số đề nghị TT', type: 'text', w: 90, fromDntt: true, group1: 'Thông tin khách hàng' },
   { key: 'customer_code_display', label: 'Mã khách', type: 'customerCode', w: 70, group1: 'Thông tin khách hàng' },
   { key: 'customer_id', label: 'Tên xuất hóa đơn', type: 'customer', w: 140, fromDntt: true, group1: 'Thông tin khách hàng' },
@@ -319,6 +320,9 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   const [saving, setSaving] = useState(null);
   const [collapsedBatches, setCollapsedBatches] = useState(new Set()); // các Mã lô đang thu gọn (ẩn dòng con)
   const [grouping, setGrouping] = useState(false); // đang gán Mã lô chung cho các dòng đã chọn
+  const [page, setPage] = useState(1);
+  const [gotoPage, setGotoPage] = useState('');
+  const PAGE_SIZE = 50; // số nhóm/dòng hiển thị mỗi trang
 
   const customerLabel = (id) => customers[id] ? `${customers[id].companyName} (${id})` : (id || '—');
   // Nếu dòng này được tạo từ 1 Mã nhánh cụ thể (qua Đề Nghị Thanh Toán), hiện đúng tên nhánh đó
@@ -341,6 +345,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     const s = search.trim().toLowerCase();
     const matchSearch = !s
       || (b.batch_code || '').toLowerCase().includes(s)
+      || (b.payment_request_no || '').toLowerCase().includes(s)
       || customerLabel(b.customer_id).toLowerCase().includes(s)
       || (b.invoice_no || '').toLowerCase().includes(s);
     const matchCustomer = !customerFilter || b.customer_id === customerFilter;
@@ -543,6 +548,32 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
     });
     return result;
   }, [filteredWithMeta]);
+
+  // Phân trang: cắt displayItems theo trang hiện tại
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedItems = displayItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  // Nếu số trang giảm (do lọc) mà trang hiện tại vượt quá, kéo về trang cuối
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages, page]);
+  // Về trang 1 khi đổi bộ lọc/tìm kiếm
+  useEffect(() => { setPage(1); }, [search, customerFilter, sellerFilter, dateFilter]);
+
+  // Danh sách số trang hiển thị (1 2 3 ... N kiểu rút gọn)
+  const pageNumbers = (() => {
+    const nums = [];
+    const add = (n) => { if (!nums.includes(n) && n >= 1 && n <= totalPages) nums.push(n); };
+    add(1); add(2); add(3);
+    add(safePage - 1); add(safePage); add(safePage + 1);
+    add(totalPages);
+    nums.sort((a, b) => a - b);
+    const out = [];
+    let prev = 0;
+    for (const n of nums) {
+      if (n - prev > 1) out.push('...');
+      out.push(n); prev = n;
+    }
+    return out;
+  })();
 
   // Dòng "gốc" của 1 nhóm Mã lô: tổng cộng dồn các cột tiền
   // (SUM_KEYS + các cột tự tính), các cột còn lại hiện giá trị chung nếu mọi dòng con giống nhau, ngược lại hiện "—".
@@ -922,7 +953,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           </button>
           {selectedIds.size >= 2 && (
             <button onClick={handleGroupSelected} disabled={grouping} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium shadow disabled:opacity-50">
-              {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành lô (${selectedIds.size})`}
+              {grouping ? '⏳ Đang gộp...' : `🔗 Gộp thành 1 báo giá (${selectedIds.size})`}
             </button>
           )}
           {selectedIds.size > 0 && (
@@ -936,7 +967,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
       <p className="text-xs text-gray-400 mb-3 px-6">Bảng chỉ để theo dõi/bổ sung thêm thông tin cho các lô đã có từ Đề Nghị Thanh Toán — không tạo lô mới trực tiếp ở đây. Nhấn số ở cột "Số đề nghị TT" để quay lại sửa ở Đề Nghị Thanh Toán. Kéo ngang để xem hết các cột.</p>
 
       <div className="flex items-center gap-3 mb-4 flex-wrap px-6">
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo mã lô, khách hàng, số hóa đơn..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Tìm theo báo giá, số đề nghị, khách hàng, số hóa đơn..."
           className="flex-1 min-w-[240px] border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
         <select value={customerFilter} onChange={e => setCustomerFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-300">
@@ -1040,7 +1071,7 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
             </tr>
           </thead>
           <tbody>
-            {displayItems.map(d => d.kind === 'group'
+            {pagedItems.map(d => d.kind === 'group'
               ? (
                 <Fragment key={`group-${d.groupKey}`}>
                   {renderGroupRoot(d.groupKey, d.keyField, d.label, d.items)}
@@ -1052,6 +1083,27 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 py-4 flex-wrap text-sm">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
+            className="px-2 py-1 text-blue-600 disabled:text-gray-300 hover:underline">← Trước</button>
+          {pageNumbers.map((n, i) => n === '...'
+            ? <span key={`dots-${i}`} className="px-2 text-gray-400">…</span>
+            : <button key={n} onClick={() => setPage(n)}
+                className={`min-w-[36px] px-2 py-1 rounded-lg ${n === safePage ? 'bg-blue-600 text-white font-medium' : 'text-gray-700 hover:bg-gray-100'}`}>{n}</button>
+          )}
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+            className="px-2 py-1 text-blue-600 disabled:text-gray-300 hover:underline">Sau →</button>
+          <span className="ml-3 text-gray-400">Tới trang</span>
+          <input type="number" min={1} max={totalPages} value={gotoPage}
+            onChange={e => setGotoPage(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { const n = Number(gotoPage); if (n >= 1 && n <= totalPages) { setPage(n); setGotoPage(''); } } }}
+            className="w-16 border border-gray-300 rounded-lg px-2 py-1 text-center" />
+          <button onClick={() => { const n = Number(gotoPage); if (n >= 1 && n <= totalPages) { setPage(n); setGotoPage(''); } }}
+            className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Đi</button>
+        </div>
+      )}
     </div>
   );
 };
