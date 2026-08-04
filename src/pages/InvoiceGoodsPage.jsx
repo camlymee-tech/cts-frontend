@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { Pagination } from '../components/Pagination';
 import { InvoiceGoodsBulkViewer } from './InvoiceGoodsBulkViewer';
 import { SearchableSelect } from '../components/SearchableSelect';
+import * as XLSX from 'xlsx';
 
 const PAGE_SIZE = 50;
 
@@ -86,6 +87,67 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
   }, [search, sellerFilter, saleFilter, dateFrom, dateTo]);
 
   const handlePickFile = () => fileRef.current?.click();
+
+  const [exporting, setExporting] = useState(false);
+  // Xuất Excel danh sách hóa đơn theo đúng bộ lọc đang xem, kèm cột "Hoàn thành hồ sơ"
+  // để chị lọc ra các hóa đơn CHƯA hoàn thành mà theo dõi/đôn đốc.
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      // Lấy toàn bộ dòng theo bộ lọc hiện tại (không phân trang) — chia lô 1000 để không quá tải
+      let all = [];
+      let offset = 0;
+      const CHUNK = 1000;
+      while (true) {
+        const { rows } = await api.listInvoiceGoodsPaged({
+          search, seller: sellerFilter, sale: saleFilter, dateFrom, dateTo,
+          limit: CHUNK, offset,
+        });
+        all = all.concat(rows);
+        if (rows.length < CHUNK) break;
+        offset += CHUNK;
+        if (offset > 100000) break; // chặn an toàn
+      }
+      // Lấy trạng thái hoàn thành cho tất cả dòng
+      let doneMap = {};
+      try {
+        const ids = all.map(r => r.id).filter(Boolean);
+        for (let i = 0; i < ids.length; i += 500) {
+          const part = await api.getInvoiceGoodsCompletedMap(ids.slice(i, i + 500));
+          doneMap = { ...doneMap, ...part };
+        }
+      } catch { /* cột chưa có — bỏ qua */ }
+
+      const data = all.map((r, i) => ({
+        'STT': i + 1,
+        'Số hóa đơn': r.invoice_no || '',
+        'Ngày': r.invoice_date || '',
+        'Khách hàng': r.customer_name || '',
+        'Mã khách': r.customer_code || '',
+        'Công ty bán': r.seller_name || '',
+        'Sale': r.sale_name || '',
+        'Số mặt hàng': Array.isArray(r.goods) ? r.goods.length : (r.goods ? 1 : 0),
+        'Tổng tiền': Math.round(Number(r.total) || 0),
+        'Hoàn thành hồ sơ': doneMap[r.id] ? 'Đã hoàn thành' : 'CHƯA hoàn thành',
+        'Ghi chú': r.note || '',
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [
+        { wch: 6 }, { wch: 16 }, { wch: 12 }, { wch: 36 }, { wch: 14 },
+        { wch: 30 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 24 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Hoa don');
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      XLSX.writeFile(wb, `Hoa_don_theo_doi_ho_so_${today}.xlsx`);
+    } catch (e) {
+      alert('Không xuất được Excel: ' + e.message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const toggleOne = (id) => {
     setSelectedIds(prev => {
@@ -195,6 +257,10 @@ export const InvoiceGoodsPage = ({ onBulkImport, onDelete, onDeleteMany, isAdmin
         <h1 className="text-2xl font-bold text-gray-800">📦 Hàng hóa theo hóa đơn</h1>
         <div className="flex items-center gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChosen} className="hidden" />
+          <button onClick={handleExportExcel} disabled={exporting}
+            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium shadow disabled:opacity-50">
+            {exporting ? '⏳ Đang xuất...' : '📤 Xuất Excel'}
+          </button>
           <button onClick={handlePickFile} disabled={importing}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow disabled:opacity-50">
             {importing
