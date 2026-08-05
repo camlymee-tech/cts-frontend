@@ -13,8 +13,9 @@ import { buildContractId, calcUSDTotal, fmtNum } from '../helpers';
 import { api } from '../lib/api';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
-export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateDDHUT = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -40,11 +41,17 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = customer.assignedSale?.code || '';
 
-  const matchingHDNTs = Object.values(contracts)
-    .filter(c => c.type === 'HDNT_UT' && c.customerId === customerId && c.sellerId === sellerId)
+  const [allHDNTs, setAllHDNTs] = useState([]);
+  useEffect(() => {
+    api.searchRelatedContracts('HDNT_UT')
+      .then(rows => setAllHDNTs(rows.map(r => ({ contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id }))))
+      .catch(e => console.error('Không tải được danh sách HĐNT liên quan:', e.message));
+  }, []);
+  const matchingHDNTs = allHDNTs
+    .filter(c => c.customerId === customerId && c.sellerId === sellerId)
     .sort((a, b) => b.contractId.localeCompare(a.contractId));
 
-  useEffect(() => { setHdntUtId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
+  useEffect(() => { setHdntUtId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId, allHDNTs]);
 
   // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste) — đọc hàng hóa giá USD
   const processFile = async (file) => {
@@ -111,15 +118,23 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
   } : null;
 
   const save = async () => {
+    if (saving) return;
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (fee <= 0) return alert('Vui lòng nhập phí dịch vụ ủy thác trọn gói');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('ddh_ut');
+    setSaving(true);
+    try {
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('ddh_ut');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const preview = getContract();
@@ -238,7 +253,7 @@ export const CreateDDHUT = ({ sellers, customers, contracts, onSave, setPage, ed
         <button onClick={() => setShowPreview(p => !p)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">
           {showPreview ? '🙈 Ẩn xem trước' : '👁️ Xem trước đơn đặt dịch vụ'}
         </button>
-        <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu đơn đặt dịch vụ'}</button>
+        <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu đơn đặt dịch vụ'}</button>
       </div>
 
       {showPreview && preview && (

@@ -9,9 +9,11 @@ import { Alert } from '../components/Alert';
 import { HDNTVCPreview } from '../previews/HDNTVCPreview';
 import { buildContractId } from '../helpers';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
+import { api } from '../lib/api';
 
-export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateHDNTVC = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [step, setStep] = useState(isEdit ? 2 : 0);
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -37,12 +39,20 @@ export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, e
   } : null;
 
   const save = async () => {
+    if (saving) return;
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(preview, isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('hdnt_vc');
+    setSaving(true);
+    try {
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(preview, isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('hdnt_vc');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -144,7 +154,7 @@ export const CreateHDNTVC = ({ sellers, customers, contracts, onSave, setPage, e
           </div>
           <div className="flex gap-2">
             <button onClick={() => setStep(1)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">← Quay lại</button>
-            <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu hợp đồng'}</button>
+            <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu hợp đồng'}</button>
           </div>
         </div>
       )}

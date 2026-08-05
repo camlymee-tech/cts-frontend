@@ -9,9 +9,11 @@ import { Alert } from '../components/Alert';
 import { HDNTPreview } from '../previews/HDNTPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
+import { api } from '../lib/api';
 
-export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [] }) => {
+export const CreateHDNT = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [step, setStep] = useState(isEdit ? 2 : 0);
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -37,12 +39,21 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
   } : null;
 
   const save = async () => {
+    if (saving) return; // chặn bấm Lưu 2 lần liên tiếp trong lúc đang kiểm tra/lưu
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(preview, isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('hdnt');
+    setSaving(true);
+    try {
+      // Kiểm tra trùng số hợp đồng TOÀN CÔNG TY (mọi sale) ngay tại server — bỏ qua nếu đang sửa và giữ nguyên số cũ
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(preview, isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('hdnt');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -144,7 +155,7 @@ export const CreateHDNT = ({ sellers, customers, contracts, onSave, setPage, edi
           </div>
           <div className="flex gap-2">
             <button onClick={() => setStep(1)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">← Quay lại</button>
-            <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu hợp đồng'}</button>
+            <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu hợp đồng'}</button>
           </div>
         </div>
       )}
