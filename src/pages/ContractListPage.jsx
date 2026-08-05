@@ -87,12 +87,19 @@ export const ContractListPage = ({ type, refreshVersion, customers, sellers, sal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, search, sellerFilter, fromDate, toDate]);
 
-  // Đổi bộ lọc/tìm kiếm → quay về trang 1 (debounce 300ms khi gõ tìm kiếm, đổi dropdown/ngày thì tải ngay)
+  // Đổi loại hợp đồng (chuyển trang HĐNT/ĐĐH/BBBG...) → xóa ngay dữ liệu cũ, tránh thoáng hiện nhầm
+  // dữ liệu loại cũ dưới tiêu đề loại mới trong lúc chờ tải xong loại mới.
+  useEffect(() => { setRows([]); setTotalCount(0); }, [type]);
+
+  // Đổi loại hợp đồng (chuyển trang HĐNT/ĐĐH/BBBG...) hoặc bộ lọc/tìm kiếm → quay về trang 1 (debounce
+  // 300ms khi gõ tìm kiếm, đổi loại/dropdown/ngày thì tải ngay). "type" PHẢI có trong deps — component
+  // này dùng chung 1 instance cho cả 9 trang danh sách (không remount khi đổi trang), thiếu "type" ở đây
+  // từng khiến chuyển trang không tải lại, hiện nhầm dữ liệu của loại cũ dưới tiêu đề loại mới.
   useEffect(() => {
     const t = setTimeout(() => { loadPage(1); setSelectedIds(new Set()); }, search ? 300 : 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, sellerFilter, fromDate, toDate]);
+  }, [type, search, sellerFilter, fromDate, toDate]);
 
   // Có thay đổi hợp đồng ở nơi khác (Xóa/Sửa/Giao sale — kể cả từ màn Xem chi tiết) → tải lại ĐÚNG
   // trang đang xem, không quay về trang 1 (khỏi giật màn hình).
