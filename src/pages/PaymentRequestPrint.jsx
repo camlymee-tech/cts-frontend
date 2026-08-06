@@ -100,6 +100,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   const [fxRows, setFxRows] = useState([blankFxRow()]);
   const [saving, setSaving] = useState(false);
 
+  const num = (v) => Number(v) || 0;
+
   // Số đề nghị thanh toán giờ NHẬP TAY hoàn toàn — không tự sinh/tự nhảy nữa.
   // Nếu mở lại 1 đề nghị có sẵn, ô này được điền sẵn đúng số cũ (vẫn có thể sửa lại nếu cần).
   const [requestNoInput, setRequestNoInput] = useState('');
@@ -108,7 +110,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
   useEffect(() => {
     if (batchesOfCustomer.length > 0) {
       setVoucherRows(batchesOfCustomer.map(b => ({
-        id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: isFx ? (b.deposit_vnd ?? '') : '', daThuKhach: b.customer_paid_total ?? '',
+        id: b.id, dienGiai: b.goods_desc || '', ctsPhaiThu: isFx ? (b.deposit_vnd ?? '') : '',
+        daThuKhach: isFx ? (b.customer_paid_total ?? '') : ((num(b.customer_paid_total) + num(b.deposit_vnd)) || ''),
         tyGiaRow: isFx ? (b.voucher_exchange_rate ?? '') : '', tienHangRow: isFx ? (b.voucher_amount_fx ?? '') : '',
       })));
       setFxRows(batchesOfCustomer.map(b => ({
@@ -129,8 +132,6 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
     // chỉ chạy 1 lần khi mở kèm sẵn dữ liệu, không tự chạy lại khi người dùng đang gõ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const num = (v) => Number(v) || 0;
 
   // Thành tiền = Tỷ giá × Số tệ (tự tính, không nhập tay)
   const fxThanhTien = (r) => num(r.tyGia) * num(r.soTe);
@@ -221,8 +222,8 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
           branch_tax_code: selectedBranch?.id || null,
           seller_id: sellerId || null,
           goods_desc: (r?.dienGiai || fx?.noiDung) || null,
-          deposit_vnd: !isFx ? 0 : (r ? totalSoTe : null),
-          customer_paid_total: !isFx ? (r ? num(r.daThuKhach) : null) : (r && r.daThuKhach !== '' ? num(r.daThuKhach) : null),
+          deposit_vnd: !isFx ? (r ? chenhLech : null) : (r ? totalSoTe : null),
+          customer_paid_total: !isFx ? (r ? ctsPhaiThuFor(r) : null) : (r && r.daThuKhach !== '' ? num(r.daThuKhach) : null),
           customer_paid_date: requestDate,
           bank_account: receiveAccount || null,
           bank_name: bankName || null,
