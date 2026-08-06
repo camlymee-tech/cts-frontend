@@ -170,7 +170,7 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, sal
               className="bg-amber-50 text-amber-600 border border-amber-200 px-4 py-2 rounded-lg text-sm hover:bg-amber-100">
               ✏️ Sửa
             </button>
-            <button onClick={() => onDelete(contract.contractId)}
+            <button onClick={() => onDelete(contract)}
               className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm hover:bg-red-100">
               🗑️ Xóa
             </button>
@@ -199,7 +199,7 @@ export const ContractViewer = ({ contract, sellers, customers, saleMap = {}, sal
               onClick={async () => {
                 setAssigning(true); setAssignError(''); setAssignDone(false);
                 try {
-                  await onAssign(contract.contractId, assignTarget);
+                  await onAssign(contract, assignTarget);
                   setAssignDone(true);
                 } catch (err) { setAssignError(err.message); }
                 finally { setAssigning(false); }

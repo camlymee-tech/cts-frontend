@@ -1,20 +1,10 @@
 // File: src/utils/customerExcel.js
 // Tiện ích Nhập / Xuất danh sách khách hàng bằng file Excel
 import * as XLSX from 'xlsx';
+import { removeDiacritics, normalizeText } from './textNormalize';
 
-const removeDiacritics = (str = '') =>
-  String(str)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-
-export { removeDiacritics };
-
-const normalizeHeader = (str = '') =>
-  removeDiacritics(str).toLowerCase().replace(/[^a-z0-9]/g, '');
-
-export const normalizeText = normalizeHeader;
+export { removeDiacritics, normalizeText };
+const normalizeHeader = normalizeText;
 
 // Các biến thể tiêu đề cột (đã chuẩn hoá bỏ dấu, bỏ khoảng trắng) ứng với từng field dữ liệu
 const HEADER_ALIASES = {

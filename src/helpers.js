@@ -1,5 +1,5 @@
 // File: src/helpers.js
-import { normalizeText } from './utils/customerExcel';
+import { normalizeText } from './utils/textNormalize';
 
 // Lấy đúng Mã Sale của khách hàng để dùng khi sinh số hợp đồng/ĐĐH.
 // Một số khách hàng cũ chỉ lưu Tên Sale mà chưa lưu Mã Sale (dữ liệu trước khi có dropdown chọn sale) —

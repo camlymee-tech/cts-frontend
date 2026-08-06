@@ -1,38 +1,51 @@
 // File: src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 import { api } from './lib/api';
 import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './pages/Dashboard';
-import { SellersPage } from './pages/SellersPage';
-import { ForeignSellersPage } from './pages/ForeignSellersPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { InvoiceGoodsPage } from './pages/InvoiceGoodsPage';
-import { CashFlowSummary } from './pages/CashFlowSummary';
-import { CashFlowPage } from './pages/CashFlowPage';
-import { DailyPaymentRequestsPage } from './pages/DailyPaymentRequestsPage';
-import { FxContractSummary } from './pages/FxContractSummary';
-import { SalesContractPage } from './pages/SalesContractPage';
-import { CnyFundPage } from './pages/CnyFundPage';
-import { PaymentRequestPrint } from './pages/PaymentRequestPrint';
-import { ApiKeyManager } from './pages/ApiKeyManager';
-import { DepartmentsManager } from './pages/DepartmentsManager';
-import { ContractListPage } from './pages/ContractListPage';
-import { ContractViewer } from './pages/ContractViewer';
-import { CreateHDNT } from './pages/CreateHDNT';
-import { CreateDDH } from './pages/CreateDDH';
-import { CreateBBBG } from './pages/CreateBBBG';
-import { CreateHDNTVC } from './pages/CreateHDNTVC';
-import { CreateDDHVC } from './pages/CreateDDHVC';
-import { CreateBBBGVC } from './pages/CreateBBBGVC';
-import { CreateHDNTUT } from './pages/CreateHDNTUT';
-import { CreateDDHUT } from './pages/CreateDDHUT';
-import { CreateBBBGUT } from './pages/CreateBBBGUT';
-import { LoginPage } from './pages/LoginPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { AdminUsersPage } from './pages/AdminUsersPage';
-import { ChooseDepartmentPage } from './pages/ChooseDepartmentPage';
-import { CompleteProfilePage } from './pages/CompleteProfilePage';
+
+// Mỗi trang được tải riêng (dynamic import) thay vì gộp chung 1 file JS —
+// trước đây toàn bộ ~30 trang (kể cả các trang rất nặng như CashFlowPage,
+// PaymentRequestPrint, SalesContractPage...) bị gộp vào 1 bundle ~1.2MB,
+// khiến người dùng phải tải hết dù chỉ đứng ở màn Đăng nhập. Nay trình duyệt
+// chỉ tải trang nào người dùng thực sự bấm vào.
+const lazyNamed = (loader, name) => lazy(() => loader().then(m => ({ default: m[name] })));
+
+const Dashboard = lazyNamed(() => import('./pages/Dashboard'), 'Dashboard');
+const SellersPage = lazyNamed(() => import('./pages/SellersPage'), 'SellersPage');
+const ForeignSellersPage = lazyNamed(() => import('./pages/ForeignSellersPage'), 'ForeignSellersPage');
+const CustomersPage = lazyNamed(() => import('./pages/CustomersPage'), 'CustomersPage');
+const InvoiceGoodsPage = lazyNamed(() => import('./pages/InvoiceGoodsPage'), 'InvoiceGoodsPage');
+const CashFlowSummary = lazyNamed(() => import('./pages/CashFlowSummary'), 'CashFlowSummary');
+const CashFlowPage = lazyNamed(() => import('./pages/CashFlowPage'), 'CashFlowPage');
+const DailyPaymentRequestsPage = lazyNamed(() => import('./pages/DailyPaymentRequestsPage'), 'DailyPaymentRequestsPage');
+const FxContractSummary = lazyNamed(() => import('./pages/FxContractSummary'), 'FxContractSummary');
+const SalesContractPage = lazyNamed(() => import('./pages/SalesContractPage'), 'SalesContractPage');
+const CnyFundPage = lazyNamed(() => import('./pages/CnyFundPage'), 'CnyFundPage');
+const PaymentRequestPrint = lazyNamed(() => import('./pages/PaymentRequestPrint'), 'PaymentRequestPrint');
+const ApiKeyManager = lazyNamed(() => import('./pages/ApiKeyManager'), 'ApiKeyManager');
+const DepartmentsManager = lazyNamed(() => import('./pages/DepartmentsManager'), 'DepartmentsManager');
+const ContractListPage = lazyNamed(() => import('./pages/ContractListPage'), 'ContractListPage');
+const ContractViewer = lazyNamed(() => import('./pages/ContractViewer'), 'ContractViewer');
+const CreateHDNT = lazyNamed(() => import('./pages/CreateHDNT'), 'CreateHDNT');
+const CreateDDH = lazyNamed(() => import('./pages/CreateDDH'), 'CreateDDH');
+const CreateBBBG = lazyNamed(() => import('./pages/CreateBBBG'), 'CreateBBBG');
+const CreateHDNTVC = lazyNamed(() => import('./pages/CreateHDNTVC'), 'CreateHDNTVC');
+const CreateDDHVC = lazyNamed(() => import('./pages/CreateDDHVC'), 'CreateDDHVC');
+const CreateBBBGVC = lazyNamed(() => import('./pages/CreateBBBGVC'), 'CreateBBBGVC');
+const CreateHDNTUT = lazyNamed(() => import('./pages/CreateHDNTUT'), 'CreateHDNTUT');
+const CreateDDHUT = lazyNamed(() => import('./pages/CreateDDHUT'), 'CreateDDHUT');
+const CreateBBBGUT = lazyNamed(() => import('./pages/CreateBBBGUT'), 'CreateBBBGUT');
+const LoginPage = lazyNamed(() => import('./pages/LoginPage'), 'LoginPage');
+const ResetPasswordPage = lazyNamed(() => import('./pages/ResetPasswordPage'), 'ResetPasswordPage');
+const AdminUsersPage = lazyNamed(() => import('./pages/AdminUsersPage'), 'AdminUsersPage');
+const CompleteProfilePage = lazyNamed(() => import('./pages/CompleteProfilePage'), 'CompleteProfilePage');
+
+const PageLoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen text-gray-400">
+    <div className="text-center"><div className="text-4xl mb-3">📋</div><div>Đang tải...</div></div>
+  </div>
+);
 
 const DOC_TYPE_MAP = {
   HDNT: 'hd_nguyen_tac', DDH: 'don_dat_hang', BBBG: 'bbbg',
@@ -59,13 +72,19 @@ export default function App() {
   const [foreignSellers, setForeignSellers] = useState({});
   const [departments, setDepartments] = useState({});
   const [customers, setCustomers] = useState({});
-  const [contracts, setContracts] = useState({});
+  // Tăng lên sau mỗi lần Xóa/Sửa/Giao sale hợp đồng (kể cả từ ContractViewer, không chỉ từ trong danh
+  // sách) — ContractListPage tự theo dõi số này để tải lại đúng trang đang xem, không cần F5.
+  const [contractsVersion, setContractsVersion] = useState(0);
+  // Số đếm theo loại (Sidebar + Dashboard) + 8 hợp đồng gần nhất — 1 lần gọi nhẹ (contracts_dashboard_stats),
+  // KHÔNG phụ thuộc vào state contracts đầy đủ ở trên nữa.
+  const [dashboardStats, setDashboardStats] = useState(null);
   const [viewContract, setViewContract] = useState(null);
   const [editContractData, setEditContractData] = useState(null);
   const [paymentRequestCustomerId, setPaymentRequestCustomerId] = useState('');
   const [paymentRequestReqNo, setPaymentRequestReqNo] = useState(null);
   const [paymentRequestBatchIds, setPaymentRequestBatchIds] = useState(null);
   const [dataReady, setDataReady] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [profile, setProfile] = useState(null);
   const [saleMap, setSaleMap] = useState({}); // { [uuid|ma_sale]: { name, deptName } } — dùng để hiện tên sale + phòng ban ở danh sách HĐ
   const [saleProfiles, setSaleProfiles] = useState([]); // [{ uuid, name, ma_sale, deptName }] — dùng cho dropdown giao sale
@@ -97,13 +116,14 @@ export default function App() {
   // Load data once logged in
   useEffect(() => {
     if (!session) return;
+    setLoadError(null);
     (async () => {
-      const [sl, dp, fsl, custRows, contractRows, prof] = await Promise.all([
+      try {
+      const [sl, dp, fsl, custRows, prof] = await Promise.all([
         api.get('sellers'),
         api.get('departments'),
         api.get('foreign_sellers'),
         api.listCustomers(),
-        api.listContracts(),
         api.getMyProfile(),
       ]);
       if (dp) setDepartments(dp);
@@ -144,12 +164,6 @@ export default function App() {
         })();
       }
 
-      const contractsMap = {};
-      contractRows.forEach(r => {
-        contractsMap[r.contract_id] = { ...r.data, _dbId: r.id, _maSale: r.ma_sale, _createdBy: r.created_by };
-      });
-      setContracts(contractsMap);
-
       // Build saleMap + saleProfiles để hiện tên + phòng ban và dropdown giao sale (admin dùng)
       if (prof?.role === 'admin') {
         try {
@@ -171,8 +185,23 @@ export default function App() {
       }
 
       setDataReady(true);
+      } catch (e) {
+        // Lỗi có thể xảy ra nếu database chậm/timeout (đã gặp thật lúc kiểm thử: "canceling statement
+        // due to statement timeout") — trước đây không bắt lỗi này, màn hình sẽ đứng yên ở "Đang tải dữ
+        // liệu..." mãi mãi vì dataReady không bao giờ được set true. Nay báo lỗi rõ + cho thử lại.
+        console.error('Không tải được dữ liệu ban đầu:', e.message);
+        setLoadError(e.message || 'Có lỗi không xác định.');
+      }
     })();
   }, [session]);
+
+  // Số đếm Sidebar/Dashboard + 8 hợp đồng gần nhất — tải lại mỗi khi có thay đổi hợp đồng (contractsVersion)
+  useEffect(() => {
+    if (!session) return;
+    api.contractsDashboardStats()
+      .then(setDashboardStats)
+      .catch(e => console.error('Không tải được số đếm hợp đồng:', e.message));
+  }, [session, contractsVersion]);
 
   const handleLogout = () => supabase.auth.signOut();
 
@@ -426,70 +455,67 @@ export default function App() {
     const { _dbId, _maSale, _createdBy, ...cleanContract } = contract;
     // Admin gán cho sale cụ thể → dùng UUID đó; không thì dùng mã sale của người đang đăng nhập
     const maSale = assignedSaleUuid || profile?.ma_sale;
-    const row = await api.upsertContract({
+    await api.upsertContract({
       _dbId,
       category: CATEGORY_MAP[contract.type] || 'mua_ban',
       docType: DOC_TYPE_MAP[contract.type],
       contract: cleanContract,
       maSale,
     });
-    const updated = { ...contracts };
-    if (oldId && oldId !== contract.contractId) delete updated[oldId];
-    updated[contract.contractId] = { ...cleanContract, _dbId: row.id, _maSale: row.ma_sale, _createdBy: row.created_by };
-
     // Mã hợp đồng bị đổi (VD: sửa lại số HĐNT) → tự cập nhật các hợp đồng con đang tham chiếu
     // tới mã CŨ (ĐĐH/BBBG có relatedContracts.hdnt/ddh/...) sang mã MỚI, tránh lệch thông tin.
     const refKey = REFERENCED_AS[contract.type];
     if (oldId && oldId !== contract.contractId && refKey) {
-      for (const childId of Object.keys(updated)) {
-        const child = updated[childId];
-        if (child.relatedContracts?.[refKey] === oldId) {
-          const newChild = { ...child, relatedContracts: { ...child.relatedContracts, [refKey]: contract.contractId } };
-          updated[childId] = newChild;
-          const { _dbId: cDbId, _maSale: cMaSale, _createdBy: cCreatedBy, ...cleanChild } = newChild;
-          await api.upsertContract({
-            _dbId: cDbId,
-            category: CATEGORY_MAP[newChild.type] || 'mua_ban',
-            docType: DOC_TYPE_MAP[newChild.type],
-            contract: cleanChild,
-            maSale: profile?.ma_sale,
-          });
-        }
+      const children = await api.findContractsReferencing(refKey, oldId);
+      for (const childRow of children) {
+        const newChildData = { ...childRow.data, relatedContracts: { ...childRow.data.relatedContracts, [refKey]: contract.contractId } };
+        await api.upsertContract({
+          _dbId: childRow.id,
+          category: childRow.category,
+          docType: childRow.doc_type,
+          contract: newChildData,
+          maSale: profile?.ma_sale,
+        });
       }
     }
 
-    setContracts(updated);
+    setContractsVersion(v => v + 1); // báo cho ContractListPage đang mở (nếu có) tự tải lại
   };
-  const deleteContract = async (id) => {
-    if (!confirm(`Bạn có chắc muốn xóa hợp đồng ${id}? Hành động này không thể hoàn tác.`)) return;
-    const target = contracts[id];
-    if (target?._dbId) await api.deleteContractRow(target._dbId);
-    const updated = { ...contracts }; delete updated[id];
-    setContracts(updated);
+  // contract: object đầy đủ (có _dbId) — lấy từ dòng trong ContractListPage/ContractViewer, không tra cứu qua map riêng nữa.
+  const deleteContract = async (contract) => {
+    if (!confirm(`Bạn có chắc muốn xóa hợp đồng ${contract.contractId}? Hành động này không thể hoàn tác.`)) return;
+    if (contract._dbId) await api.deleteContractRow(contract._dbId);
     setViewContract(null);
+    setContractsVersion(v => v + 1);
   };
-  const deleteContracts = async (ids) => {
-    if (!ids || ids.length === 0) return false;
-    if (!confirm(`Bạn có chắc muốn xóa ${ids.length} hợp đồng đã chọn? Hành động này không thể hoàn tác.`)) return false;
-    const updated = { ...contracts };
+  const deleteContracts = async (selectedContracts) => {
+    if (!selectedContracts || selectedContracts.length === 0) return false;
+    if (!confirm(`Bạn có chắc muốn xóa ${selectedContracts.length} hợp đồng đã chọn? Hành động này không thể hoàn tác.`)) return false;
     let successCount = 0;
     try {
-      for (const id of ids) {
-        const target = contracts[id];
-        if (target?._dbId) await api.deleteContractRow(target._dbId);
-        delete updated[id];
+      for (const c of selectedContracts) {
+        if (c._dbId) await api.deleteContractRow(c._dbId);
         successCount++;
       }
     } catch (err) {
-      alert(`Đã xóa được ${successCount}/${ids.length} hợp đồng, sau đó gặp lỗi: ${err.message}`);
+      alert(`Đã xóa được ${successCount}/${selectedContracts.length} hợp đồng, sau đó gặp lỗi: ${err.message}`);
     } finally {
-      setContracts(updated);
       setViewContract(null);
+      setContractsVersion(v => v + 1);
     }
     return true;
   };
-  const handleEditContract = (contract) => {
-    setEditContractData(contract);
+  // Load đủ dữ liệu (kể cả goods) trước khi vào form Sửa — danh sách chỉ giữ bản nhẹ (không có goods)
+  // từ sau khi list_contracts_slim bỏ goods ra khỏi payload để giảm dung lượng lúc đăng nhập.
+  const handleEditContract = async (contract) => {
+    let full = contract;
+    if (contract._dbId) {
+      try {
+        const res = await api.getContractFull(contract._dbId);
+        full = { ...res.data, _dbId: res.id, _maSale: res.ma_sale, _createdBy: res.created_by };
+      } catch { /* dùng tạm bản nhẹ nếu lỗi */ }
+    }
+    setEditContractData(full);
     setViewContract(null);
     setPage('edit-' + contract.type.toLowerCase());
   };
@@ -508,20 +534,16 @@ export default function App() {
     }
   };
 
-  // Admin giao hợp đồng cho sale khác — chỉ cập nhật ma_sale, giữ nguyên người tạo
-  const assignContract = async (contractId, newMaSale) => {
-    const target = contracts[contractId];
-    if (!target?._dbId) return;
-    await api.assignContractSale(target._dbId, newMaSale);
-    const updated = {
-      ...contracts,
-      [contractId]: { ...target, _maSale: newMaSale },
-    };
-    setContracts(updated);
+  // Admin giao hợp đồng cho sale khác — chỉ cập nhật ma_sale, giữ nguyên người tạo.
+  // contract: object đầy đủ (có _dbId), lấy từ dòng trong ContractListPage/ContractViewer.
+  const assignContract = async (contract, newMaSale) => {
+    if (!contract?._dbId) return;
+    await api.assignContractSale(contract._dbId, newMaSale);
     // Cập nhật viewContract nếu đang xem hợp đồng này
-    if (viewContract?.contractId === contractId) {
+    if (viewContract?.contractId === contract.contractId) {
       setViewContract({ ...viewContract, _maSale: newMaSale });
     }
+    setContractsVersion(v => v + 1);
   };
 
   // --- Loading / Auth states ---
@@ -533,11 +555,27 @@ export default function App() {
     );
   }
 
-  if (!session) return <LoginPage />;
+  if (!session) return <Suspense fallback={<PageLoadingFallback />}><LoginPage /></Suspense>;
 
   // Dù đã có session (do Supabase tạo tạm khi bấm link email), vẫn phải đặt mật khẩu mới xong
   // mới cho vào app — tránh trường hợp ai nhặt được link email cũ cũng vào thẳng được tài khoản.
-  if (isPasswordRecovery) return <ResetPasswordPage onDone={() => setIsPasswordRecovery(false)} />;
+  if (isPasswordRecovery) return <Suspense fallback={<PageLoadingFallback />}><ResetPasswordPage onDone={() => setIsPasswordRecovery(false)} /></Suspense>;
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-400">
+        <div className="text-center max-w-sm px-4">
+          <div className="text-4xl mb-3">⚠️</div>
+          <div className="text-gray-700 font-medium mb-1">Không tải được dữ liệu</div>
+          <div className="text-sm text-gray-500 mb-4">{loadError}</div>
+          <button onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium shadow">
+            🔄 Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!dataReady) {
     return (
@@ -551,24 +589,29 @@ export default function App() {
   // Chưa điền đủ thông tin (tên + phòng ban + mã sale) → yêu cầu tự điền trước khi vào app
   const isAdmin = profile?.role === 'admin';
   if (profile && profile.role !== 'admin' && (!profile.full_name || !profile.department_id || !profile.ma_sale)) {
-    return <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
-      onDone={(updated) => setProfile(updated)} />;
+    return <Suspense fallback={<PageLoadingFallback />}>
+      <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
+        onDone={(updated) => setProfile(updated)} />
+    </Suspense>;
   }
 
-  const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
-  Object.values(contracts).forEach(c => { if (counts[c.type] !== undefined) counts[c.type]++; });
+  const counts = dashboardStats
+    ? { HDNT: dashboardStats.hdnt, DDH: dashboardStats.ddh, BBBG: dashboardStats.bbbg,
+        HDNT_VC: dashboardStats.hdnt_vc, DDH_VC: dashboardStats.ddh_vc, BBBG_VC: dashboardStats.bbbg_vc,
+        HDNT_UT: dashboardStats.hdnt_ut, DDH_UT: dashboardStats.ddh_ut, BBBG_UT: dashboardStats.bbbg_ut }
+    : { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
   const noSellers = Object.keys(sellers).length === 0;
 
   const renderPage = () => {
     switch (page) {
-      case 'dashboard': return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
+      case 'dashboard': return <Dashboard customers={customers} stats={dashboardStats} setPage={setPage} />;
       case 'settings':  return isAdmin ? (
         <div className="space-y-6">
           <SellersPage sellers={sellers} onSave={saveSeller} onDelete={deleteSeller} />
           <ApiKeyManager />
           <DepartmentsManager departments={departments} onSave={saveDepartment} onDelete={deleteDepartment} />
         </div>
-      ) : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
+      ) : <Dashboard customers={customers} stats={dashboardStats} setPage={setPage} />;
       case 'customers':    return <CustomersPage customers={customers} departments={departments} onSave={saveCustomer} onDelete={deleteCustomer} onBulkImport={bulkImportCustomers} saleProfiles={saleProfiles} isAdmin={isAdmin} profile={profile} />;
       case 'invoice_goods': return <InvoiceGoodsPage onBulkImport={bulkImportInvoiceGoods} onDelete={deleteInvoiceGoodsRow} onDeleteMany={bulkDeleteInvoiceGoods} isAdmin={isAdmin} />;
       case 'cash_flow': return <CashFlowSummary batches={cashFlowBatches} customers={customers} sellers={sellers} isAdmin={isAdmin} saleProfiles={saleProfiles} onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
@@ -605,39 +648,39 @@ export default function App() {
           onSave={saveCashFlowBatch} onDelete={deleteCashFlowBatchRow}
           initialCustomerFilter="" onBack={() => setPage('cash_flow')}
           onOpenPaymentRequest={(customerId, reqNo, batchIds) => { setPaymentRequestCustomerId(customerId); setPaymentRequestReqNo(reqNo ?? null); setPaymentRequestBatchIds(batchIds || null); setPage('payment_request'); }} />;
-      case 'hdnt':         return <ContractListPage type="HDNT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'ddh':          return <ContractListPage type="DDH"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'bbbg':         return <ContractListPage type="BBBG" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'hdnt_vc':      return <ContractListPage type="HDNT_VC" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'ddh_vc':       return <ContractListPage type="DDH_VC"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'bbbg_vc':      return <ContractListPage type="BBBG_VC" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'ddh_ut':       return <ContractListPage type="DDH_UT"  contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
-      case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" contracts={contracts} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'hdnt':         return <ContractListPage type="HDNT" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh':          return <ContractListPage type="DDH"  refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg':         return <ContractListPage type="BBBG" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'hdnt_vc':      return <ContractListPage type="HDNT_VC" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh_vc':       return <ContractListPage type="DDH_VC"  refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg_vc':      return <ContractListPage type="BBBG_VC" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'hdnt_ut':      return <ContractListPage type="HDNT_UT" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'ddh_ut':       return <ContractListPage type="DDH_UT"  refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
+      case 'bbbg_ut':      return <ContractListPage type="BBBG_UT" refreshVersion={contractsVersion} customers={customers} sellers={sellers} saleMap={saleMap} saleProfiles={saleProfiles} onAssign={assignContract} setPage={setPage} setViewContract={handleViewContract} onDelete={deleteContract} onDeleteMany={deleteContracts} onEdit={handleEditContract} />;
       case 'foreign_sellers': return <ForeignSellersPage foreignSellers={foreignSellers} onSave={saveForeignSeller} onDelete={deleteForeignSeller} />;
       case 'sales_contract': return <SalesContractPage salesContracts={salesContracts} customers={customers} foreignSellers={foreignSellers} onSaveForeignSeller={saveForeignSeller} onSave={saveSalesContract} onDelete={deleteSalesContractRow} isAdmin={isAdmin} />;
-      case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} />;
-      case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
-      case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
-      case 'create-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'create-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'create-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'create-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'create-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'create-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
-      case 'edit-hdnt':    return <CreateHDNT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
-      case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
-      case 'edit-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
-      case 'edit-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} contracts={contracts} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'create-hdnt':  return <CreateHDNT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} />;
+      case 'create-ddh':   return <CreateDDH  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
+      case 'create-bbbg':  return <CreateBBBG sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} />;
+      case 'create-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'create-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'create-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'create-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'create-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'create-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} />;
+      case 'edit-hdnt':    return <CreateHDNT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-ddh':     return <CreateDDH  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
+      case 'edit-bbbg':    return <CreateBBBG sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} profile={profile} saleProfiles={saleProfiles} onCreateCustomer={saveCustomer} onUpdateSeller={saveSeller} editData={editContractData} />;
+      case 'edit-hdnt_vc': return <CreateHDNTVC sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-ddh_vc':  return <CreateDDHVC  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-bbbg_vc': return <CreateBBBGVC sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-hdnt_ut': return <CreateHDNTUT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-ddh_ut':  return <CreateDDHUT  sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
+      case 'edit-bbbg_ut': return <CreateBBBGUT sellers={sellers} customers={customers} onSave={saveContract} setPage={setPage} isAdmin={isAdmin} saleProfiles={saleProfiles} editData={editContractData} />;
       case 'my-profile': return <CompleteProfilePage profile={profile} departments={departments} isAdmin={isAdmin}
           onDone={(updated) => setProfile(updated)} isEdit={true} />;
-      case 'admin-users':  return isAdmin ? <AdminUsersPage departments={departments} /> : <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
-      default:             return <Dashboard customers={customers} contracts={contracts} setPage={setPage} />;
+      case 'admin-users':  return isAdmin ? <AdminUsersPage departments={departments} /> : <Dashboard customers={customers} stats={dashboardStats} setPage={setPage} />;
+      default:             return <Dashboard customers={customers} stats={dashboardStats} setPage={setPage} />;
     }
   };
 
@@ -655,9 +698,10 @@ export default function App() {
             {isAdmin && <button onClick={() => setPage('settings')} className="ml-4 underline font-medium hover:text-amber-900">Thêm ngay →</button>}
           </div>
         )}
-        {renderPage()}
+        <Suspense fallback={<PageLoadingFallback />}>{renderPage()}</Suspense>
       </main>
       {viewContract && (
+        <Suspense fallback={<PageLoadingFallback />}>
         <ContractViewer
           contract={viewContract}
           sellers={sellers}
@@ -670,6 +714,7 @@ export default function App() {
           onDelete={deleteContract}
           onEdit={handleEditContract}
         />
+        </Suspense>
       )}
     </div>
   );

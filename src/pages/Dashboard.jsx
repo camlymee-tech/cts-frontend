@@ -2,10 +2,12 @@
 import { Badge } from '../components/Badge';
 import { TYPE_COLOR } from '../helpers';
 
-export const Dashboard = ({ customers, contracts, setPage }) => {
-  const counts = { HDNT: 0, DDH: 0, BBBG: 0, HDNT_VC: 0, DDH_VC: 0, BBBG_VC: 0, HDNT_UT: 0, DDH_UT: 0, BBBG_UT: 0 };
-  Object.values(contracts).forEach(c => { if (counts[c.type] !== undefined) counts[c.type]++; });
-  const recent = Object.values(contracts).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8);
+// stats đến từ RPC contracts_dashboard_stats() (App.jsx) — 9 số đếm + 8 hợp đồng gần nhất, 1 lần gọi
+// nhẹ duy nhất, không còn cần tải toàn bộ hợp đồng vào bộ nhớ chỉ để đếm/hiện vài dòng gần đây.
+export const Dashboard = ({ customers, stats, setPage }) => {
+  const loaded = !!stats;
+  const cv = (n) => (loaded ? n : '…');
+  const recent = stats?.recent || [];
 
   const Stat = ({ label, value, color, sub }) => (
     <div className={`rounded-xl p-5 ${color}`}>
@@ -23,6 +25,10 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
     </button>
   );
 
+  const total = loaded
+    ? stats.hdnt + stats.ddh + stats.bbbg + stats.hdnt_vc + stats.ddh_vc + stats.bbbg_vc + stats.hdnt_ut + stats.ddh_ut + stats.bbbg_ut
+    : 0;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
@@ -30,20 +36,20 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Tổng quan</div>
       <div className="grid grid-cols-4 gap-4 mb-5">
         <Stat label="Khách hàng" value={Object.keys(customers).length} color="bg-blue-50 text-blue-700 border border-blue-200" />
-        <Stat label="HĐNT mua bán" value={counts.HDNT} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐĐH mua bán" value={counts.DDH} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG mua bán" value={counts.BBBG} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="HĐNT mua bán" value={cv(stats?.hdnt)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐĐH mua bán" value={cv(stats?.ddh)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG mua bán" value={cv(stats?.bbbg)} color="bg-purple-50 text-purple-700 border border-purple-200" />
       </div>
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <Stat label="HĐNT vận chuyển" value={counts.HDNT_VC} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐHVC" value={counts.DDH_VC} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG vận chuyển" value={counts.BBBG_VC} color="bg-purple-50 text-purple-700 border border-purple-200" />
-        <Stat label="Tổng số hợp đồng" value={Object.values(counts).reduce((a, b) => a + b, 0)} color="bg-blue-50 text-blue-700 border border-blue-200" />
+        <Stat label="HĐNT vận chuyển" value={cv(stats?.hdnt_vc)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐHVC" value={cv(stats?.ddh_vc)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG vận chuyển" value={cv(stats?.bbbg_vc)} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="Tổng số hợp đồng" value={cv(total)} color="bg-blue-50 text-blue-700 border border-blue-200" />
       </div>
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Stat label="HĐNT ủy thác" value={counts.HDNT_UT} color="bg-green-50 text-green-700 border border-green-200" />
-        <Stat label="ĐH ủy thác" value={counts.DDH_UT} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-        <Stat label="BBBG ủy thác" value={counts.BBBG_UT} color="bg-purple-50 text-purple-700 border border-purple-200" />
+        <Stat label="HĐNT ủy thác" value={cv(stats?.hdnt_ut)} color="bg-green-50 text-green-700 border border-green-200" />
+        <Stat label="ĐH ủy thác" value={cv(stats?.ddh_ut)} color="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+        <Stat label="BBBG ủy thác" value={cv(stats?.bbbg_ut)} color="bg-purple-50 text-purple-700 border border-purple-200" />
       </div>
 
       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">🛍️ Tạo nhanh — Hợp đồng mua bán</div>
@@ -70,7 +76,9 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-4 border-b border-gray-100 font-semibold text-gray-700">🕐 Hợp đồng gần đây</div>
-        {recent.length === 0 ? (
+        {!loaded ? (
+          <div className="p-10 text-center text-gray-400">Đang tải hợp đồng gần đây...</div>
+        ) : recent.length === 0 ? (
           <div className="p-10 text-center text-gray-400">Chưa có hợp đồng nào. Bắt đầu tạo mới!</div>
         ) : (
           <table className="w-full text-sm">
@@ -83,12 +91,12 @@ export const Dashboard = ({ customers, contracts, setPage }) => {
             </tr></thead>
             <tbody>
               {recent.map(c => (
-                <tr key={c.contractId} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2.5 font-mono text-blue-700 font-medium">{c.contractId}</td>
+                <tr key={c.contract_id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-2.5 font-mono text-blue-700 font-medium">{c.contract_id}</td>
                   <td className="px-4 py-2.5">
                     <Badge color={TYPE_COLOR[c.type] || 'gray'}>{c.type}</Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-gray-700">{c.customerSnapshot?.companyName || c.customerName || c.customerId}</td>
+                  <td className="px-4 py-2.5 text-gray-700">{c.customer_label}</td>
                   <td className="px-4 py-2.5 text-gray-500">{c.date}</td>
                   <td className="px-4 py-2.5"><Badge color="blue">{c.status}</Badge></td>
                 </tr>

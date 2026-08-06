@@ -893,28 +893,57 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   };
 
   const exportExcel = () => {
-    const computedMapFor = (row) => {
-      const c = deriveComputed(row);
-      return { amountVnd: c.amountVnd, invoice_amount: c.invoiceAmount, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount, fxAmountVnd: c.fxAmountVnd, fxRemaining: c.fxRemaining };
+    const computedFns = {
+      amountVnd: (c) => c.amountVnd,
+      invoice_amount: (c) => c.invoiceAmount,
+      totalCustomerTransferred: (c) => c.totalCustomerTransferred,
+      diffAmount: (c) => c.diffAmount,
+      fxAmountVnd: (c) => c.fxAmountVnd,
+      fxRemaining: (c) => c.fxRemaining,
     };
-    const data = filtered.map(row => {
-      const computedMap = computedMapFor(row);
-      const obj = {};
-      cols.forEach(col => {
-        let val;
-        if (col.type === 'computed') val = computedMap[col.key];
-        else if (col.type === 'customerCode') val = row.customer_id;
-        else if (col.type === 'customer') val = customerDisplayLabel(row);
-        else if (col.type === 'seller') val = sellerLabel(row.seller_id);
-        else if (col.type === 'saleInfo') {
-          const info = saleInfoByUuid[row.created_by];
-          val = col.key === 'sale_code_display' ? info?.code : info?.name;
-        } else val = row[col.key];
-        obj[col.label] = val ?? '';
+    const valueForCol = (col, row) => {
+      if (col.type === 'computed') return computedFns[col.key]?.(deriveComputed(row));
+      if (col.type === 'customerCode') return row.customer_id;
+      if (col.type === 'customer') return customerDisplayLabel(row);
+      if (col.type === 'seller') return sellerLabel(row.seller_id);
+      if (col.type === 'saleInfo') {
+        const info = saleInfoByUuid[row.created_by];
+        return col.key === 'sale_code_display' ? info?.code : info?.name;
+      }
+      return row[col.key];
+    };
+    // Dòng đã "Gộp thành lô": các dòng con bị đưa Số tiền chuyển/Thuế+phí về 0 khi gộp (xem setGroupTotal)
+    // nên xuất riêng từng dòng con sẽ trông như mất dữ liệu. Xuất 1 DÒNG DUY NHẤT cho cả nhóm với các cột
+    // tiền CỘNG DỒN — giống hệt dòng gốc màu vàng đang hiển thị trên màn hình — để kế toán thấy đúng số thật.
+    const buildGroupRow = (items) => {
+      const rows = items.map(it => it.row);
+      const commonValue = (key) => {
+        const vals = new Set(rows.map(r => r[key] ?? ''));
+        return vals.size === 1 ? rows[0][key] : null;
+      };
+      return cols.map(col => {
+        if (SUM_KEYS.includes(col.key)) return rows.reduce((s, r) => s + num(r[col.key]), 0);
+        if (col.type === 'computed' && computedFns[col.key]) return rows.reduce((s, r) => s + computedFns[col.key](deriveComputed(r)), 0);
+        if (col.key === 'seller_id') { const same = commonValue('seller_id'); return same ? sellerLabel(same) : ''; }
+        if (col.key === 'customer_code_display') return commonValue('customer_id') ?? '';
+        if (col.key === 'customer_id') { const same = commonValue('customer_id'); return same ? customerDisplayLabel(rows[0]) : ''; }
+        if (col.type === 'saleInfo') {
+          const sameCreator = commonValue('created_by');
+          const info = sameCreator ? saleInfoByUuid[sameCreator] : null;
+          return (col.key === 'sale_code_display' ? info?.code : info?.name) ?? '';
+        }
+        return commonValue(col.key) ?? '';
       });
-      return obj;
-    });
-    const ws = XLSX.utils.json_to_sheet(data);
+    };
+    // Dùng mảng theo vị trí (không phải object theo tên cột) vì có 2 cột trùng nhãn "Tiền hàng"
+    // (Tiền hàng VNĐ và Tiền hàng đã thu Lần 1) — nếu xuất theo object, cột xuất sau sẽ đè mất cột trước.
+    const header = cols.map(col => col.label);
+    const aoa = [header, ...displayItems.map(entry => (
+      entry.kind === 'group'
+        ? buildGroupRow(entry.items)
+        : cols.map(col => valueForCol(col, entry.item.row) ?? '')
+    ))];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = cols.map(() => ({ wch: 20 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Theo doi dong tien');

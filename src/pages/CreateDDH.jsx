@@ -7,7 +7,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
-import { normalizeText } from '../utils/customerExcel';
+import { normalizeText } from '../utils/textNormalize';
 import { CustomerForm } from './CustomerForm';
 import { DDHPreview } from '../previews/DDHPreview';
 import { buildContractId, calcTotals, fmtNum, resolveSaleCode } from '../helpers';
@@ -15,13 +15,14 @@ import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
-export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
+export const CreateDDH = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
   const [sellerOverride, setSellerOverride] = useState(editData?.sellerSnapshot || null); // sửa riêng cho đơn này, không đổi bên bán gốc
   const [appliedInvoiceDate, setAppliedInvoiceDate] = useState(null); // ngày của hóa đơn vừa áp dụng — để cảnh báo nếu trùng ngày đặt hàng
   const [sourceInvoiceNo, setSourceInvoiceNo] = useState(editData?.invoiceNo || ''); // số hóa đơn đã dùng để tạo đơn này (nếu có)
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -48,22 +49,29 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
 
   const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
 
-  const matchingHDNTs = Object.values(contracts)
-    .filter(c => c.type === 'HDNT' && c.customerId === customerId && c.sellerId === sellerId)
+  // Danh sách nhẹ TOÀN BỘ HĐNT (không tải hết mọi hợp đồng nữa) — dùng để gắn hợp đồng cha.
+  const [allHDNTs, setAllHDNTs] = useState([]);
+  useEffect(() => {
+    api.searchRelatedContracts('HDNT')
+      .then(rows => setAllHDNTs(rows.map(r => ({ contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id, date: r.date, customerLabel: r.customer_label }))))
+      .catch(e => console.error('Không tải được danh sách HĐNT liên quan:', e.message));
+  }, []);
+
+  const matchingHDNTs = allHDNTs
+    .filter(c => c.customerId === customerId && c.sellerId === sellerId)
     .sort((a, b) => b.contractId.localeCompare(a.contractId));
 
-  // Toàn bộ HĐNT để tự tìm/chọn thủ công — ưu tiên hiện các HĐNT cùng KH+bên bán lên đầu (đánh dấu ⭐)
+  // Ưu tiên hiện các HĐNT cùng KH+bên bán lên đầu (đánh dấu ⭐), sau đó tới toàn bộ HĐNT còn lại
   const matchingIds = new Set(matchingHDNTs.map(h => h.contractId));
-  const allHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT').sort((a, b) => b.contractId.localeCompare(a.contractId));
   const hdntOptions = [
     { value: '', label: '-- Không gắn --' },
     ...[...matchingHDNTs, ...allHDNTs.filter(h => !matchingIds.has(h.contractId))].map(h => ({
       value: h.contractId,
-      label: `${h.contractId}${matchingIds.has(h.contractId) ? ' ⭐' : ''} — ${customerLabel(h)}`,
+      label: `${h.contractId}${matchingIds.has(h.contractId) ? ' ⭐' : ''} — ${h.customerLabel}`,
     })),
   ];
 
-  useEffect(() => { setHdntId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId]);
+  useEffect(() => { setHdntId(matchingHDNTs[0]?.contractId || ''); }, [customerId, sellerId, allHDNTs]);
 
   // Xử lý chung cho 1 file ảnh/PDF (dùng cho cả Upload và Dán/Paste)
   const processFile = async (file) => {
@@ -215,18 +223,26 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
   } : null;
 
   const save = async () => {
+    if (saving) return;
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
     if (appliedInvoiceDate && date === appliedInvoiceDate) {
       const proceed = confirm(`⚠️ Ngày đặt hàng (${date}) đang trùng với ngày hóa đơn đã áp dụng.\nNgày ĐĐH không nên trùng ngày hóa đơn — vui lòng sửa lại "Ngày đặt hàng".\n\nBấm OK nếu vẫn muốn lưu, hoặc Hủy để quay lại sửa.`);
       if (!proceed) return;
     }
-    await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('ddh');
+    setSaving(true);
+    try {
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('ddh');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const preview = getContract();
@@ -372,7 +388,7 @@ export const CreateDDH = ({ sellers, customers, contracts, onSave, setPage, edit
         <button onClick={() => setShowPreview(p => !p)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">
           {showPreview ? '🙈 Ẩn xem trước' : '👁️ Xem trước hợp đồng'}
         </button>
-        <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu đơn đặt hàng'}</button>
+        <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu đơn đặt hàng'}</button>
       </div>
 
       {showPreview && preview && (

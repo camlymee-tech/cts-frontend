@@ -1,8 +1,11 @@
 // File: src/pages/CustomersPage.jsx
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Badge } from '../components/Badge';
 import { CustomerForm } from './CustomerForm';
+import { Pagination } from '../components/Pagination';
 import { downloadCustomerTemplate, parseCustomersFile, exportCustomersToExcel } from '../utils/customerExcel';
+
+const PAGE_SIZE = 50;
 
 export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, onBulkImport, saleProfiles = [], isAdmin = false, profile = null }) => {
   const [search, setSearch] = useState('');
@@ -12,6 +15,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
   const [editId, setEditId] = useState(null);
   const [newCode, setNewCode] = useState('');
   const [importing, setImporting] = useState(false);
+  const [pageNum, setPageNum] = useState(1);
   const fileInputRef = useRef(null);
 
   // Sale tự tạo khách hàng → tự gán vào chính họ, không cần chọn
@@ -21,7 +25,9 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
 
   const deptName = (cid) => departments[cid]?.name || '';
 
-  const filtered = Object.entries(customers).filter(([id, c]) => {
+  // useMemo: danh sách khách hàng đã lên tới hơn 1000 dòng — tránh lọc lại toàn bộ mỗi lần component
+  // render vì lý do khác (VD: đang sửa 1 dòng khác), chỉ lọc lại khi customers/search/filter thực sự đổi.
+  const filtered = useMemo(() => Object.entries(customers).filter(([id, c]) => {
     const s = search.toLowerCase();
     const matchSearch = !search || c.companyName?.toLowerCase().includes(s) || id.toLowerCase().includes(s)
       || (c.taxCode || '').toLowerCase().includes(s)
@@ -30,7 +36,12 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
     const matchSale = !sf || (c.assignedSale?.code || '').toLowerCase().includes(sf) || (c.assignedSale?.name || '').toLowerCase().includes(sf);
     const matchDept = !deptFilter || c.departmentId === deptFilter;
     return matchSearch && matchSale && matchDept;
-  });
+  }), [customers, search, saleFilter, deptFilter]);
+
+  // Phân trang hiển thị (Xuất Excel vẫn xuất toàn bộ "filtered", không chỉ trang đang xem)
+  const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePageNum = Math.min(pageNum, maxPage);
+  const paged = filtered.slice((safePageNum - 1) * PAGE_SIZE, safePageNum * PAGE_SIZE);
 
   const handleAdd = async (form) => {
     const code = newCode.trim();
@@ -127,6 +138,9 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
         </div>
       )}
 
+      {filtered.length > 0 && (
+        <div className="text-xs text-gray-400 mb-2">Tìm thấy {filtered.length} khách hàng</div>
+      )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
         {filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-400">Không có khách hàng nào</div>
@@ -143,7 +157,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
               <th className="px-5 py-3"></th>
             </tr></thead>
             <tbody>
-              {filtered.map(([id, c], idx) => (
+              {paged.map(([id, c], idx) => (
                 editId === id ? (
                   <tr key={id}><td colSpan="8" className="p-5 bg-blue-50/30 border-t border-gray-100">
                     <div className="text-sm font-medium text-blue-700 mb-3">{id}</div>
@@ -151,7 +165,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
                   </td></tr>
                 ) : (
                   <tr key={id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-5 py-3 text-gray-400">{idx + 1}</td>
+                    <td className="px-5 py-3 text-gray-400">{(safePageNum - 1) * PAGE_SIZE + idx + 1}</td>
                     <td className="px-5 py-3 font-mono font-bold text-blue-600">{id}</td>
                     <td className="px-5 py-3 font-medium text-gray-800 relative group cursor-default">
                       {c.companyName}
@@ -183,6 +197,7 @@ export const CustomersPage = ({ customers, departments = {}, onSave, onDelete, o
             </tbody>
           </table>
         )}
+        <Pagination page={safePageNum} maxPage={maxPage} onChange={setPageNum} />
       </div>
     </div>
   );

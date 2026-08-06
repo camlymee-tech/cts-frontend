@@ -10,9 +10,11 @@ import { ServiceFeeTable } from '../previews/ServiceFeeTable';
 import { BBBGUTPreview } from '../previews/BBBGUTPreview';
 import { buildContractId } from '../helpers';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
+import { api } from '../lib/api';
 
-export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
+export const CreateBBBGUT = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, saleProfiles = [] }) => {
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -36,20 +38,37 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
   const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = customer.assignedSale?.code || '';
 
-  const matchingHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT_UT' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
-  const matchingDDHs = Object.values(contracts).filter(c => c.type === 'DDH_UT' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const [allHDNTs, setAllHDNTs] = useState([]);
+  const [allDDHs, setAllDDHs] = useState([]);
+  useEffect(() => {
+    api.searchRelatedContracts('HDNT_UT')
+      .then(rows => setAllHDNTs(rows.map(r => ({ contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id }))))
+      .catch(e => console.error('Không tải được danh sách HĐNT liên quan:', e.message));
+    api.searchRelatedContracts('DDH_UT')
+      .then(rows => setAllDDHs(rows.map(r => ({ id: r.id, contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id }))))
+      .catch(e => console.error('Không tải được danh sách Đơn Đặt Dịch Vụ liên quan:', e.message));
+  }, []);
+
+  const matchingHDNTs = allHDNTs.filter(c => c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const matchingDDHs = allDDHs.filter(c => c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
 
   useEffect(() => {
     setHdntUtId(matchingHDNTs[0]?.contractId || '');
     const d = matchingDDHs[0];
     setDdhUtId(d?.contractId || '');
-    setFeeAmount(d?.goods?.[0]?.donGia ?? '');
-  }, [customerId, sellerId]);
+    if (!d) { setFeeAmount(''); return; }
+    api.getContractFull(d.id)
+      .then(res => setFeeAmount(res?.data?.goods?.[0]?.donGia ?? ''))
+      .catch(e => console.error('Không tải được dữ liệu Đơn Đặt Dịch Vụ:', e.message));
+  }, [customerId, sellerId, allHDNTs, allDDHs]);
 
   const selectDDH = (id) => {
     setDdhUtId(id);
-    const d = contracts[id];
-    setFeeAmount(d?.goods?.[0]?.donGia ?? '');
+    const d = allDDHs.find(x => x.contractId === id);
+    if (!d) { setFeeAmount(''); return; }
+    api.getContractFull(d.id)
+      .then(res => setFeeAmount(res?.data?.goods?.[0]?.donGia ?? ''))
+      .catch(e => alert('Không tải được dữ liệu Đơn Đặt Dịch Vụ: ' + e.message));
   };
 
   const fee = Number(feeAmount) || 0;
@@ -66,15 +85,23 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
   } : null;
 
   const save = async () => {
+    if (saving) return;
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
     if (fee <= 0) return alert('Vui lòng nhập giá trị dịch vụ quyết toán');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('bbbg_ut');
+    setSaving(true);
+    try {
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('bbbg_ut');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const preview = getContract();
@@ -192,7 +219,7 @@ export const CreateBBBGUT = ({ sellers, customers, contracts, onSave, setPage, e
         <button onClick={() => setShowPreview(p => !p)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">
           {showPreview ? '🙈 Ẩn xem trước' : '👁️ Xem trước biên bản'}
         </button>
-        <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu biên bản'}</button>
+        <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu biên bản'}</button>
       </div>
 
       {showPreview && preview && (

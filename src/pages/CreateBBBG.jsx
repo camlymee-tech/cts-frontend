@@ -7,7 +7,7 @@ import { PartyInfoCard } from '../components/PartyInfoCard';
 import { ContractIdPreview } from '../components/ContractIdPreview';
 import { GoodsTable } from '../components/GoodsTable';
 import { InvoiceGoodsPicker } from '../components/InvoiceGoodsPicker';
-import { normalizeText } from '../utils/customerExcel';
+import { normalizeText } from '../utils/textNormalize';
 import { CustomerForm } from './CustomerForm';
 import { BBBGPreview } from '../previews/BBBGPreview';
 import { buildContractId, resolveSaleCode } from '../helpers';
@@ -15,12 +15,13 @@ import { api } from '../lib/api';
 import { pdfFirstPageToImage } from '../lib/pdfToImage';
 import { buildCustomerOptions, parseCustomerOptionValue, encodeCustomerOptionValue } from '../utils/customerOptions';
 
-export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
+export const CreateBBBG = ({ sellers, customers, onSave, setPage, editData, isAdmin = false, profile = null, saleProfiles = [], onCreateCustomer, onUpdateSeller }) => {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [editingSeller, setEditingSeller] = useState(false);
   const [sourceInvoiceNo, setSourceInvoiceNo] = useState(editData?.invoiceNo || '');
   const [sellerOverride, setSellerOverride] = useState(editData?.sellerSnapshot || null); // sửa riêng cho đơn này, không đổi bên bán gốc
   const isEdit = !!editData;
+  const [saving, setSaving] = useState(false);
   const [assignedSaleUuid, setAssignedSaleUuid] = useState(editData?._assignedTo || '');
   const [sellerId, setSellerId] = useState(editData?.sellerId || '');
   const [customerId, setCustomerId] = useState(editData?.customerId || '');
@@ -44,29 +45,37 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   const customer = selectedBranch ? { ...rawCustomer, ...selectedBranch } : rawCustomer;
   const saleCode = resolveSaleCode(customer, { profile, saleProfiles });
 
-  const customerLabel = (c) => c.customerSnapshot?.companyName || customers[c.customerId]?.companyName || c.customerName || c.customerId;
+  // Danh sách nhẹ TOÀN BỘ HĐNT/ĐĐH (không tải hết mọi hợp đồng nữa) — dùng để gắn hợp đồng cha.
+  const [allHDNTs, setAllHDNTs] = useState([]);
+  const [allDDHs, setAllDDHs] = useState([]);
+  useEffect(() => {
+    api.searchRelatedContracts('HDNT')
+      .then(rows => setAllHDNTs(rows.map(r => ({ contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id, customerLabel: r.customer_label }))))
+      .catch(e => console.error('Không tải được danh sách HĐNT liên quan:', e.message));
+    api.searchRelatedContracts('DDH')
+      .then(rows => setAllDDHs(rows.map(r => ({ id: r.id, contractId: r.contract_id, customerId: r.customer_id, sellerId: r.seller_id, customerLabel: r.customer_label }))))
+      .catch(e => console.error('Không tải được danh sách ĐĐH liên quan:', e.message));
+  }, []);
 
-  const matchingHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
-  const matchingDDHs = Object.values(contracts).filter(c => c.type === 'DDH' && c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const matchingHDNTs = allHDNTs.filter(c => c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
+  const matchingDDHs = allDDHs.filter(c => c.customerId === customerId && c.sellerId === sellerId).sort((a, b) => b.contractId.localeCompare(a.contractId));
 
-  // Toàn bộ HĐNT/ĐĐH để tự tìm/chọn thủ công — ưu tiên hiện các bản ghi cùng KH+bên bán lên đầu (đánh dấu ⭐)
+  // Ưu tiên hiện các bản ghi cùng KH+bên bán lên đầu (đánh dấu ⭐)
   const matchingHDNTIds = new Set(matchingHDNTs.map(h => h.contractId));
-  const allHDNTs = Object.values(contracts).filter(c => c.type === 'HDNT').sort((a, b) => b.contractId.localeCompare(a.contractId));
   const hdntOptions = [
     { value: '', label: '-- Không gắn --' },
     ...[...matchingHDNTs, ...allHDNTs.filter(h => !matchingHDNTIds.has(h.contractId))].map(h => ({
       value: h.contractId,
-      label: `${h.contractId}${matchingHDNTIds.has(h.contractId) ? ' ⭐' : ''} — ${customerLabel(h)}`,
+      label: `${h.contractId}${matchingHDNTIds.has(h.contractId) ? ' ⭐' : ''} — ${h.customerLabel}`,
     })),
   ];
 
   const matchingDDHIds = new Set(matchingDDHs.map(d => d.contractId));
-  const allDDHs = Object.values(contracts).filter(c => c.type === 'DDH').sort((a, b) => b.contractId.localeCompare(a.contractId));
   const ddhOptions = [
     { value: '', label: '-- Không gắn --' },
     ...[...matchingDDHs, ...allDDHs.filter(d => !matchingDDHIds.has(d.contractId))].map(d => ({
       value: d.contractId,
-      label: `${d.contractId}${matchingDDHIds.has(d.contractId) ? ' ⭐' : ''} — ${customerLabel(d)}`,
+      label: `${d.contractId}${matchingDDHIds.has(d.contractId) ? ' ⭐' : ''} — ${d.customerLabel}`,
     })),
   ];
 
@@ -74,16 +83,26 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
     setHdntId(matchingHDNTs[0]?.contractId || '');
     const d = matchingDDHs[0];
     setDdhId(d?.contractId || '');
-    setGoods(d?.goods?.length ? d.goods : []);
-    if (!isEdit) setVatInvoiceImage(d?.vatInvoiceImage || null);
-  }, [customerId, sellerId]);
+    if (!d) { setGoods([]); if (!isEdit) setVatInvoiceImage(null); return; }
+    api.getContractFull(d.id)
+      .then(res => {
+        setGoods(res?.data?.goods?.length ? res.data.goods : []);
+        if (!isEdit) setVatInvoiceImage(res?.data?.vatInvoiceImage || null);
+      })
+      .catch(e => console.error('Không tải được dữ liệu ĐĐH:', e.message));
+  }, [customerId, sellerId, allHDNTs, allDDHs]);
 
   const selectDDH = (id) => {
     setDdhId(id);
-    const d = contracts[id];
-    setGoods(d?.goods?.length ? d.goods : []);
-    setVatInvoiceImage(d?.vatInvoiceImage || null);
-    setSourceInvoiceNo(d?.invoiceNo || '');
+    const d = allDDHs.find(x => x.contractId === id);
+    if (!d) { setGoods([]); setVatInvoiceImage(null); setSourceInvoiceNo(''); return; }
+    api.getContractFull(d.id)
+      .then(res => {
+        setGoods(res?.data?.goods?.length ? res.data.goods : []);
+        setVatInvoiceImage(res?.data?.vatInvoiceImage || null);
+        setSourceInvoiceNo(res?.data?.invoiceNo || '');
+      })
+      .catch(e => alert('Không tải được dữ liệu ĐĐH: ' + e.message));
   };
 
   const fileRef2 = useRef();
@@ -224,14 +243,22 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
   } : null;
 
   const save = async () => {
+    if (saving) return;
     if (!sellerId) return alert('Vui lòng chọn công ty bên bán');
     if (!customerId) return alert('Vui lòng chọn khách hàng');
     if (!stt.trim()) return alert('Vui lòng nhập STT (số thứ tự)');
     if (!contractId.trim()) return alert('Số hợp đồng không được để trống');
-    if (!isEdit && contracts[contractId]) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
-    if (isEdit && contracts[contractId] && contractId !== editData.contractId) return alert('Số hợp đồng mới đã tồn tại:\n' + contractId);
-    await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
-    setPage('bbbg');
+    setSaving(true);
+    try {
+      if (!isEdit || contractId !== editData.contractId) {
+        const exists = await api.contractIdExists(contractId);
+        if (exists) return alert('Số hợp đồng đã tồn tại:\n' + contractId);
+      }
+      await onSave(getContract(), isEdit ? editData.contractId : null, assignedSaleUuid || null);
+      setPage('bbbg');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const preview = getContract();
@@ -369,7 +396,7 @@ export const CreateBBBG = ({ sellers, customers, contracts, onSave, setPage, edi
         <button onClick={() => setShowPreview(p => !p)} className="bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm">
           {showPreview ? '🙈 Ẩn xem trước' : '👁️ Xem trước biên bản'}
         </button>
-        <button onClick={save} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow">{isEdit ? '✓ Lưu thay đổi' : '✓ Lưu biên bản'}</button>
+        <button onClick={save} disabled={saving} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 text-sm font-medium shadow disabled:opacity-50">{saving ? '⏳ Đang lưu...' : isEdit ? '✓ Lưu thay đổi' : '✓ Lưu biên bản'}</button>
       </div>
 
       {showPreview && preview && (

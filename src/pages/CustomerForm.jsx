@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Field } from '../components/Field';
 import { Select } from '../components/Select';
 import { SaleSearchDropdown } from '../components/SaleSearchDropdown';
-import { normalizeText, removeDiacritics } from '../utils/customerExcel';
+import { normalizeText, removeDiacritics } from '../utils/textNormalize';
 import { api } from '../lib/api';
 
 // Với khách hàng cũ chưa gắn accountId (dữ liệu nhập trước khi có dropdown), tự đối chiếu

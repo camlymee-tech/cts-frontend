@@ -94,10 +94,56 @@ export const api = {
   },
 
   // ───────── Hợp đồng (bảng contracts, RLS theo người tạo) ─────────
-  async listContracts() {
-    // Dùng RPC slim để bỏ vatInvoiceImage khỏi danh sách (ảnh base64 làm payload nặng → timeout).
-    // Ảnh chỉ được load khi xem hợp đồng cụ thể (getContractFull).
-    const { data, error } = await supabase.rpc('list_contracts_slim');
+  // Danh sách hợp đồng có tìm kiếm/lọc/phân trang ngay ở server — dùng cho ContractListPage,
+  // thay cho việc tải hết rồi lọc ở trình duyệt (giống hệt cách list_invoice_goods_paged đã làm).
+  async listContractsPaged({ type, search = '', seller = '', dateFrom = '', dateTo = '', limit = 30, offset = 0 } = {}) {
+    const { data, error } = await supabase.rpc('list_contracts_paged', {
+      p_type: type,
+      p_search: search || null,
+      p_seller: seller || null,
+      p_date_from: dateFrom || null,
+      p_date_to: dateTo || null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new Error(error.message);
+    const rows = data || [];
+    return { rows, totalCount: Number(rows[0]?.total_count ?? 0) };
+  },
+
+  // Số đếm theo loại (Sidebar + Dashboard) + 8 hợp đồng gần nhất, 1 lần gọi duy nhất
+  async contractsDashboardStats() {
+    const { data, error } = await supabase.rpc('contracts_dashboard_stats');
+    if (error) throw new Error(error.message);
+    return data?.[0] || null;
+  },
+
+  // Kiểm tra trùng số hợp đồng — TOÀN CÔNG TY (mọi sale), không chỉ trong phạm vi hợp đồng của người đang đăng nhập
+  async contractIdExists(contractId) {
+    const { data, error } = await supabase.rpc('contract_id_exists', { p_contract_id: contractId });
+    if (error) throw new Error(error.message);
+    return !!data;
+  },
+
+  // Danh sách nhẹ toàn bộ hợp đồng 1 loại (dùng để gắn HĐNT/ĐĐH cha khi tạo ĐĐH/BBBG) — tự phân trang
+  // để không bị cắt ở 1000 dòng (loại HĐNT/ĐĐH mua bán đã vượt 1000 dòng thật).
+  async searchRelatedContracts(type) {
+    const PAGE = 1000;
+    let all = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase.rpc('search_related_contracts', { p_type: type }).range(from, from + PAGE - 1);
+      if (error) throw new Error(error.message);
+      all = all.concat(data || []);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  },
+
+  // Tìm các hợp đồng con đang tham chiếu 1 số hợp đồng cha (dùng khi đổi số HĐNT/ĐĐH) — TOÀN CÔNG TY
+  async findContractsReferencing(refKey, oldId) {
+    const { data, error } = await supabase.rpc('find_contracts_referencing', { p_ref_key: refKey, p_old_id: oldId });
     if (error) throw new Error(error.message);
     return data || [];
   },
