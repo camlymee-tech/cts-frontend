@@ -389,16 +389,10 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   });
 
   // Gộp các dòng đã chọn (checkbox) thành 1 lô NGAY, không hỏi Mã lô — tự gán 1 mã tạm để liên kết
-  // các dòng lại với nhau; chị có thể bấm vào ô Mã lô ở dòng gốc để tự gõ lại tên mình muốn bất cứ lúc nào.
-  // Chỉ cho gộp khi các dòng đã chọn có CÙNG 1 Số đề nghị TT — khác số thì để nguyên, không gộp nhầm.
+  // các dòng lại với nhau; chị có thể bấm vào ô Báo giá ở dòng gốc để tự gõ lại tên mình muốn bất cứ lúc nào.
+  // Cho phép gộp bất kỳ dòng nào đã chọn, KHÔNG bắt buộc cùng Số đề nghị TT.
   const handleGroupSelected = async () => {
     if (selectedIds.size < 2) return;
-    const selectedRows = merged.filter(r => selectedIds.has(r.id));
-    const reqNos = new Set(selectedRows.map(r => (r.payment_request_no ?? '').toString().trim()));
-    if (reqNos.size !== 1 || [...reqNos][0] === '') {
-      alert('Chỉ gộp được các dòng có CÙNG 1 Số đề nghị TT. Chị kiểm tra lại các dòng đã chọn nhé.');
-      return;
-    }
     const maxNo = merged.reduce((max, b) => {
       const m = /^LO(\d+)$/i.exec((b.batch_code || '').trim());
       return m ? Math.max(max, Number(m[1])) : max;
@@ -893,57 +887,28 @@ export const CashFlowPage = ({ batches = [], customers = {}, sellers = {}, isAdm
   };
 
   const exportExcel = () => {
-    const computedFns = {
-      amountVnd: (c) => c.amountVnd,
-      invoice_amount: (c) => c.invoiceAmount,
-      totalCustomerTransferred: (c) => c.totalCustomerTransferred,
-      diffAmount: (c) => c.diffAmount,
-      fxAmountVnd: (c) => c.fxAmountVnd,
-      fxRemaining: (c) => c.fxRemaining,
+    const computedMapFor = (row) => {
+      const c = deriveComputed(row);
+      return { amountVnd: c.amountVnd, invoice_amount: c.invoiceAmount, totalCustomerTransferred: c.totalCustomerTransferred, diffAmount: c.diffAmount, fxAmountVnd: c.fxAmountVnd, fxRemaining: c.fxRemaining };
     };
-    const valueForCol = (col, row) => {
-      if (col.type === 'computed') return computedFns[col.key]?.(deriveComputed(row));
-      if (col.type === 'customerCode') return row.customer_id;
-      if (col.type === 'customer') return customerDisplayLabel(row);
-      if (col.type === 'seller') return sellerLabel(row.seller_id);
-      if (col.type === 'saleInfo') {
-        const info = saleInfoByUuid[row.created_by];
-        return col.key === 'sale_code_display' ? info?.code : info?.name;
-      }
-      return row[col.key];
-    };
-    // Dòng đã "Gộp thành lô": các dòng con bị đưa Số tiền chuyển/Thuế+phí về 0 khi gộp (xem setGroupTotal)
-    // nên xuất riêng từng dòng con sẽ trông như mất dữ liệu. Xuất 1 DÒNG DUY NHẤT cho cả nhóm với các cột
-    // tiền CỘNG DỒN — giống hệt dòng gốc màu vàng đang hiển thị trên màn hình — để kế toán thấy đúng số thật.
-    const buildGroupRow = (items) => {
-      const rows = items.map(it => it.row);
-      const commonValue = (key) => {
-        const vals = new Set(rows.map(r => r[key] ?? ''));
-        return vals.size === 1 ? rows[0][key] : null;
-      };
-      return cols.map(col => {
-        if (SUM_KEYS.includes(col.key)) return rows.reduce((s, r) => s + num(r[col.key]), 0);
-        if (col.type === 'computed' && computedFns[col.key]) return rows.reduce((s, r) => s + computedFns[col.key](deriveComputed(r)), 0);
-        if (col.key === 'seller_id') { const same = commonValue('seller_id'); return same ? sellerLabel(same) : ''; }
-        if (col.key === 'customer_code_display') return commonValue('customer_id') ?? '';
-        if (col.key === 'customer_id') { const same = commonValue('customer_id'); return same ? customerDisplayLabel(rows[0]) : ''; }
-        if (col.type === 'saleInfo') {
-          const sameCreator = commonValue('created_by');
-          const info = sameCreator ? saleInfoByUuid[sameCreator] : null;
-          return (col.key === 'sale_code_display' ? info?.code : info?.name) ?? '';
-        }
-        return commonValue(col.key) ?? '';
+    const data = filtered.map(row => {
+      const computedMap = computedMapFor(row);
+      const obj = {};
+      cols.forEach(col => {
+        let val;
+        if (col.type === 'computed') val = computedMap[col.key];
+        else if (col.type === 'customerCode') val = row.customer_id;
+        else if (col.type === 'customer') val = customerDisplayLabel(row);
+        else if (col.type === 'seller') val = sellerLabel(row.seller_id);
+        else if (col.type === 'saleInfo') {
+          const info = saleInfoByUuid[row.created_by];
+          val = col.key === 'sale_code_display' ? info?.code : info?.name;
+        } else val = row[col.key];
+        obj[col.label] = val ?? '';
       });
-    };
-    // Dùng mảng theo vị trí (không phải object theo tên cột) vì có 2 cột trùng nhãn "Tiền hàng"
-    // (Tiền hàng VNĐ và Tiền hàng đã thu Lần 1) — nếu xuất theo object, cột xuất sau sẽ đè mất cột trước.
-    const header = cols.map(col => col.label);
-    const aoa = [header, ...displayItems.map(entry => (
-      entry.kind === 'group'
-        ? buildGroupRow(entry.items)
-        : cols.map(col => valueForCol(col, entry.item.row) ?? '')
-    ))];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
+      return obj;
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
     ws['!cols'] = cols.map(() => ({ wch: 20 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Theo doi dong tien');
