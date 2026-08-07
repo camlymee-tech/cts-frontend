@@ -53,8 +53,9 @@ const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
       <input
         type="text" inputMode="decimal" value={display}
         onChange={(e) => {
-          // Nhận cả dấu chấm và dấu phẩy làm dấu thập phân (người dùng hay gõ dấu chấm trên bàn phím số)
-          let raw = e.target.value.replace(/\./g, ',').replace(/[^0-9,]/g, '');
+          // Dấu CHẤM = phân cách hàng nghìn (bỏ đi), chỉ dấu PHẨY mới là thập phân (kiểu VN).
+          // Nhờ vậy gõ "300.000.000" ra đúng 300 triệu, còn "8,5" ra đúng 8.5.
+          let raw = e.target.value.replace(/\./g, '').replace(/[^0-9,]/g, '');
           const parts = raw.split(',');
           const intPart = parts[0] || '';
           const decPart = parts.length > 1 ? parts.slice(1).join('') : undefined;
