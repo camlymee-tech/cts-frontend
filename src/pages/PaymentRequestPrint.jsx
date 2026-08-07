@@ -53,7 +53,8 @@ const MoneyInput = ({ value, onChange, className, allowDecimal = false }) => {
       <input
         type="text" inputMode="decimal" value={display}
         onChange={(e) => {
-          let raw = e.target.value.replace(/[^0-9,]/g, '');
+          // Nhận cả dấu chấm và dấu phẩy làm dấu thập phân (người dùng hay gõ dấu chấm trên bàn phím số)
+          let raw = e.target.value.replace(/\./g, ',').replace(/[^0-9,]/g, '');
           const parts = raw.split(',');
           const intPart = parts[0] || '';
           const decPart = parts.length > 1 ? parts.slice(1).join('') : undefined;
@@ -372,7 +373,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
                 {isFx ? (
                   <>
                     <input value={r.dienGiai} onChange={e => setVoucherField(i, 'dienGiai', e.target.value)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                    <MoneyInput value={r.tyGiaRow} onChange={v => setVoucherField(i, 'tyGiaRow', v)} className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                    <MoneyInput value={r.tyGiaRow} onChange={v => setVoucherField(i, 'tyGiaRow', v)} allowDecimal className="col-span-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                     <MoneyInput value={r.tienHangRow} onChange={v => setVoucherField(i, 'tienHangRow', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                     <div className="col-span-2 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right bg-gray-50 text-gray-600" title="Tự tính = Tỉ giá × Tiền hàng $">
                       {fmtNum(num(r.tyGiaRow) * num(r.tienHangRow))}
@@ -418,7 +419,7 @@ export const PaymentRequestPrint = ({ customerId: initialCustomerId, customer: i
             {fxRows.map((r, i) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input value={r.noiDung} onChange={e => setFxField(i, 'noiDung', e.target.value)} className="col-span-6 border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-                <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
+                <MoneyInput value={r.tyGia} onChange={v => setFxField(i, 'tyGia', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <MoneyInput value={r.soTe} onChange={v => setFxField(i, 'soTe', v)} allowDecimal className="col-span-2 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right" />
                 <div className="col-span-1 text-sm text-gray-500 text-right pr-1">{fmtNum(fxThanhTien(r))}</div>
                 <button onClick={() => removeFxRow(i)} className="col-span-1 text-red-500 hover:text-red-700 text-sm">✕</button>
